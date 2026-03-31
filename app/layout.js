@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
@@ -7,10 +8,9 @@ import SessionWrapper from "./component/SessionWrapper";
 import { Toaster } from "react-hot-toast";
 import { Suspense } from "react";
 
-
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["300","400","500","600","700"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-poppins",
 });
 
@@ -26,11 +26,28 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
+      <head>
+        {/* ✅ Google Analytics Script */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-LB9SCCYFDL"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-LB9SCCYFDL');
+          `}
+        </Script>
+      </head>
+
       <body className={`${poppins.variable} antialiased font-sans bg-white relative`}>
+
         {/* WhatsApp Button */}
         <Link href={whatsappUrl} target="_blank" rel="noopener noreferrer">
           <Image
-            className="fixed bottom-20 right-5 z-60 rounded-full cursor-pointer shadow-lg"
+            className="fixed bottom-20 right-5 z-50 rounded-full cursor-pointer shadow-lg"
             width={80}
             height={80}
             src="/whatsapp.jpg"
@@ -40,11 +57,9 @@ export default function RootLayout({ children }) {
 
         <SessionWrapper>
           <Suspense fallback={<div>Loading...</div>}>
-      
-              <ClientLayout>
-                {children} {/* ✅ correctly passed to ClientLayout */}
-              </ClientLayout>
-           
+            <ClientLayout>
+              {children}
+            </ClientLayout>
           </Suspense>
         </SessionWrapper>
 

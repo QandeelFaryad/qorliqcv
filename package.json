@@ -10,7 +10,13 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "docx": "^9.6.1",
+    "file-saver": "^2.0.5",
     "framer-motion": "^12.23.26",
+    "html-docx-js": "^0.3.1",
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "mongoose": "^8.5.0",
     "next": "^16.0.0",
     "next-auth": "^4.24.13",
@@ -19,6 +25,7 @@
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
+    "stripe": "^22.1.1",
     "swiper": "^12.0.3",
     "uuid": "^9.0.1"
   },

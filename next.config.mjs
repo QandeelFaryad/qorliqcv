@@ -6,18 +6,8 @@ const nextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
         pathname: "/dyr4xwyhf/**",
-       
       },
     ],
-  },
-
-  async rewrites() {
-    return [
-      {
-        source: '/((?!api|products).*)',
-        destination: '/',
-      },
-    ];
   },
 };
 

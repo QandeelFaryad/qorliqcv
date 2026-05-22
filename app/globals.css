@@ -1,37 +1,40 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-qorliqGold: #C6A35D;
+  --color-qorliqGoldDark: #8A6A35;
+  --color-qorliqCream: #F7F2E8;
+  --color-qorliqIvory: #FFF9EF;
+  --color-qorliqDark: #050505;
+  --color-qorliqCharcoal: #111111;
+
+  --shadow-luxury: 0 24px 80px rgba(0, 0, 0, 0.18);
+  --shadow-gold: 0 20px 60px rgba(198, 163, 93, 0.22);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-font-family: var(--font-poppins), sans-serif;
+  background: #ffffff;
+  color: #050505;
 }
-/* Hide scrollbar but allow scrolling */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+@media print {
+  body {
+    background: white !important;
+  }
+
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    background: white !important;
+  }
 }
-
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE & Edge */
-  scrollbar-width: none;     /* Firefox */
-}
-
-

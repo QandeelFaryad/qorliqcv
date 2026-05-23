@@ -1,16 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import { pricingPlans } from "@/lib/pricingPlans";
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+);
 
 export default function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status, data: session } = useSession();
 
-  const [loading, setLoading] = useState(false);
+  const [clientSecret, setClientSecret] = useState("");
+  const [intentLoading, setIntentLoading] = useState(false);
   const [error, setError] = useState("");
 
   const planId = searchParams.get("plan") || "";
@@ -18,6 +30,7 @@ export default function CheckoutContent() {
   const template = searchParams.get("template") || "";
 
   const selectedPlan = pricingPlans.find((plan) => plan.id === planId);
+  const isSubscription = selectedPlan?.type === "subscription";
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -26,48 +39,65 @@ export default function CheckoutContent() {
     }
   }, [status, router, planId, cvId, template]);
 
-  const startCheckout = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  useEffect(() => {
+    const createIntent = async () => {
+      try {
+        if (status !== "authenticated") return;
+        if (!selectedPlan) return;
+        if (clientSecret) return;
 
-      if (!selectedPlan) {
-        setError("Please select a valid package.");
-        return;
+        setIntentLoading(true);
+        setError("");
+
+        const res = await fetch("/api/checkout/create-intent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            planId,
+            cvId,
+            template,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          setError(data.error || "Unable to load payment form.");
+          return;
+        }
+
+        setClientSecret(data.clientSecret);
+      } catch (error) {
+        console.error("Create intent error:", error);
+        setError("Unable to load payment form.");
+      } finally {
+        setIntentLoading(false);
       }
+    };
 
-      const res = await fetch("/api/checkout/create-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    createIntent();
+  }, [status, selectedPlan, planId, cvId, template, clientSecret]);
+
+  const elementsOptions = useMemo(() => {
+    if (!clientSecret) return null;
+
+    return {
+      clientSecret,
+      appearance: {
+        theme: "night",
+        variables: {
+          colorPrimary: "#d6b25e",
+          colorBackground: "#050505",
+          colorText: "#ffffff",
+          colorDanger: "#ff6b6b",
+          borderRadius: "14px",
+          fontFamily: "Inter, system-ui, sans-serif",
         },
-        body: JSON.stringify({
-          planId,
-          cvId,
-          template,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setError(data.error || "Unable to start checkout.");
-        return;
-      }
-
-      if (!data.url) {
-        setError("Stripe checkout URL missing.");
-        return;
-      }
-
-      window.location.href = data.url;
-    } catch (error) {
-      console.error("Checkout error:", error);
-      setError("Unable to start checkout.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      },
+    };
+  }, [clientSecret]);
 
   if (status === "loading") {
     return (
@@ -110,14 +140,12 @@ export default function CheckoutContent() {
     );
   }
 
-  const isSubscription = selectedPlan.type === "subscription";
-
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-10 text-white md:py-12">
       <section className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_420px]">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 md:p-8">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
-            Checkout
+            Secure Checkout
           </p>
 
           <h1 className="mt-4 text-3xl font-black tracking-[-0.04em] md:text-5xl">
@@ -125,8 +153,8 @@ export default function CheckoutContent() {
           </h1>
 
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
-            Review your selected package. After clicking the button, you will be
-            redirected to Stripe secure checkout to complete payment.
+            Enter your card details below. Your payment is processed securely by
+            Stripe.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -140,26 +168,41 @@ export default function CheckoutContent() {
             />
             <InfoCard
               title="Payment Type"
-              value={isSubscription ? "Recurring subscription" : "One-time payment"}
+              value={
+                isSubscription ? "Recurring subscription" : "One-time payment"
+              }
             />
             <InfoCard title="Access" value="PDF and MS Word download included" />
           </div>
 
           <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/30 p-5">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
-              Secure Payment
+              Card Details
             </p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <PaymentMethod label="Debit / Credit Card" />
-              <PaymentMethod label="Apple Pay" />
-              <PaymentMethod label="Google Pay" />
-              <PaymentMethod label="Link by Stripe" />
+            <div className="mt-5">
+              {intentLoading ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
+                  Loading secure payment form...
+                </div>
+              ) : clientSecret && elementsOptions ? (
+                <Elements stripe={stripePromise} options={elementsOptions}>
+                  <StripePaymentForm
+                    selectedPlan={selectedPlan}
+                    cvId={cvId}
+                    template={template}
+                    planId={planId}
+                  />
+                </Elements>
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
+                  Payment form not loaded.
+                </div>
+              )}
             </div>
 
             <p className="mt-4 text-xs leading-6 text-white/40">
-              Available payment methods depend on your Stripe account settings
-              and customer device/browser.
+              Your card details are handled securely by Stripe.
             </p>
           </div>
 
@@ -204,29 +247,99 @@ export default function CheckoutContent() {
           </div>
 
           <button
-            onClick={startCheckout}
-            disabled={loading || status === "loading"}
-            className="mt-7 w-full rounded-full bg-qorliqGold px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading
-              ? "Redirecting..."
-              : isSubscription
-              ? "Start Subscription"
-              : "Pay Now"}
-          </button>
-
-          <button
             type="button"
             onClick={() =>
               router.push(`/pricing?cvId=${cvId}&template=${template}`)
             }
-            className="mt-3 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:bg-white/10"
+            className="mt-7 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:bg-white/10"
           >
             Change Plan
           </button>
         </aside>
       </section>
     </main>
+  );
+}
+
+function StripePaymentForm({ selectedPlan, cvId, template, planId }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const router = useRouter();
+
+  const [message, setMessage] = useState("");
+  const [isReady, setIsReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const isSubscription = selectedPlan?.type === "subscription";
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      setMessage("Stripe is not ready yet.");
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setMessage("");
+
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          return_url: `${window.location.origin}/cv-builder/success?cvId=${cvId || ""}&template=${template || ""}&plan=${planId || ""}`,
+        },
+      });
+
+      if (error) {
+        setMessage(error.message || "Payment failed. Please try again.");
+        return;
+      }
+
+      if (
+        paymentIntent?.status === "succeeded" ||
+        paymentIntent?.status === "processing"
+      ) {
+        router.push(
+          `/cv-builder/success?cvId=${cvId || ""}&template=${template || ""}&plan=${planId || ""}`
+        );
+        return;
+      }
+
+      setMessage("Payment is not completed yet. Please try again.");
+    } catch (error) {
+      console.error("Payment confirm error:", error);
+      setMessage("Payment failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <PaymentElement onReady={() => setIsReady(true)} />
+      </div>
+
+      {message ? (
+        <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {message}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={!stripe || !elements || !isReady || isProcessing}
+        className="mt-6 w-full rounded-full bg-qorliqGold px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isProcessing
+          ? "Processing Payment..."
+          : isSubscription
+          ? "Pay & Start Subscription"
+          : "Pay Now"}
+      </button>
+    </form>
   );
 }
 
@@ -239,14 +352,6 @@ function InfoCard({ title, value }) {
       <p className="mt-2 break-words text-sm font-bold text-white/80">
         {value}
       </p>
-    </div>
-  );
-}
-
-function PaymentMethod({ label }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-white/70">
-      {label}
     </div>
   );
 }

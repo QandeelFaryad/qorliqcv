@@ -85,11 +85,15 @@ export async function POST(req) {
       );
     }
 
-    const mode =
-      selectedPlan.type === "subscription" ? "subscription" : "payment";
-
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    if (!stripePriceId.startsWith("price_")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `${selectedPlan.stripePriceEnv} must be a Stripe Price ID starting with price_. You used ${stripePriceId}`,
+        },
+        { status: 400 }
+      );
+    }
 
     const metadata = {
       userId: user._id.toString(),
@@ -101,54 +105,95 @@ export async function POST(req) {
       template: template || "",
     };
 
-    const checkoutData = {
-      mode,
-      payment_method_types: ["card"],
-      customer_email: user.email,
+    let customerId = user.stripeCustomerId;
 
-      line_items: [
-        {
-          price: stripePriceId,
-          quantity: 1,
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name || undefined,
+        metadata: {
+          userId: user._id.toString(),
         },
-      ],
+      });
 
-      success_url: `${siteUrl}/cv-builder/success?cvId=${cvId || ""}&template=${
-        template || ""
-      }&plan=${planId}&session_id={CHECKOUT_SESSION_ID}`,
+      customerId = customer.id;
 
-      cancel_url: `${siteUrl}/checkout?plan=${planId}&cvId=${
-        cvId || ""
-      }&template=${template || ""}`,
+      user.stripeCustomerId = customerId;
+      await user.save();
+    }
 
+    if (selectedPlan.type === "subscription") {
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [
+          {
+            price: stripePriceId,
+          },
+        ],
+        payment_behavior: "default_incomplete",
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+        },
+        expand: ["latest_invoice.payment_intent"],
+        metadata,
+      });
+
+      const paymentIntent = subscription.latest_invoice?.payment_intent;
+
+      if (!paymentIntent?.client_secret) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Unable to create subscription payment.",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        type: "subscription",
+        clientSecret: paymentIntent.client_secret,
+        subscriptionId: subscription.id,
+      });
+    }
+
+    const price = await stripe.prices.retrieve(stripePriceId);
+
+    if (!price.unit_amount) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Stripe price amount is missing.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: price.unit_amount,
+      currency: price.currency || "gbp",
+      customer: customerId,
+      receipt_email: user.email,
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata,
-    };
-
-    if (mode === "subscription") {
-      checkoutData.subscription_data = {
-        metadata,
-      };
-    }
-
-    if (mode === "payment") {
-      checkoutData.payment_intent_data = {
-        metadata,
-      };
-    }
-
-    const session = await stripe.checkout.sessions.create(checkoutData);
+    });
 
     return NextResponse.json({
       success: true,
-      url: session.url,
+      type: "payment",
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error("Stripe checkout session error:", error);
+    console.error("Stripe create intent error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Unable to create checkout session.",
+        error: error.message || "Unable to create payment.",
       },
       { status: 500 }
     );

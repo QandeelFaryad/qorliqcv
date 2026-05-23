@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const templateConfig = {
   "ats-professional": {
@@ -121,6 +123,9 @@ const emptyCV = {
 export default function CVPreviewPage() {
   const params = useParams();
   const cvId = params.id;
+  const router = useRouter();
+const { status } = useSession();
+const [checkingAccess, setCheckingAccess] = useState(false);
 
   const [cv, setCv] = useState(emptyCV);
   const [loading, setLoading] = useState(true);
@@ -171,6 +176,61 @@ export default function CVPreviewPage() {
 
   const config =
     templateConfig[cv.template] || templateConfig["ats-professional"];
+const handlePayAndSave = async () => {
+  try {
+    setCheckingAccess(true);
+
+    const cvId = cv?._id || cv?.id;
+
+    if (!cvId) {
+      alert("CV ID missing. Please save your CV first.");
+      return;
+    }
+
+    const template = cv?.template || selectedTemplate || "ats-professional";
+
+    if (status === "loading") {
+      return;
+    }
+
+    // 1. If user is not logged in, send to login page
+    if (status !== "authenticated") {
+      router.push(
+        `/login?callbackUrl=/pricing&cvId=${cvId}&template=${template}`
+      );
+      return;
+    }
+
+    // 2. User is logged in, now check subscription/access
+    const res = await fetch("/api/user/access", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data?.error || "Unable to verify your access.");
+      return;
+    }
+
+    // 3. If subscription/access is active, go direct to success/download page
+    if (data?.hasAccess === true) {
+      router.push(
+        `/cv-builder/success?cvId=${cvId}&template=${template}`
+      );
+      return;
+    }
+
+    // 4. Logged in but no active access, send to pricing page
+    router.push(`/pricing?cvId=${cvId}&template=${template}`);
+  } catch (error) {
+    console.error("Pay and save error:", error);
+    alert("Unable to continue. Please try again.");
+  } finally {
+    setCheckingAccess(false);
+  }
+};
 
   if (loading) {
     return (
@@ -184,7 +244,7 @@ export default function CVPreviewPage() {
 
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-10 text-white md:px-6 print:bg-white print:p-0">
-      <div className="mx-auto max-w-5xl print:max-w-none">
+      <div className="mx-auto max-w-4xl print:max-w-none">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between print:hidden">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
@@ -209,12 +269,13 @@ export default function CVPreviewPage() {
               Edit CV
             </Link>
 
-     <Link
-  href={`/cv-builder/success?cvId=${cvId}`}
-  className="inline-flex items-center justify-center rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
+<button
+  onClick={handlePayAndSave}
+  disabled={checkingAccess}
+  className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
 >
-  Pay & Download
-</Link>
+  {checkingAccess ? "Checking..." : "Pay & Save"}
+</button>
           </div>
         </div>
 

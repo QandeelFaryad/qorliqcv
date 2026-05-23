@@ -394,200 +394,320 @@ function getWordHtml(innerHtml) {
 // ---------- PAGE ----------
 export default function SuccessPage() {
   const cvRef = useRef(null);
+  const previewShellRef = useRef(null);
 
- const [cv, setCv] = useState(emptyCV);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
+  const [cv, setCv] = useState(emptyCV);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingWord, setDownloadingWord] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
+  const [previewHeight, setPreviewHeight] = useState(1123);
+
   useEffect(() => {
-  async function loadCV() {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const cvId = params.get("cvId");
+    async function loadCV() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const cvId = params.get("cvId");
 
-      if (!cvId) {
-        setError("CV ID missing. Please create your CV again.");
+        if (!cvId) {
+          setError("CV ID missing. Please create your CV again.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`/api/cv/${cvId}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Unable to load CV.");
+        }
+
+        const loadedCV = data.cv || data.data;
+
+        if (!loadedCV) {
+          throw new Error("CV data not found.");
+        }
+
+        setCv({
+          ...emptyCV,
+          ...loadedCV,
+        });
+      } catch (error) {
+        console.error("Load CV error:", error);
+        setError(error.message || "Unable to load CV.");
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const res = await fetch(`/api/cv/${cvId}`, {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Unable to load CV.");
-      }
-
-      const loadedCV = data.cv || data.data;
-
-      if (!loadedCV) {
-        throw new Error("CV data not found.");
-      }
-
-      setCv({
-        ...emptyCV,
-        ...loadedCV,
-      });
-    } catch (error) {
-      console.error("Load CV error:", error);
-      setError(error.message || "Unable to load CV.");
-    } finally {
-      setLoading(false);
     }
-  }
 
-  loadCV();
-}, []);
+    loadCV();
+  }, []);
 
   const config = templateConfig[cv.template] || templateConfig["ats-professional"];
 
-
-  const downloadPDF = async () => {
-    if (downloadingPDF) return;
-
+  const updatePreviewSize = () => {
+    const shell = previewShellRef.current;
     const element = cvRef.current;
 
-    if (!element) {
-      alert("CV preview not found. Please refresh and try again.");
-      return;
-    }
+    if (!shell || !element) return;
 
-    let restoreImages = null;
+    const shellWidth = shell.clientWidth;
+    const a4Width = 794;
+    const a4MinHeight = 1123;
 
-    try {
-      setDownloadingPDF(true);
+    const nextScale = Math.min(1, shellWidth / a4Width);
+    const realHeight = Math.max(a4MinHeight, element.scrollHeight || a4MinHeight);
 
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
+    setPreviewScale(nextScale);
+    setPreviewHeight(realHeight * nextScale);
+  };
+
+  useEffect(() => {
+    if (loading) return;
+
+    updatePreviewSize();
+
+    let resizeObserver;
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(updatePreviewSize);
+
+      if (previewShellRef.current) {
+        resizeObserver.observe(previewShellRef.current);
       }
 
-      restoreImages = await prepareImagesForPDF(element);
-      await waitForImages(element);
+      if (cvRef.current) {
+        resizeObserver.observe(cvRef.current);
+      }
+    }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    window.addEventListener("resize", updatePreviewSize);
 
-      const dataUrl = await toPng(element, {
-        cacheBust: true,
-        pixelRatio: 2.5,
-        backgroundColor: "#ffffff",
-        width: 794,
-        height: element.scrollHeight,
-        style: {
-          width: "794px",
-          maxWidth: "794px",
-          background: "#ffffff",
-          margin: "0",
-          transform: "none",
-          boxShadow: "none",
-        },
-      });
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(updatePreviewSize).catch(() => {});
+    }
 
-      const pdf = new jsPDF("p", "mm", "a4");
+    const timer = setTimeout(updatePreviewSize, 300);
 
-      const pdfWidth = 210;
-      const pdfHeight = 297;
+    return () => {
+      window.removeEventListener("resize", updatePreviewSize);
+      clearTimeout(timer);
 
-      const imgProps = pdf.getImageProperties(dataUrl);
-      const imgWidth = pdfWidth;
-      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [loading, cv, config.layout]);
+  function createExportClone(element) {
+  if (!element) return null;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+  const clone = element.cloneNode(true);
 
-      pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+  clone.id = "qorliq-cv-export-clone";
+
+  clone.style.width = "794px";
+  clone.style.minWidth = "794px";
+  clone.style.maxWidth = "794px";
+  clone.style.background = "#ffffff";
+  clone.style.margin = "0";
+  clone.style.padding = "0";
+  clone.style.position = "fixed";
+  clone.style.top = "0";
+  clone.style.left = "-10000px";
+  clone.style.right = "auto";
+  clone.style.bottom = "auto";
+  clone.style.transform = "none";
+  clone.style.transformOrigin = "top left";
+  clone.style.scale = "none";
+  clone.style.opacity = "1";
+  clone.style.visibility = "visible";
+  clone.style.pointerEvents = "none";
+  clone.style.zIndex = "-1";
+  clone.style.overflow = "visible";
+
+  document.body.appendChild(clone);
+
+  return clone;
+}
+
+function removeExportClone(clone) {
+  if (clone && clone.parentNode) {
+    clone.parentNode.removeChild(clone);
+  }
+}
+
+const downloadPDF = async () => {
+  if (downloadingPDF) return;
+
+  const previewElement = cvRef.current;
+
+  if (!previewElement) {
+    alert("CV preview not found. Please refresh and try again.");
+    return;
+  }
+
+  let exportElement = null;
+  let restoreImages = null;
+
+  try {
+    setDownloadingPDF(true);
+
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    exportElement = createExportClone(previewElement);
+
+    if (!exportElement) {
+      throw new Error("Unable to prepare CV for PDF.");
+    }
+
+    restoreImages = await prepareImagesForPDF(exportElement);
+    await waitForImages(exportElement);
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const exportWidth = 794;
+    const exportHeight = Math.max(1123, exportElement.scrollHeight);
+
+    const dataUrl = await toPng(exportElement, {
+      cacheBust: true,
+      pixelRatio: 2.5,
+      backgroundColor: "#ffffff",
+      width: exportWidth,
+      height: exportHeight,
+      canvasWidth: exportWidth * 2.5,
+      canvasHeight: exportHeight * 2.5,
+      style: {
+        width: `${exportWidth}px`,
+        minWidth: `${exportWidth}px`,
+        maxWidth: `${exportWidth}px`,
+        height: `${exportHeight}px`,
+        background: "#ffffff",
+        margin: "0",
+        padding: "0",
+        position: "static",
+        transform: "none",
+        transformOrigin: "top left",
+        boxShadow: "none",
+        overflow: "visible",
+      },
+    });
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pdfWidth = 210;
+    const pdfHeight = 297;
+
+    const imgProps = pdf.getImageProperties(dataUrl);
+    const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
       heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-
-      pdf.save(`${safeFileName(cv.fullName || "qorliq-cv")}.pdf`);
-    } catch (error) {
-      console.error("PDF download real error:", error);
-      alert(error?.message || "PDF download failed.");
-    } finally {
-      if (restoreImages) restoreImages();
-      setDownloadingPDF(false);
-    }
-  };
-
-  const downloadWord = async () => {
-    if (downloadingWord) return;
-
-    const element = cvRef.current;
-
-    if (!element) {
-      alert("CV preview not found. Please refresh and try again.");
-      return;
     }
 
-    let restoreImages = null;
+    pdf.save(`${safeFileName(cv.fullName || "qorliq-cv")}.pdf`);
+  } catch (error) {
+    console.error("PDF download real error:", error);
+    alert(error?.message || "PDF download failed.");
+  } finally {
+    if (restoreImages) restoreImages();
+    removeExportClone(exportElement);
+    setDownloadingPDF(false);
+  }
+};
 
-    try {
-      setDownloadingWord(true);
+const downloadWord = async () => {
+  if (downloadingWord) return;
 
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
+  const previewElement = cvRef.current;
 
-      restoreImages = await prepareImagesForPDF(element);
-      await waitForImages(element);
+  if (!previewElement) {
+    alert("CV preview not found. Please refresh and try again.");
+    return;
+  }
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+  let exportElement = null;
+  let restoreImages = null;
 
-      const htmlDocx = await import("html-docx-js/dist/html-docx");
-      const { saveAs } = await import("file-saver");
+  try {
+    setDownloadingWord(true);
 
-      const html = getWordHtml(element.innerHTML);
-      const blob = htmlDocx.default.asBlob(html);
-
-      saveAs(blob, `${safeFileName(cv.fullName || "qorliq-cv")}.docx`);
-    } catch (error) {
-      console.error("Word download error:", error);
-      alert(error?.message || "Word download failed.");
-    } finally {
-      if (restoreImages) restoreImages();
-      setDownloadingWord(false);
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
     }
-  };
 
-if (loading) {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
-      <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
-        Loading your CV...
-      </p>
-    </main>
-  );
-}
+    exportElement = createExportClone(previewElement);
 
-if (error) {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
-      <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
-          CV Not Found
+    if (!exportElement) {
+      throw new Error("Unable to prepare CV for Word.");
+    }
+
+    restoreImages = await prepareImagesForPDF(exportElement);
+    await waitForImages(exportElement);
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const htmlDocx = await import("html-docx-js/dist/html-docx");
+    const { saveAs } = await import("file-saver");
+
+    const html = getWordHtml(exportElement.innerHTML);
+    const blob = htmlDocx.default.asBlob(html);
+
+    saveAs(blob, `${safeFileName(cv.fullName || "qorliq-cv")}.docx`);
+  } catch (error) {
+    console.error("Word download error:", error);
+    alert(error?.message || "Word download failed.");
+  } finally {
+    if (restoreImages) restoreImages();
+    removeExportClone(exportElement);
+    setDownloadingWord(false);
+  }
+};
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
+          Loading your CV...
         </p>
+      </main>
+    );
+  }
 
-        <h1 className="mt-4 text-3xl font-black">Unable to Load CV</h1>
+  if (error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
+        <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
+            CV Not Found
+          </p>
 
-        <p className="mt-4 text-sm leading-7 text-white/55">{error}</p>
-      </div>
-    </main>
-  );
-}
+          <h1 className="mt-4 text-3xl font-black">Unable to Load CV</h1>
+
+          <p className="mt-4 text-sm leading-7 text-white/55">{error}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#050505] px-4 py-10 text-white md:px-6">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen overflow-x-hidden bg-[#050505] px-3 py-8 text-white sm:px-4 md:px-6 md:py-10">
+      <div className="mx-auto w-full max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
@@ -603,11 +723,11 @@ if (error) {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <button
               onClick={downloadPDF}
               disabled={downloadingPDF || downloadingWord}
-              className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {downloadingPDF ? "Preparing PDF..." : "Download PDF"}
             </button>
@@ -615,25 +735,43 @@ if (error) {
             <button
               onClick={downloadWord}
               disabled={downloadingPDF || downloadingWord}
-              className="rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-qorliqGold hover:text-qorliqGold disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-qorliqGold hover:text-qorliqGold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {downloadingWord ? "Preparing Word..." : "Download Word"}
             </button>
           </div>
         </div>
 
-        <div className="mx-auto flex w-full justify-center overflow-x-auto">
+        <div
+          ref={previewShellRef}
+          className="mx-auto w-full overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-2 sm:p-4"
+        >
           <div
-            ref={cvRef}
-            id="qorliq-cv-pdf"
+            className="relative mx-auto"
             style={{
-              width: "794px",
-              maxWidth: "794px",
-              background: "#ffffff",
-              margin: "0 auto",
+              height: `${previewHeight}px`,
+              maxWidth: "100%",
             }}
           >
-            <TemplateRenderer cv={cv} config={config} />
+            <div
+              ref={cvRef}
+              id="qorliq-cv-pdf"
+              style={{
+                width: "794px",
+                minWidth: "794px",
+                maxWidth: "794px",
+                background: "#ffffff",
+                margin: "0",
+                flexShrink: 0,
+                position: "absolute",
+                top: 0,
+                left: "50%",
+                transform: `translateX(-50%) scale(${previewScale})`,
+                transformOrigin: "top center",
+              }}
+            >
+              <TemplateRenderer cv={cv} config={config} />
+            </div>
           </div>
         </div>
       </div>
@@ -704,7 +842,12 @@ function ATSTemplate({ cv, config }) {
           </CVSection>
         ) : null}
 
-        <div className="grid gap-8 md:grid-cols-[0.58fr_0.42fr]">
+        <div
+          className="grid gap-8"
+          style={{
+            gridTemplateColumns: "0.58fr 0.42fr",
+          }}
+        >
           <div className="space-y-8">
             {hasValidEducation(cv) ? (
               <CVSection title="Education" accent={accent}>
@@ -897,7 +1040,12 @@ function ExecutiveTemplate({ cv, config }) {
         />
       </div>
 
-      <div className="grid gap-10 px-10 py-10 md:grid-cols-[0.36fr_0.64fr]">
+      <div
+        className="grid gap-10 px-10 py-10"
+        style={{
+          gridTemplateColumns: "0.36fr 0.64fr",
+        }}
+      >
         <aside className="space-y-8">
           {hasList(cv.skills) ? (
             <CVSection title="Core Skills" accent={accent}>
@@ -960,7 +1108,7 @@ function CreativeTemplate({ cv, config }) {
   return (
     <div className="min-h-[1120px] bg-white px-10 py-10 text-black shadow-2xl">
       <header
-        className="flex flex-col gap-6 rounded-[2rem] p-7 sm:flex-row sm:items-center"
+        className="flex flex-row items-center gap-6 rounded-[2rem] p-7"
         style={{ backgroundColor: `${accent}15` }}
       >
         {hasText(cv.photo) || hasText(cv.fullName) ? (
@@ -991,7 +1139,12 @@ function CreativeTemplate({ cv, config }) {
         </div>
       </header>
 
-      <main className="mt-10 grid gap-9 md:grid-cols-[0.62fr_0.38fr]">
+      <main
+        className="mt-10 grid gap-9"
+        style={{
+          gridTemplateColumns: "0.62fr 0.38fr",
+        }}
+      >
         <div className="space-y-8">
           {hasText(cv.summary) ? (
             <CVSection title="Creative Profile" accent={accent}>
@@ -1063,7 +1216,7 @@ function PhotoHeaderTemplate({ cv, config }) {
   return (
     <div className="min-h-[1120px] bg-white px-10 py-10 text-black shadow-2xl">
       <header
-        className="flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-center"
+        className="flex flex-row items-center gap-6 border-b pb-8"
         style={{ borderColor: `${accent}40` }}
       >
         {hasText(cv.photo) || hasText(cv.fullName) ? (
@@ -1107,7 +1260,12 @@ function PhotoHeaderTemplate({ cv, config }) {
           </CVSection>
         ) : null}
 
-        <div className="grid gap-9 md:grid-cols-2">
+        <div
+          className="grid gap-9"
+          style={{
+            gridTemplateColumns: "1fr 1fr",
+          }}
+        >
           {hasValidEducation(cv) ? (
             <CVSection title="Education" accent={accent}>
               <EducationContent cv={cv} />
@@ -1401,7 +1559,7 @@ function ExperienceContent({ cv }) {
         <div className="space-y-6">
           {valid.map((item, idx) => (
             <div key={idx}>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-row items-start justify-between gap-1">
                 <div>
                   {hasText(item.jobTitle) ? (
                     <h3 className="text-lg font-black text-black">
@@ -1453,7 +1611,7 @@ function EducationContent({ cv, compact = false }) {
         <div className={compact ? "space-y-4" : "space-y-5"}>
           {valid.map((item, idx) => (
             <div key={idx}>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-row items-start justify-between gap-1">
                 <div>
                   {hasText(item.degree) ? (
                     <h3 className="text-base font-black text-black">
@@ -1506,7 +1664,7 @@ function ProjectsContent({ cv }) {
         <div className="space-y-5">
           {valid.map((item, idx) => (
             <div key={idx}>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-row items-start justify-between gap-1">
                 <div>
                   {hasText(item.title) ? (
                     <h3 className="text-base font-black text-black">

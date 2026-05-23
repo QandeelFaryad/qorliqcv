@@ -1,6 +1,7 @@
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Providers from "./providers";
 
 export const metadata = {
   title: "Qorliq Digital",
@@ -12,9 +13,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <Header />
+        <Providers>
+          <Header />
         {children}
         <Footer />
+        </Providers>
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const cvTemplates = [
   {
@@ -1143,12 +1143,159 @@ function TemplateCard({ template, selected, onClick }) {
     </button>
   );
 }
+function OldCVPopup({ template, onClose }) {
+  const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+ const handleOldCVUpload = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const allowedExtensions = [".pdf", ".doc", ".docx", ".txt"];
+  const fileName = file.name.toLowerCase();
+
+  const isAllowed = allowedExtensions.some((ext) => fileName.endsWith(ext));
+
+  if (!isAllowed) {
+    alert("Please upload PDF, DOC, DOCX or TXT file only.");
+    return;
+  }
+
+  setUploading(true);
+  setUploadedFileName(file.name);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/cv/extract", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      alert(result.error || "Unable to extract CV data.");
+      return;
+    }
+
+    const oldCVData = {
+      uploaded: true,
+      fileName: file.name,
+      ...result.data,
+    };
+
+    localStorage.setItem("qorliq-old-cv-data", JSON.stringify(oldCVData));
+
+    router.push(`/cv-builder/create?template=${template.id}&oldcv=yes`);
+  } catch (error) {
+    console.error("Old CV upload error:", error);
+    alert("Unable to upload or extract this CV.");
+  } finally {
+    setUploading(false);
+  }
+};
+
+  const goEmptyCreate = () => {
+    localStorage.removeItem("qorliq-old-cv-data");
+    router.push(`/cv-builder/create?template=${template.id}`);
+  };
+
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-[2rem] border border-white/10 bg-[#111116] p-7 text-white shadow-2xl">
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
+              Selected Template
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">
+              {template.name}
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-white/50">
+              Before opening the editor, tell us if you already have an old CV.
+              We can use it to prepare your new CV faster.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm font-black text-white/70 hover:bg-white/10"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="rounded-[1.5rem] border border-qorliqGold/30 bg-qorliqGold/10 p-5">
+            <h3 className="text-xl font-black text-white">
+              Yes, I have old CV
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-white/55">
+              Upload PDF, DOC, DOCX or TXT. TXT file can auto-fill immediately.
+              PDF/DOCX extraction will need backend parser.
+            </p>
+
+            <label className="mt-5 block cursor-pointer rounded-full bg-qorliqGold px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-black transition hover:bg-white">
+              {uploading ? "Reading CV..." : "Upload Old CV"}
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                onChange={handleOldCVUpload}
+                className="hidden"
+              />
+            </label>
+
+            {uploadedFileName && (
+              <p className="mt-3 text-xs font-semibold text-white/45">
+                Uploaded: {uploadedFileName}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5">
+            <h3 className="text-xl font-black text-white">
+              No, start empty
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-white/55">
+              Open the selected CV template with an empty form and fill your
+              personal details manually.
+            </p>
+
+            <button
+              type="button"
+              onClick={goEmptyCreate}
+              className="mt-5 w-full rounded-full border border-white/10 bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-black transition hover:bg-qorliqGold"
+            >
+              Open Empty Template
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <p className="text-xs leading-6 text-white/45">
+            Recommended: for now use TXT file if you want instant auto-fill.
+            PDF/DOC/DOCX extraction will be added with backend API later.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CVBuilderPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
     cvTemplates[0].id
   );
   const [activeFilter, setActiveFilter] = useState("all");
+  const [showOldCVPopup, setShowOldCVPopup] = useState(false);
 
   const filteredTemplates = useMemo(() => {
     if (activeFilter === "all") return cvTemplates;
@@ -1184,12 +1331,13 @@ export default function CVBuilderPage() {
           </p>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href={`/cv-builder/create?template=${activeTemplate.id}`}
-              className="rounded-full bg-qorliqGold px-8 py-4 text-center text-xs font-black uppercase tracking-widest text-black shadow-xl shadow-qorliqGold/10 transition duration-300 hover:scale-[1.03] hover:bg-white"
-            >
-              Use {activeTemplate.name}
-            </Link>
+        <button
+  type="button"
+  onClick={() => setShowOldCVPopup(true)}
+  className="rounded-full bg-qorliqGold px-8 py-4 text-center text-xs font-black uppercase tracking-widest text-black shadow-xl shadow-qorliqGold/10 transition duration-300 hover:scale-[1.03] hover:bg-white"
+>
+  Use {activeTemplate.name}
+</button>
 
             <a
               href="#templates"
@@ -1275,12 +1423,13 @@ export default function CVBuilderPage() {
             </p>
           </div>
 
-          <Link
-            href={`/cv-builder/create?template=${activeTemplate.id}`}
-            className="rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black transition hover:bg-qorliqGold"
-          >
-            Continue With Selected
-          </Link>
+         <button
+  type="button"
+  onClick={() => setShowOldCVPopup(true)}
+  className="rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black transition hover:bg-qorliqGold"
+>
+  Continue With Selected
+</button>
         </div>
 
         <div className="mb-8 flex flex-wrap gap-2">
@@ -1311,6 +1460,12 @@ export default function CVBuilderPage() {
           ))}
         </div>
       </section>
+          {showOldCVPopup && (
+        <OldCVPopup
+          template={activeTemplate}
+          onClose={() => setShowOldCVPopup(false)}
+        />
+      )}
     </main>
   );
 }

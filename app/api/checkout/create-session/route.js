@@ -85,14 +85,25 @@ export async function POST(req) {
       );
     }
 
+    const mode =
+      selectedPlan.type === "subscription" ? "subscription" : "payment";
+
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+    const metadata = {
+      userId: user._id.toString(),
+      email: user.email,
+      planId,
+      planName: selectedPlan.name || "",
+      planType: selectedPlan.type || "",
+      cvId: cvId || "",
+      template: template || "",
+    };
+
     const checkoutData = {
-      mode: selectedPlan.type === "subscription" ? "subscription" : "payment",
-
+      mode,
       payment_method_types: ["card"],
-
       customer_email: user.email,
 
       line_items: [
@@ -104,34 +115,24 @@ export async function POST(req) {
 
       success_url: `${siteUrl}/cv-builder/success?cvId=${cvId || ""}&template=${
         template || ""
-      }&session_id={CHECKOUT_SESSION_ID}`,
+      }&plan=${planId}&session_id={CHECKOUT_SESSION_ID}`,
 
       cancel_url: `${siteUrl}/checkout?plan=${planId}&cvId=${
         cvId || ""
       }&template=${template || ""}`,
 
-      metadata: {
-        userId: user._id.toString(),
-        email: user.email,
-        planId,
-        planName: selectedPlan.name || "",
-        planType: selectedPlan.type || "",
-        cvId: cvId || "",
-        template: template || "",
-      },
+      metadata,
     };
 
-    if (selectedPlan.type === "subscription") {
+    if (mode === "subscription") {
       checkoutData.subscription_data = {
-        metadata: {
-          userId: user._id.toString(),
-          email: user.email,
-          planId,
-          planName: selectedPlan.name || "",
-          planType: selectedPlan.type || "",
-          cvId: cvId || "",
-          template: template || "",
-        },
+        metadata,
+      };
+    }
+
+    if (mode === "payment") {
+      checkoutData.payment_intent_data = {
+        metadata,
       };
     }
 

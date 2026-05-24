@@ -272,49 +272,74 @@ function StripePaymentForm({ selectedPlan, cvId, template, planId }) {
 
   const isSubscription = selectedPlan?.type === "subscription";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!stripe || !elements) {
-      setMessage("Stripe is not ready yet.");
+  if (!stripe || !elements) {
+    setMessage("Stripe is not ready yet.");
+    return;
+  }
+
+  try {
+    setIsProcessing(true);
+    setMessage("");
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+      confirmParams: {
+        return_url: `${window.location.origin}/cv-builder/success?cvId=${
+          cvId || ""
+        }&template=${template || ""}&plan=${planId || ""}`,
+      },
+    });
+
+    if (error) {
+      setMessage(error.message || "Payment failed. Please try again.");
       return;
     }
 
-    try {
-      setIsProcessing(true);
-      setMessage("");
+    if (
+      paymentIntent?.status === "succeeded" ||
+      paymentIntent?.status === "processing"
+    ) {
+      if (isSubscription) {
+        try {
+          const verifyRes = await fetch("/api/stripe/sync-subscription", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
 
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        redirect: "if_required",
-        confirmParams: {
-          return_url: `${window.location.origin}/cv-builder/success?cvId=${cvId || ""}&template=${template || ""}&plan=${planId || ""}`,
-        },
-      });
+          const verifyData = await verifyRes.json();
 
-      if (error) {
-        setMessage(error.message || "Payment failed. Please try again.");
-        return;
+          if (!verifyRes.ok || !verifyData.success) {
+            console.error("Subscription verify failed:", verifyData);
+          } else {
+            console.log("Subscription verified:", verifyData);
+          }
+        } catch (verifyError) {
+          console.error("Subscription verify request failed:", verifyError);
+        }
       }
 
-      if (
-        paymentIntent?.status === "succeeded" ||
-        paymentIntent?.status === "processing"
-      ) {
-        router.push(
-          `/cv-builder/success?cvId=${cvId || ""}&template=${template || ""}&plan=${planId || ""}`
-        );
-        return;
-      }
-
-      setMessage("Payment is not completed yet. Please try again.");
-    } catch (error) {
-      console.error("Payment confirm error:", error);
-      setMessage("Payment failed. Please try again.");
-    } finally {
-      setIsProcessing(false);
+      router.push(
+        `/cv-builder/success?cvId=${cvId || ""}&template=${
+          template || ""
+        }&plan=${planId || ""}`
+      );
+      return;
     }
-  };
+
+    setMessage("Payment is not completed yet. Please try again.");
+  } catch (error) {
+    console.error("Payment confirm error:", error);
+    setMessage("Payment failed. Please try again.");
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit}>

@@ -399,54 +399,96 @@ export default function SuccessPage() {
   const [cv, setCv] = useState(emptyCV);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [accessChecking, setAccessChecking] = useState(true);
+const [hasAccess, setHasAccess] = useState(false);
+const [accessError, setAccessError] = useState("");
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingWord, setDownloadingWord] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
   const [previewHeight, setPreviewHeight] = useState(1123);
 
-  useEffect(() => {
-    async function loadCV() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const cvId = params.get("cvId");
+useEffect(() => {
+  async function verifyAccessAndLoadCV() {
+    try {
+      setAccessChecking(true);
+      setLoading(true);
+      setError("");
+      setAccessError("");
 
-        if (!cvId) {
-          setError("CV ID missing. Please create your CV again.");
-          setLoading(false);
-          return;
-        }
+      const verifyRes = await fetch("/api/stripe/sync-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-        const res = await fetch(`/api/cv/${cvId}`, {
-          method: "GET",
-          cache: "no-store",
-        });
+      const verifyData = await verifyRes.json();
 
-        const data = await res.json();
+      console.log("Success page verify response:", verifyData);
 
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || "Unable to load CV.");
-        }
-
-        const loadedCV = data.cv || data.data;
-
-        if (!loadedCV) {
-          throw new Error("CV data not found.");
-        }
-
-        setCv({
-          ...emptyCV,
-          ...loadedCV,
-        });
-      } catch (error) {
-        console.error("Load CV error:", error);
-        setError(error.message || "Unable to load CV.");
-      } finally {
+      if (!verifyRes.ok || !verifyData.success) {
+        setHasAccess(false);
+        setAccessError(
+          verifyData.error || "Please complete payment to download your CV."
+        );
         setLoading(false);
+        return;
       }
-    }
 
-    loadCV();
-  }, []);
+      const active =
+        verifyData.databaseStatus === "active" ||
+        verifyData.hasActiveSubscription === true;
+
+      if (!active) {
+        setHasAccess(false);
+        setAccessError("Your subscription is inactive or expired.");
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+
+      const params = new URLSearchParams(window.location.search);
+      const cvId = params.get("cvId");
+
+      if (!cvId) {
+        setError("CV ID missing. Please create your CV again.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(`/api/cv/${cvId}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Unable to load CV.");
+      }
+
+      const loadedCV = data.cv || data.data;
+
+      if (!loadedCV) {
+        throw new Error("CV data not found.");
+      }
+
+      setCv({
+        ...emptyCV,
+        ...loadedCV,
+      });
+    } catch (error) {
+      console.error("Load CV/access error:", error);
+      setError(error.message || "Unable to load CV.");
+    } finally {
+      setAccessChecking(false);
+      setLoading(false);
+    }
+  }
+
+  verifyAccessAndLoadCV();
+}, []);
 
   const config = templateConfig[cv.template] || templateConfig["ats-professional"];
 
@@ -543,7 +585,10 @@ function removeExportClone(clone) {
 
 const downloadPDF = async () => {
   if (downloadingPDF) return;
-
+if (!hasAccess) {
+  alert("Your subscription is inactive or expired. Please renew your plan.");
+  return;
+}
   const previewElement = cvRef.current;
 
   if (!previewElement) {
@@ -679,15 +724,44 @@ const downloadWord = async () => {
   }
 };
 
-  if (loading) {
+if (loading || accessChecking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
-          Loading your CV...
+      Checking your access...
         </p>
       </main>
     );
   }
+  if (accessError || !hasAccess) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
+      <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
+          Access Required
+        </p>
+
+        <h1 className="mt-4 text-3xl font-black">Subscription Required</h1>
+
+        <p className="mt-4 text-sm leading-7 text-white/55">
+          {accessError || "Please choose a plan to download your CV."}
+        </p>
+
+        <button
+          onClick={() => {
+            const params = new URLSearchParams(window.location.search);
+            const cvId = params.get("cvId") || "";
+            const template = params.get("template") || "";
+            window.location.href = `/pricing?cvId=${cvId}&template=${template}`;
+          }}
+          className="mt-6 rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
+        >
+          Choose Plan
+        </button>
+      </div>
+    </main>
+  );
+}
 
   if (error) {
     return (

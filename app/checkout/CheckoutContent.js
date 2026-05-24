@@ -22,6 +22,7 @@ export default function CheckoutContent() {
   const { status, data: session } = useSession();
 
   const [clientSecret, setClientSecret] = useState("");
+  const [subscriptionId, setSubscriptionId] = useState("");
   const [intentLoading, setIntentLoading] = useState(false);
   const [error, setError] = useState("");
   const intentCreatedRef = useRef(false);
@@ -72,7 +73,11 @@ intentCreatedRef.current = true;
           return;
         }
 
-        setClientSecret(data.clientSecret);
+     setClientSecret(data.clientSecret);
+
+if (data.subscriptionId) {
+  setSubscriptionId(data.subscriptionId);
+}
      } catch (error) {
   intentCreatedRef.current = false;
   console.error("Create intent error:", error);
@@ -193,11 +198,12 @@ intentCreatedRef.current = true;
               ) : clientSecret && elementsOptions ? (
                 <Elements stripe={stripePromise} options={elementsOptions}>
                   <StripePaymentForm
-                    selectedPlan={selectedPlan}
-                    cvId={cvId}
-                    template={template}
-                    planId={planId}
-                  />
+  selectedPlan={selectedPlan}
+  cvId={cvId}
+  template={template}
+  planId={planId}
+  subscriptionId={subscriptionId}
+/>
                 </Elements>
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
@@ -266,7 +272,13 @@ intentCreatedRef.current = true;
   );
 }
 
-function StripePaymentForm({ selectedPlan, cvId, template, planId }) {
+function StripePaymentForm({
+  selectedPlan,
+  cvId,
+  template,
+  planId,
+  subscriptionId,
+})  {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -315,17 +327,60 @@ const handleSubmit = async (e) => {
             headers: {
               "Content-Type": "application/json",
             },
+            body: JSON.stringify({
+              subscriptionId,
+              planId,
+            }),
           });
 
           const verifyData = await verifyRes.json();
 
+          console.log("Subscription verify response:", verifyData);
+
           if (!verifyRes.ok || !verifyData.success) {
-            console.error("Subscription verify failed:", verifyData);
-          } else {
-            console.log("Subscription verified:", verifyData);
+            setMessage(
+              verifyData.error ||
+                "Payment completed, but subscription verification failed."
+            );
+            return;
           }
         } catch (verifyError) {
           console.error("Subscription verify request failed:", verifyError);
+          setMessage("Payment completed, but subscription verification failed.");
+          return;
+        }
+      }
+
+      if (!isSubscription && paymentIntent?.status === "succeeded") {
+        try {
+          const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id,
+              planId,
+            }),
+          });
+
+          const oneTimeData = await oneTimeRes.json();
+
+          console.log("One-time access response:", oneTimeData);
+
+          if (!oneTimeRes.ok || !oneTimeData.success) {
+            setMessage(
+              oneTimeData.error ||
+                "Payment completed, but one-time access could not be activated."
+            );
+            return;
+          }
+        } catch (oneTimeError) {
+          console.error("One-time access verify failed:", oneTimeError);
+          setMessage(
+            "Payment completed, but one-time access could not be activated."
+          );
+          return;
         }
       }
 

@@ -45,6 +45,11 @@ const userSchema = new mongoose.Schema(
       default: "inactive",
     },
 
+    hasActiveSubscription: {
+      type: Boolean,
+      default: false,
+    },
+
     stripeCustomerId: {
       type: String,
       default: "",
@@ -63,6 +68,11 @@ const userSchema = new mongoose.Schema(
     subscriptionEndDate: {
       type: Date,
       default: null,
+    },
+
+    lastPaymentStatus: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true }

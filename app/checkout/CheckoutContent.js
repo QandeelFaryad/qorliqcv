@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
@@ -24,6 +24,7 @@ export default function CheckoutContent() {
   const [clientSecret, setClientSecret] = useState("");
   const [intentLoading, setIntentLoading] = useState(false);
   const [error, setError] = useState("");
+  const intentCreatedRef = useRef(false);
 
   const planId = searchParams.get("plan") || "";
   const cvId = searchParams.get("cvId") || "";
@@ -42,9 +43,12 @@ export default function CheckoutContent() {
   useEffect(() => {
     const createIntent = async () => {
       try {
-        if (status !== "authenticated") return;
-        if (!selectedPlan) return;
-        if (clientSecret) return;
+      if (status !== "authenticated") return;
+if (!selectedPlan) return;
+if (clientSecret) return;
+if (intentCreatedRef.current) return;
+
+intentCreatedRef.current = true;
 
         setIntentLoading(true);
         setError("");
@@ -69,10 +73,11 @@ export default function CheckoutContent() {
         }
 
         setClientSecret(data.clientSecret);
-      } catch (error) {
-        console.error("Create intent error:", error);
-        setError("Unable to load payment form.");
-      } finally {
+     } catch (error) {
+  intentCreatedRef.current = false;
+  console.error("Create intent error:", error);
+  setError("Unable to load payment form.");
+}finally {
         setIntentLoading(false);
       }
     };

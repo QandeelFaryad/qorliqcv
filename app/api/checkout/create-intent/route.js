@@ -192,17 +192,38 @@ if (selectedPlan.type === "subscription") {
       { status: 500 }
     );
   }
+const updatedUser = await User.findByIdAndUpdate(
+  user._id,
+  {
+    $set: {
+      plan: planId,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id,
+      subscriptionStatus: subscription.status || "incomplete",
+      subscriptionStartDate: new Date(),
+      subscriptionEndDate: null,
+      updatedAt: new Date(),
+    },
+  },
+  { new: true }
+);
 
-  user.stripeSubscriptionId = subscription.id;
-  user.subscriptionStatus = subscription.status || "incomplete";
-  await user.save();
+console.log("Subscription saved in DB:", {
+  userId: updatedUser?._id?.toString(),
+  email: updatedUser?.email,
+  plan: updatedUser?.plan,
+  stripeCustomerId: updatedUser?.stripeCustomerId,
+  stripeSubscriptionId: updatedUser?.stripeSubscriptionId,
+  subscriptionStatus: updatedUser?.subscriptionStatus,
+});
 
-  return NextResponse.json({
-    success: true,
-    type: "subscription",
-    clientSecret,
-    subscriptionId: subscription.id,
-  });
+return NextResponse.json({
+  success: true,
+  type: "subscription",
+  clientSecret,
+  subscriptionId: subscription.id,
+  dbUpdated: Boolean(updatedUser),
+});
 }
     const price = await stripe.prices.retrieve(stripePriceId);
 

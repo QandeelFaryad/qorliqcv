@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
 
 const navItems = [
   { href: "/#home", label: "Home" },
@@ -13,6 +14,25 @@ const navItems = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const { data: session, status } = useSession();
+
+  const userName =
+    session?.user?.name ||
+    session?.user?.email?.split("@")[0] ||
+    "User";
+
+  const userInitial = userName?.charAt(0)?.toUpperCase();
+
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    setOpen(false);
+
+    await signOut({
+      callbackUrl: "/login",
+    });
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050505]/90 text-white backdrop-blur-2xl">
@@ -50,12 +70,7 @@ export default function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden items-center gap-3 lg:flex">
-          <Link
-            href="/#contact"
-            className="rounded-full border border-white/15 px-5 py-3 text-sm font-black text-white/85 transition hover:border-qorliqGold hover:bg-qorliqGold/10 hover:text-qorliqGold"
-          >
-            Request Quote
-          </Link>
+       
 
           <Link
             href="/cv-builder"
@@ -63,6 +78,48 @@ export default function Header() {
           >
             CV Builder
           </Link>
+
+          {/* Desktop Profile */}
+          {status === "authenticated" ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((prev) => !prev)}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-qorliqGold/40 bg-qorliqGold/15 text-sm font-black uppercase text-qorliqGold transition hover:bg-qorliqGold/25"
+                aria-label="User profile"
+              >
+                {userInitial}
+              </button>
+
+              {profileOpen ? (
+                <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-white/10 bg-[#101010] p-3 shadow-2xl shadow-black/40">
+                  <div className="mb-3 border-b border-white/10 pb-3">
+                    <p className="text-sm font-bold text-white">
+                      {userName}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-white/50">
+                      {session?.user?.email}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-left text-sm font-bold text-red-300 transition hover:bg-red-500/20"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-full border border-qorliqGold/30 px-5 py-3 text-sm font-black text-qorliqGold transition hover:bg-qorliqGold/10"
+            >
+              Login
+            </Link>
+          )}
         </div>
 
         {/* Mobile Button */}
@@ -108,13 +165,7 @@ export default function Header() {
             ))}
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Link
-                href="/#contact"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-white/15 px-5 py-4 text-center text-sm font-black text-white transition hover:border-qorliqGold hover:text-qorliqGold"
-              >
-                Request Quote
-              </Link>
+           
 
               <Link
                 href="/cv-builder"
@@ -124,6 +175,42 @@ export default function Header() {
                 Open CV Builder
               </Link>
             </div>
+
+            {/* Mobile Profile */}
+            {status === "authenticated" ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-qorliqGold/40 bg-qorliqGold/15 text-sm font-black uppercase text-qorliqGold">
+                    {userInitial}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-white">
+                      {userName}
+                    </p>
+                    <p className="truncate text-xs text-white/50">
+                      {session?.user?.email}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full rounded-full border border-red-500/20 bg-red-500/10 px-5 py-4 text-center text-sm font-black text-red-300 transition hover:bg-red-500/20"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="mt-3 rounded-full border border-qorliqGold/30 px-5 py-4 text-center text-sm font-black text-qorliqGold transition hover:bg-qorliqGold/10"
+              >
+                Login
+              </Link>
+            )}
           </nav>
         </div>
       ) : null}

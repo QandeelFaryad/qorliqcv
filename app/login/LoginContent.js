@@ -43,11 +43,11 @@ export default function LoginContent() {
     return `${url.pathname}${url.search}`;
   }, [callbackUrl, cvId, template, plan]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push(finalCallbackUrl);
-    }
-  }, [status, router, finalCallbackUrl]);
+useEffect(() => {
+  if (status === "authenticated") {
+    checkSubscriptionAndRedirect();
+  }
+}, [status, template]);
 
   const updateForm = (field, value) => {
     setForm((prev) => ({
@@ -55,41 +55,77 @@ export default function LoginContent() {
       [field]: value,
     }));
   };
+const checkSubscriptionAndRedirect = async () => {
+  try {
+    // ✅ If template is not selected, go to CV builder page
+    if (!template) {
+      router.push("/cv-builder");
+      return;
+    }
 
-  const handleGoogleLogin = async () => {
+    const res = await fetch("/api/auth/register", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (data?.success && data?.active) {
+      router.push(
+        `/cv-builder/success?cvId=${cvId || ""}&template=${
+          template || ""
+        }&plan=${data.user?.plan || plan || ""}`
+      );
+      return;
+    }
+
+    router.push(finalCallbackUrl);
+  } catch (error) {
+    console.error("Subscription redirect check error:", error);
+
+    if (!template) {
+      router.push("/cv-builder");
+      return;
+    }
+
+    router.push(finalCallbackUrl);
+  }
+};
+
+const handleGoogleLogin = async () => {
+  setError("");
+
+  await signIn("google", {
+    callbackUrl: template ? finalCallbackUrl : "/cv-builder",
+  });
+};
+
+const handleManualLogin = async (e) => {
+  e.preventDefault();
+
+  try {
+    setLoading(true);
     setError("");
 
-    await signIn("google", {
-      callbackUrl: finalCallbackUrl,
+    const res = await signIn("credentials", {
+      email: form.email,
+      password: form.password,
+      redirect: false,
     });
-  };
 
-  const handleManualLogin = async (e) => {
-    e.preventDefault();
-
-    try {
-      setLoading(true);
-      setError("");
-
-      const res = await signIn("credentials", {
-        email: form.email,
-        password: form.password,
-        redirect: false,
-      });
-
-      if (res?.error) {
-        setError("Invalid email or password.");
-        return;
-      }
-
-      router.push(finalCallbackUrl);
-    } catch (error) {
-      console.error("Login error:", error);
-      setError("Unable to login.");
-    } finally {
-      setLoading(false);
+    if (res?.error) {
+      setError("Invalid email or password.");
+      return;
     }
-  };
+
+    await checkSubscriptionAndRedirect();
+  } catch (error) {
+    console.error("Login error:", error);
+    setError("Unable to login.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleRegister = async (e) => {
     e.preventDefault();

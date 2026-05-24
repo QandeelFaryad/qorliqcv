@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { getServerSession } from "next-auth";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import { authOptions } from "@/lib/authOptions";
 
 export async function POST(req) {
   try {
@@ -62,6 +64,12 @@ export async function POST(req) {
       name,
       email,
       password: hashedPassword,
+
+      // default subscription values
+      subscriptionStatus: "inactive",
+      plan: "",
+      stripeCustomerId: "",
+      stripeSubscriptionId: "",
     });
 
     return NextResponse.json({
@@ -75,6 +83,66 @@ export async function POST(req) {
       {
         success: false,
         error: "Unable to create account.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        {
+          success: false,
+          active: false,
+          error: "Not logged in.",
+        },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    const user = await User.findOne({
+      email: session.user.email.toLowerCase().trim(),
+    }).select(
+      "name email subscriptionStatus plan stripeCustomerId stripeSubscriptionId subscription"
+    );
+
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        active: false,
+        error: "User not found.",
+      });
+    }
+
+    const active =
+      user.subscriptionStatus === "active" ||
+      user.subscription?.status === "active";
+
+    return NextResponse.json({
+      success: true,
+      active,
+      user: {
+        name: user.name,
+        email: user.email,
+        plan: user.plan || user.subscription?.plan || "",
+        subscriptionStatus:
+          user.subscriptionStatus || user.subscription?.status || "inactive",
+      },
+    });
+  } catch (error) {
+    console.error("Subscription check error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        active: false,
+        error: "Unable to check subscription.",
       },
       { status: 500 }
     );

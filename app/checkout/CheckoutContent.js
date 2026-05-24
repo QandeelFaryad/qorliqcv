@@ -316,69 +316,57 @@ const handleSubmit = async (e) => {
       return;
     }
 
-    if (
-      paymentIntent?.status === "succeeded" ||
-      paymentIntent?.status === "processing"
-    ) {
+    if (paymentIntent?.status === "succeeded") {
       if (isSubscription) {
-        try {
-          const verifyRes = await fetch("/api/stripe/sync-subscription", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              subscriptionId,
-              planId,
-            }),
-          });
+        const verifyRes = await fetch("/api/stripe/sync-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            subscriptionId,
+            planId,
+          }),
+        });
 
-          const verifyData = await verifyRes.json();
+        const verifyData = await verifyRes.json();
 
-          console.log("Subscription verify response:", verifyData);
+        console.log("Subscription verify response:", verifyData);
 
-          if (!verifyRes.ok || !verifyData.success) {
-            setMessage(
-              verifyData.error ||
-                "Payment completed, but subscription verification failed."
-            );
-            return;
-          }
-        } catch (verifyError) {
-          console.error("Subscription verify request failed:", verifyError);
-          setMessage("Payment completed, but subscription verification failed.");
+        if (!verifyRes.ok || !verifyData.success) {
+          setMessage(
+            verifyData.error ||
+              "Payment completed, but subscription verification failed."
+          );
           return;
         }
       }
 
-      if (!isSubscription && paymentIntent?.status === "succeeded") {
-        try {
-          const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              paymentIntentId: paymentIntent.id,
-              planId,
-            }),
-          });
+      if (!isSubscription) {
+        const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentIntentId: paymentIntent.id,
+            planId,
+            cvId,
+          }),
+        });
 
-          const oneTimeData = await oneTimeRes.json();
+        const oneTimeData = await oneTimeRes.json();
 
-          console.log("One-time access response:", oneTimeData);
+        console.log("One-time verify response:", oneTimeData);
 
-          if (!oneTimeRes.ok || !oneTimeData.success) {
-            setMessage(
-              oneTimeData.error ||
-                "Payment completed, but one-time access could not be activated."
-            );
-            return;
-          }
-        } catch (oneTimeError) {
-          console.error("One-time access verify failed:", oneTimeError);
+        if (
+          !oneTimeRes.ok ||
+          !oneTimeData.success ||
+          oneTimeData.hasAccess !== true
+        ) {
           setMessage(
-            "Payment completed, but one-time access could not be activated."
+            oneTimeData.error ||
+              "Payment completed, but one-time access could not be activated."
           );
           return;
         }
@@ -387,8 +375,13 @@ const handleSubmit = async (e) => {
       router.push(
         `/cv-builder/success?cvId=${cvId || ""}&template=${
           template || ""
-        }&plan=${planId || ""}`
+        }&plan=${planId || ""}&payment_intent=${paymentIntent.id}`
       );
+      return;
+    }
+
+    if (paymentIntent?.status === "processing") {
+      setMessage("Payment is processing. Please wait and refresh after a moment.");
       return;
     }
 
@@ -400,7 +393,6 @@ const handleSubmit = async (e) => {
     setIsProcessing(false);
   }
 };
-
   return (
     <form onSubmit={handleSubmit}>
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">

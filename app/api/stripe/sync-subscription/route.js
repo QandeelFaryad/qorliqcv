@@ -12,11 +12,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Stripe secret key is missing.",
+        },
+        { status: 500 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: "Please login first." },
+        {
+          success: false,
+          error: "Please login first.",
+        },
         { status: 401 }
       );
     }
@@ -32,16 +45,70 @@ export async function POST(req) {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "User not found." },
+        {
+          success: false,
+          error: "User not found.",
+        },
         { status: 404 }
       );
     }
 
+    const now = new Date();
+
+    /*
+      FIRST: Check one-time access.
+      Agar user ne one-time plan buy kiya hai, uske paas stripeSubscriptionId nahi hota.
+      Isliye subscription error dene se pehle one-time access verify karna zaroori hai.
+    */
+    const isOneTimePlan =
+      user.plan === "one-time" ||
+      user.plan === "one_time" ||
+      user.plan === "onetime" ||
+      user.planType === "one-time" ||
+      user.accessType === "one-time";
+
+    const isOneTimePaid =
+      user.paymentStatus === "paid" ||
+      user.lastPaymentStatus === "paid" ||
+      user.oneTimeAccessStatus === "active";
+
+    const oneTimeEndDate =
+      user.accessExpiresAt || user.subscriptionEndDate || null;
+
+    const isOneTimeExpired = oneTimeEndDate
+      ? new Date(oneTimeEndDate) <= now
+      : false;
+
+    if (isOneTimePlan && isOneTimePaid && !isOneTimeExpired) {
+      return NextResponse.json({
+        success: true,
+        type: "one-time",
+        stripeStatus: "paid",
+        databaseStatus: "active",
+        plan: user.plan || "one-time",
+        subscriptionStartDate: user.subscriptionStartDate || null,
+        subscriptionEndDate: oneTimeEndDate,
+        hasActiveSubscription: true,
+        hasOneTimeAccess: true,
+        accessType: "one-time",
+        paymentStatus: "paid",
+      });
+    }
+
+    /*
+      SECOND: Check normal subscription.
+    */
     const finalSubscriptionId = subscriptionId || user.stripeSubscriptionId;
 
     if (!finalSubscriptionId) {
       return NextResponse.json(
-        { success: false, error: "No subscription found for this user." },
+        {
+          success: false,
+          databaseStatus: "inactive",
+          hasActiveSubscription: false,
+          hasOneTimeAccess: false,
+          error: "No active subscription or one-time access found for this user.",
+        },
         { status: 400 }
       );
     }
@@ -53,9 +120,8 @@ export async function POST(req) {
       }
     );
 
-  const stripeActive =
-  subscription.status === "active" ||
-  subscription.status === "trialing";
+    const stripeActive =
+      subscription.status === "active" || subscription.status === "trialing";
 
     let subscriptionStartDate = null;
     let subscriptionEndDate = null;
@@ -83,7 +149,10 @@ export async function POST(req) {
     }
 
     // 3. Try latest invoice line period
-    if ((!subscriptionStartDate || !subscriptionEndDate) && subscription.latest_invoice) {
+    if (
+      (!subscriptionStartDate || !subscriptionEndDate) &&
+      subscription.latest_invoice
+    ) {
       const invoice =
         typeof subscription.latest_invoice === "string"
           ? await stripe.invoices.retrieve(subscription.latest_invoice)
@@ -100,16 +169,15 @@ export async function POST(req) {
       }
     }
 
+    const isExpired =
+      subscriptionEndDate && new Date(subscriptionEndDate) <= now;
+
+    const isActive = stripeActive && !isExpired;
+
     // 4. Final fallback
     if (!subscriptionStartDate && isActive) {
       subscriptionStartDate = new Date();
     }
-    const now = new Date();
-
-const isExpired =
-  subscriptionEndDate && new Date(subscriptionEndDate) <= now;
-
-const isActive = stripeActive && !isExpired;
 
     const finalPlan =
       subscription.metadata?.planId ||
@@ -127,18 +195,21 @@ const isActive = stripeActive && !isExpired;
       user._id,
       {
         $set: {
-     plan: isActive ? finalPlan : "free",
-subscriptionStatus: isActive
-  ? "active"
-  : isExpired
-  ? "inactive"
-  : subscription.status,
-hasActiveSubscription: isActive,
+          plan: isActive ? finalPlan : "free",
+          planType: isActive ? "subscription" : "",
+          accessType: isActive ? "subscription" : "",
+
+          subscriptionStatus: isActive
+            ? "active"
+            : isExpired
+            ? "inactive"
+            : subscription.status,
+
+          hasActiveSubscription: isActive,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscription.id,
           subscriptionStartDate,
           subscriptionEndDate,
-          hasActiveSubscription: isActive,
           updatedAt: new Date(),
         },
       },
@@ -159,12 +230,15 @@ hasActiveSubscription: isActive,
 
     return NextResponse.json({
       success: true,
+      type: "subscription",
       stripeStatus: subscription.status,
       databaseStatus: updatedUser.subscriptionStatus,
       plan: updatedUser.plan,
       subscriptionStartDate: updatedUser.subscriptionStartDate,
       subscriptionEndDate: updatedUser.subscriptionEndDate,
       hasActiveSubscription: updatedUser.hasActiveSubscription,
+      hasOneTimeAccess: false,
+      accessType: updatedUser.accessType || "subscription",
     });
   } catch (error) {
     console.error("Verify subscription error:", error);
@@ -172,7 +246,7 @@ hasActiveSubscription: isActive,
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
+        error: error.message || "Unable to verify access.",
       },
       { status: 500 }
     );

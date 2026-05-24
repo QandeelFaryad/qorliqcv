@@ -237,23 +237,63 @@ return NextResponse.json({
       );
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: price.unit_amount,
-      currency: price.currency || "gbp",
-      customer: customerId,
-      receipt_email: user.email,
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata,
-    });
+const paymentIntent = await stripe.paymentIntents.create({
+  amount: price.unit_amount,
+  currency: price.currency || "gbp",
+  customer: customerId,
+  receipt_email: user.email,
+  automatic_payment_methods: {
+    enabled: true,
+  },
+  metadata,
+});
 
-    return NextResponse.json({
-      success: true,
-      type: "payment",
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-    });
+/*
+  One-time plan ke liye DB ko pending state me update kar rahe hain.
+  Final paid status payment success ke baad update hona chahiye.
+*/
+const updatedUser = await User.findByIdAndUpdate(
+  user._id,
+  {
+    $set: {
+      plan: planId,
+      planType: "one-time",
+      stripeCustomerId: customerId,
+      stripePaymentIntentId: paymentIntent.id,
+
+      // one-time access fields
+      paymentStatus: "pending",
+      accessType: "one-time",
+      oneTimeAccessStatus: "pending",
+
+      // old subscription fields clear
+      subscriptionStatus: "inactive",
+      stripeSubscriptionId: "",
+      subscriptionEndDate: null,
+
+      updatedAt: new Date(),
+    },
+  },
+  { new: true }
+);
+
+console.log("One-time payment intent saved in DB:", {
+  userId: updatedUser?._id?.toString(),
+  email: updatedUser?.email,
+  plan: updatedUser?.plan,
+  planType: updatedUser?.planType,
+  paymentStatus: updatedUser?.paymentStatus,
+  stripePaymentIntentId: updatedUser?.stripePaymentIntentId,
+});
+
+return NextResponse.json({
+  success: true,
+  type: "payment",
+  clientSecret: paymentIntent.client_secret,
+  paymentIntentId: paymentIntent.id,
+  dbUpdated: Boolean(updatedUser),
+});
+
   } catch (error) {
     console.error("Stripe create intent error:", error);
 

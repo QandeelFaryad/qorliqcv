@@ -12,11 +12,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json(
+        {
+          success: false,
+          hasAccess: false,
+          error: "Stripe secret key is missing.",
+        },
+        { status: 500 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: "Please login first." },
+        {
+          success: false,
+          hasAccess: false,
+          error: "Please login first.",
+        },
         { status: 401 }
       );
     }
@@ -26,73 +41,134 @@ export async function POST(req) {
     const body = await req.json().catch(() => ({}));
     const { paymentIntentId, planId } = body;
 
-    if (!paymentIntentId) {
-      return NextResponse.json(
-        { success: false, error: "Payment Intent ID is missing." },
-        { status: 400 }
-      );
-    }
-
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (paymentIntent.status !== "succeeded") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Payment is not completed yet.",
-          stripeStatus: paymentIntent.status,
-        },
-        { status: 400 }
-      );
-    }
-
     const user = await User.findOne({
       email: session.user.email.toLowerCase().trim(),
     });
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "User not found." },
+        {
+          success: false,
+          hasAccess: false,
+          error: "User not found.",
+        },
         { status: 404 }
       );
     }
 
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 3);
+    if (paymentIntentId) {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    const updatedUser = await User.findByIdAndUpdate(
-      user._id,
-      {
-        $set: {
-          plan: planId || "one-time",
-          subscriptionStatus: "active",
-          hasActiveSubscription: true,
-          subscriptionStartDate: startDate,
-          subscriptionEndDate: endDate,
-          lastPaymentStatus: "paid",
-          updatedAt: new Date(),
+      if (paymentIntent.status !== "succeeded") {
+        return NextResponse.json(
+          {
+            success: false,
+            hasAccess: false,
+            error: "Payment is not completed yet.",
+            stripeStatus: paymentIntent.status,
+          },
+          { status: 400 }
+        );
+      }
+
+      const startDate = new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 3);
+
+      const updatedUser = await User.findByIdAndUpdate(
+        user._id,
+        {
+          $set: {
+            plan: planId || paymentIntent.metadata?.planId || "one-time",
+            planType: "one-time",
+            accessType: "one-time",
+
+            paymentStatus: "paid",
+            lastPaymentStatus: "paid",
+            oneTimeAccessStatus: "active",
+
+            subscriptionStatus: "active",
+            hasActiveSubscription: true,
+
+            subscriptionStartDate: startDate,
+            subscriptionEndDate: endDate,
+            accessExpiresAt: endDate,
+
+            stripePaymentIntentId: paymentIntent.id,
+
+            downloadLimit: 5,
+            downloadCount: 0,
+            editLimit: 1,
+            editCount: 0,
+
+            updatedAt: new Date(),
+          },
         },
-      },
-      { new: true }
-    );
+        { new: true }
+      );
 
-    return NextResponse.json({
-      success: true,
-      paymentStatus: paymentIntent.status,
-      plan: updatedUser.plan,
-      subscriptionStatus: updatedUser.subscriptionStatus,
-      subscriptionStartDate: updatedUser.subscriptionStartDate,
-      subscriptionEndDate: updatedUser.subscriptionEndDate,
-      hasActiveSubscription: updatedUser.hasActiveSubscription,
-    });
+      return NextResponse.json({
+        success: true,
+        hasAccess: true,
+        accessType: "one-time",
+        paymentStatus: "paid",
+        plan: updatedUser.plan,
+        subscriptionStatus: updatedUser.subscriptionStatus,
+        subscriptionStartDate: updatedUser.subscriptionStartDate,
+        subscriptionEndDate: updatedUser.subscriptionEndDate,
+        accessExpiresAt: updatedUser.accessExpiresAt,
+        hasActiveSubscription: updatedUser.hasActiveSubscription,
+      });
+    }
+
+    const now = new Date();
+
+    const endDate =
+      user.accessExpiresAt || user.subscriptionEndDate || null;
+
+    const hasOneTimePlan =
+      user.accessType === "one-time" ||
+      user.planType === "one-time" ||
+      user.plan === "one-time";
+
+    const isPaid =
+      user.paymentStatus === "paid" ||
+      user.lastPaymentStatus === "paid" ||
+      user.oneTimeAccessStatus === "active";
+
+    const notExpired = endDate && new Date(endDate) > now;
+
+    if (hasOneTimePlan && isPaid && notExpired) {
+      return NextResponse.json({
+        success: true,
+        hasAccess: true,
+        accessType: "one-time",
+        paymentStatus: "paid",
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate,
+        accessExpiresAt: user.accessExpiresAt,
+        hasActiveSubscription: true,
+      });
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        hasAccess: false,
+        error: "One-time access is inactive or expired.",
+      },
+      { status: 403 }
+    );
   } catch (error) {
     console.error("Verify one-time payment error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
+        hasAccess: false,
+        error: error.message || "Unable to verify one-time payment.",
       },
       { status: 500 }
     );

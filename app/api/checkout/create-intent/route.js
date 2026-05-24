@@ -6,6 +6,9 @@ import { authOptions } from "@/lib/authOptions";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
@@ -98,6 +101,7 @@ export async function POST(req) {
     const metadata = {
       userId: user._id.toString(),
       email: user.email,
+      plan: planId,
       planId,
       planName: selectedPlan.name || "",
       planType: selectedPlan.type || "",
@@ -107,57 +111,99 @@ export async function POST(req) {
 
     let customerId = user.stripeCustomerId;
 
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch (error) {
+        if (error.code === "resource_missing") {
+          customerId = "";
+          user.stripeCustomerId = "";
+          await user.save();
+        } else {
+          throw error;
+        }
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
         name: user.name || undefined,
         metadata: {
           userId: user._id.toString(),
+          email: user.email,
         },
       });
 
       customerId = customer.id;
-
       user.stripeCustomerId = customerId;
       await user.save();
     }
+if (selectedPlan.type === "subscription") {
+  const subscription = await stripe.subscriptions.create({
+    customer: customerId,
+    items: [
+      {
+        price: stripePriceId,
+        quantity: 1,
+      },
+    ],
+    payment_behavior: "default_incomplete",
+    payment_settings: {
+      save_default_payment_method: "on_subscription",
+    },
+    expand: [
+      "latest_invoice.confirmation_secret",
+      "latest_invoice.payment_intent",
+    ],
+    metadata,
+  });
 
-    if (selectedPlan.type === "subscription") {
-      const subscription = await stripe.subscriptions.create({
-        customer: customerId,
-        items: [
-          {
-            price: stripePriceId,
-          },
-        ],
-        payment_behavior: "default_incomplete",
-        payment_settings: {
-          save_default_payment_method: "on_subscription",
+  const invoice = subscription.latest_invoice;
+
+  const confirmationSecret =
+    invoice?.confirmation_secret?.client_secret || null;
+
+  const paymentIntentSecret =
+    invoice?.payment_intent?.client_secret || null;
+
+  const clientSecret = confirmationSecret || paymentIntentSecret;
+
+  if (!clientSecret) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Unable to create subscription payment.",
+        debug: {
+          planId,
+          selectedPlanType: selectedPlan.type,
+          stripePriceEnv: selectedPlan.stripePriceEnv,
+          stripePriceId,
+          subscriptionId: subscription.id,
+          subscriptionStatus: subscription.status,
+          latestInvoiceId:
+            typeof invoice === "object" ? invoice.id : invoice,
+          invoiceStatus:
+            typeof invoice === "object" ? invoice.status : null,
+          hasConfirmationSecret: Boolean(invoice?.confirmation_secret),
+          hasPaymentIntent: Boolean(invoice?.payment_intent),
         },
-        expand: ["latest_invoice.payment_intent"],
-        metadata,
-      });
+      },
+      { status: 500 }
+    );
+  }
 
-      const paymentIntent = subscription.latest_invoice?.payment_intent;
+  user.stripeSubscriptionId = subscription.id;
+  user.subscriptionStatus = subscription.status || "incomplete";
+  await user.save();
 
-      if (!paymentIntent?.client_secret) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Unable to create subscription payment.",
-          },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        type: "subscription",
-        clientSecret: paymentIntent.client_secret,
-        subscriptionId: subscription.id,
-      });
-    }
-
+  return NextResponse.json({
+    success: true,
+    type: "subscription",
+    clientSecret,
+    subscriptionId: subscription.id,
+  });
+}
     const price = await stripe.prices.retrieve(stripePriceId);
 
     if (!price.unit_amount) {

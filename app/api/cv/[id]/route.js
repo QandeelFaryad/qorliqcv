@@ -3,6 +3,87 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import CV from "@/models/CV";
 
+
+function cleanText(value = "") {
+  return String(value || "")
+    .replace(/\r/g, "")
+    .replace(/\t/g, " ")
+    .replace(/[ ]{2,}/g, " ")
+    .replace(/\n[ ]+/g, "\n")
+    .replace(/[ ]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanArray(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value.map((item) => cleanText(item)).filter(Boolean);
+}
+
+function cleanNumber(value, fallback = 0, min = null, max = null) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) return fallback;
+
+  if (min !== null && number < min) return min;
+  if (max !== null && number > max) return max;
+
+  return number;
+}
+
+function cleanBoolean(value) {
+  return value === true || value === "true";
+}
+
+function cleanObjectTextFields(obj = {}) {
+  if (!obj || typeof obj !== "object") return {};
+
+  const cleaned = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string") {
+      cleaned[key] = cleanText(value);
+    } else if (typeof value === "boolean") {
+      cleaned[key] = cleanBoolean(value);
+    } else if (typeof value === "number") {
+      cleaned[key] = value;
+    } else if (Array.isArray(value)) {
+      cleaned[key] = value
+        .map((item) => {
+          if (typeof item === "string") return cleanText(item);
+          if (item && typeof item === "object") return cleanObjectTextFields(item);
+          return item;
+        })
+        .filter(Boolean);
+    } else if (value && typeof value === "object") {
+      cleaned[key] = cleanObjectTextFields(value);
+    } else {
+      cleaned[key] = value;
+    }
+  }
+
+  return cleaned;
+}
+
+function cleanObjectArray(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => cleanObjectTextFields(item))
+    .filter((item) => {
+      if (!item || typeof item !== "object") return false;
+
+      return Object.values(item).some((value) => {
+        if (typeof value === "string") return value.trim();
+        if (typeof value === "boolean") return value === true;
+        if (typeof value === "number") return Number.isFinite(value);
+        if (Array.isArray(value)) return value.length > 0;
+        return Boolean(value);
+      });
+    });
+}
+
 // GET single CV by ID
 export async function GET(req, { params }) {
   try {
@@ -75,43 +156,53 @@ export async function PUT(req, { params }) {
     const body = await req.json();
 
     const updateData = {
-      template: body.template || "ats-professional",
+       template: cleanText(body.template || "clean-ats"),
+    selectedColor: cleanText(body.selectedColor || ""),
 
-      fullName: body.fullName || "",
-      jobTitle: body.jobTitle || "",
-      email: body.email || "",
-      phone: body.phone || "",
-      location: body.location || "",
+    fullName: cleanText(body.fullName || ""),
+    jobTitle: cleanText(body.jobTitle || ""),
+    email: cleanText(body.email || ""),
+    phone: cleanText(body.phone || ""),
+    location: cleanText(body.location || ""),
 
-      linkedIn: body.linkedIn || "",
-      github: body.github || "",
-      portfolio: body.portfolio || "",
-      website: body.website || "",
+    linkedIn: cleanText(body.linkedIn || ""),
+    github: cleanText(body.github || ""),
+    portfolio: cleanText(body.portfolio || ""),
+    website: cleanText(body.website || ""),
 
-      photo: body.photo || "",
+    photo: body.photo || "",
+    photoZoom: cleanNumber(body.photoZoom, 1, 1, 3),
+    photoPositionX: cleanNumber(body.photoPositionX, 50, 0, 100),
+    photoPositionY: cleanNumber(body.photoPositionY, 50, 0, 100),
 
-      summary: body.summary || "",
+    summary: cleanText(body.summary || ""),
 
-      // Old/simple text fields for preview/pdf compatibility
-      experience: body.experience || "",
-      projects: body.projects || "",
-      education: body.education || "",
+    experience: cleanText(body.experience || ""),
+    projects: cleanText(body.projects || ""),
+    education: cleanText(body.education || ""),
 
-      // Simple array fields
-      skills: Array.isArray(body.skills) ? body.skills : [],
-      languages: Array.isArray(body.languages) ? body.languages : [],
-      certifications: Array.isArray(body.certifications)
-        ? body.certifications
-        : [],
-      strengths: Array.isArray(body.strengths) ? body.strengths : [],
+    skills: cleanArray(body.skills),
+    skillLevels: cleanArray(body.skillLevels),
 
-      // New structured fields from create page
-      experiences: Array.isArray(body.experiences) ? body.experiences : [],
-      educations: Array.isArray(body.educations) ? body.educations : [],
-      projectsList: Array.isArray(body.projectsList) ? body.projectsList : [],
-      certificationsList: Array.isArray(body.certificationsList)
-        ? body.certificationsList
-        : [],
+    languages: cleanArray(body.languages),
+    languageLevels: cleanArray(body.languageLevels),
+
+    certifications: cleanArray(body.certifications),
+    strengths: cleanArray(body.strengths),
+    achievements: cleanArray(body.achievements),
+    hobbies: cleanArray(body.hobbies),
+
+    references: cleanText(body.references || ""),
+
+    experiences: cleanObjectArray(body.experiences),
+    educations: cleanObjectArray(body.educations),
+    projectsList: cleanObjectArray(body.projectsList),
+    certificationsList: cleanObjectArray(body.certificationsList),
+    additionalSections: cleanObjectArray(body.additionalSections),
+
+    atsScore: cleanNumber(body.atsScore, 0, 0, 100),
+
+    status: cleanText(body.status || "draft"),
     };
 
     const updatedCV = await CV.findByIdAndUpdate(

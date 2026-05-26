@@ -3,81 +3,69 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+const colorSets = {
+  blue: ["#2563EB", "#1D4ED8", "#0F172A", "#60A5FA", "#DBEAFE"],
+  gold: ["#B88A2C", "#A16207", "#111827", "#FACC15", "#FEF3C7"],
+  black: ["#111827", "#020617", "#374151", "#94A3B8", "#F1F5F9"],
+  purple: ["#7C3AED", "#5B21B6", "#312E81", "#A78BFA", "#EDE9FE"],
+  green: ["#059669", "#047857", "#064E3B", "#34D399", "#D1FAE5"],
+  teal: ["#0F766E", "#115E59", "#134E4A", "#5EEAD4", "#CCFBF1"],
+  red: ["#DC2626", "#B91C1C", "#7F1D1D", "#F87171", "#FEE2E2"],
+  cyan: ["#0891B2", "#0E7490", "#164E63", "#67E8F9", "#CFFAFE"],
+  rose: ["#DB2777", "#BE123C", "#831843", "#FDA4AF", "#FFE4E6"],
+  slate: ["#475569", "#334155", "#0F172A", "#CBD5E1", "#F8FAFC"],
+  orange: ["#EA580C", "#C2410C", "#7C2D12", "#FDBA74", "#FFEDD5"],
+};
+
 const cvTemplates = [
-  { id: "ats-professional", name: "ATS Professional" },
-  { id: "modern-corporate", name: "Modern Corporate" },
-  { id: "executive-leadership", name: "Executive Leadership" },
-  { id: "creative-portfolio", name: "Creative Portfolio" },
-  { id: "graduate-entry", name: "Graduate Entry" },
-  { id: "technical-it", name: "Technical IT" },
-  { id: "academic-research", name: "Academic Research" },
-  { id: "healthcare-clinical", name: "Healthcare Clinical" },
-  { id: "skilled-trade", name: "Skilled Trade" },
-  { id: "international-europass", name: "International Europass" },
+  { id: "eu-photo-document", name: "EU Photo Document", category: "With photo", layout: "eu-photo-document", photo: true, photoShape: "eu", photoType: "female", colors: colorSets.blue, ats: 96, tag: "EU Photo" },
+  { id: "berlin-side-photo", name: "Berlin Side Photo", category: "With photo", layout: "berlin-side-photo", photo: true, photoShape: "square", photoType: "male", colors: colorSets.black, ats: 92, tag: "Photo" },
+  { id: "corporate-circle-photo", name: "Corporate Circle Photo", category: "With photo", layout: "corporate-circle-photo", photo: true, photoShape: "circle-ring", photoType: "male-2", colors: colorSets.blue, ats: 95, tag: "Photo" },
+  { id: "creative-blob-photo", name: "Creative Blob Photo", category: "With photo", layout: "creative-blob-photo", photo: true, photoShape: "blob", photoType: "female-2", colors: colorSets.purple, ats: 88, tag: "Photo" },
+  { id: "luxury-oval-photo", name: "Luxury Oval Photo", category: "With photo", layout: "luxury-oval-photo", photo: true, photoShape: "oval", photoType: "female-3", colors: colorSets.gold, ats: 93, tag: "Photo" },
+  { id: "london-executive", name: "London Executive", category: "Professional", layout: "london-executive", photo: false, colors: colorSets.gold, ats: 96, tag: "Executive" },
+  { id: "clean-ats", name: "Clean ATS", category: "ATS", layout: "clean-ats", photo: false, colors: colorSets.blue, ats: 99, tag: "ATS" },
+  { id: "classic-pro", name: "Classic Pro", category: "Simple", layout: "classic-pro", photo: false, colors: colorSets.slate, ats: 97, tag: "Classic" },
+  { id: "tech-minimal", name: "Tech Minimal", category: "Modern", layout: "tech-minimal", photo: false, colors: colorSets.cyan, ats: 95, tag: "Tech" },
+  { id: "graduate-fresh", name: "Graduate Fresh", category: "Simple", layout: "graduate-fresh", photo: false, colors: colorSets.green, ats: 96, tag: "Graduate" },
+  { id: "formal-uk", name: "Formal UK", category: "ATS", layout: "formal-uk", photo: false, colors: colorSets.black, ats: 98, tag: "UK" },
+  { id: "senior-director", name: "Senior Director", category: "Professional", layout: "senior-director", photo: false, colors: colorSets.orange, ats: 94, tag: "Director" },
+  { id: "admin-professional", name: "Admin Professional", category: "Simple", layout: "admin-professional", photo: false, colors: colorSets.slate, ats: 97, tag: "Admin" },
+  { id: "healthcare-clinical", name: "Healthcare Clinical", category: "ATS", layout: "healthcare-clinical", photo: false, colors: colorSets.teal, ats: 95, tag: "Health" },
+  { id: "sales-leader", name: "Sales Leader", category: "Modern", layout: "sales-leader", photo: false, colors: colorSets.red, ats: 92, tag: "Sales" },
+  { id: "finance-analyst", name: "Finance Analyst", category: "Professional", layout: "finance-analyst", photo: false, colors: colorSets.cyan, ats: 96, tag: "Finance" },
+  { id: "stockholm-clean", name: "Stockholm Clean", category: "International", layout: "stockholm-clean", photo: false, colors: colorSets.blue, ats: 94, tag: "Nordic" },
+  { id: "dubai-corporate", name: "Dubai Corporate", category: "International", layout: "dubai-corporate", photo: false, colors: colorSets.teal, ats: 93, tag: "Gulf" },
+  { id: "canada-simple", name: "Canada Simple", category: "International", layout: "canada-simple", photo: false, colors: colorSets.red, ats: 98, tag: "Canada" },
+  { id: "academic-scholar", name: "Academic Scholar", category: "ATS", layout: "academic-scholar", photo: false, colors: colorSets.purple, ats: 97, tag: "Academic" },
+  { id: "legal-advisor", name: "Legal Advisor", category: "Professional", layout: "legal-advisor", photo: false, colors: colorSets.slate, ats: 95, tag: "Legal" },
+  { id: "hospitality-premium", name: "Hospitality Premium", category: "Creative", layout: "hospitality-premium", photo: false, colors: colorSets.rose, ats: 89, tag: "Hotel" },
+  { id: "engineer-grid", name: "Engineer Grid", category: "Modern", layout: "engineer-grid", photo: false, colors: colorSets.orange, ats: 94, tag: "Engineer" },
+  { id: "teacher-friendly", name: "Teacher Friendly", category: "Simple", layout: "teacher-friendly", photo: false, colors: colorSets.green, ats: 95, tag: "Teacher" },
+  { id: "project-manager", name: "Project Manager", category: "Professional", layout: "project-manager", photo: false, colors: colorSets.purple, ats: 96, tag: "PM" },
+  { id: "customer-service", name: "Customer Service", category: "Simple", layout: "customer-service", photo: false, colors: colorSets.blue, ats: 94, tag: "Service" },
+  { id: "marketing-bold", name: "Marketing Bold", category: "Creative", layout: "marketing-bold", photo: false, colors: colorSets.rose, ats: 88, tag: "Marketing" },
+  { id: "hr-professional", name: "HR Professional", category: "Professional", layout: "hr-professional", photo: false, colors: colorSets.slate, ats: 97, tag: "HR" },
+  { id: "data-analyst", name: "Data Analyst", category: "Modern", layout: "data-analyst", photo: false, colors: colorSets.cyan, ats: 96, tag: "Data" },
+  { id: "premium-monogram", name: "Premium Monogram", category: "Professional", layout: "premium-monogram", photo: false, colors: colorSets.gold, ats: 93, tag: "Luxury" },
 ];
 
-const templateConfig = {
-  "ats-professional": {
-    layout: "ats",
-    name: "ATS Professional",
-    accent: "#111827",
-    photo: false,
-  },
-  "modern-corporate": {
-    layout: "modern",
-    name: "Modern Corporate",
-    accent: "#2563EB",
-    photo: true,
-  },
-  "executive-leadership": {
-    layout: "executive",
-    name: "Executive Leadership",
-    accent: "#B88A2C",
-    photo: false,
-  },
-  "creative-portfolio": {
-    layout: "creative",
-    name: "Creative Portfolio",
-    accent: "#7C3AED",
-    photo: true,
-  },
-  "graduate-entry": {
-    layout: "student",
-    name: "Graduate Entry",
-    accent: "#059669",
-    photo: true,
-  },
-  "technical-it": {
-    layout: "technical",
-    name: "Technical IT",
-    accent: "#0891B2",
-    photo: false,
-  },
-  "academic-research": {
-    layout: "academic",
-    name: "Academic Research",
-    accent: "#4338CA",
-    photo: false,
-  },
-  "healthcare-clinical": {
-    layout: "healthcare",
-    name: "Healthcare Clinical",
-    accent: "#0F766E",
-    photo: true,
-  },
-  "skilled-trade": {
-    layout: "trade",
-    name: "Skilled Trade",
-    accent: "#EA580C",
-    photo: true,
-  },
-  "international-europass": {
-    layout: "europass",
-    name: "International Europass",
-    accent: "#1D4ED8",
-    photo: true,
-  },
-};
+
+const templateConfig = cvTemplates.reduce((acc, template) => {
+  acc[template.id] = {
+    layout: template.layout,
+    name: template.name,
+    accent: template.colors?.[0] || "#2563EB",
+    colors: template.colors || colorSets.blue,
+    photo: template.photo,
+    photoShape: template.photoShape || "circle",
+    photoType: template.photoType || "male",
+    ats: template.ats || 95,
+    tag: template.tag || "CV",
+    category: template.category || "Professional",
+  };
+  return acc;
+}, {});
 
 const emptyExperience = {
   jobTitle: "",
@@ -112,8 +100,14 @@ const emptyCertification = {
   date: "",
 };
 
+const emptyAdditionalSection = {
+  title: "",
+  description: "",
+};
+
 const emptyForm = {
-  template: "ats-professional",
+  template: "clean-ats",
+  selectedColor: "#2563EB",
 
   fullName: "",
   jobTitle: "",
@@ -124,17 +118,28 @@ const emptyForm = {
   github: "",
   portfolio: "",
   website: "",
+
   photo: "",
+  photoZoom: 1,
+  photoPositionX: 50,
+  photoPositionY: 50,
 
   summary: "",
 
   experiences: [{ ...emptyExperience }],
   educations: [{ ...emptyEducation }],
   projectsList: [],
-  skills: [],
-  languages: [],
   certificationsList: [],
+
+  skills: [],
+  skillLevels: [],
+  languages: [],
+  languageLevels: [],
   strengths: [],
+  achievements: [],
+  hobbies: [],
+  references: "",
+  additionalSections: [],
 
   experience: "",
   education: "",
@@ -144,40 +149,89 @@ const emptyForm = {
 
 const steps = [
   {
-    title: "Basic Information",
-    desc: "Name, contact details, template and profile image.",
+    title: "Personal Details",
+    desc: "Add contact details, choose template and upload photo.",
   },
   {
     title: "Professional Summary",
-    desc: "Short profile summary shown near the top of the CV.",
+    desc: "Write your summary or choose a suggested professional description.",
   },
   {
     title: "Work Experience",
-    desc: "Add job title, company, dates and responsibilities.",
+    desc: "Add jobs, companies, dates and suggested responsibilities.",
   },
   {
     title: "Education",
-    desc: "Add qualification, institution, location and dates.",
+    desc: "Add qualifications, institutions and education details.",
   },
   {
     title: "Skills & Languages",
-    desc: "Add skills, languages and key strengths.",
+    desc: "Add skills with levels and languages with proficiency.",
   },
   {
-    title: "Projects",
-    desc: "Optional project details for stronger CV presentation.",
+    title: "Projects & Achievements",
+    desc: "Add projects, career highlights and achievements.",
   },
   {
-    title: "Certifications",
-    desc: "Optional certificates, issuer and year.",
+    title: "Certifications & Extra",
+    desc: "Add certificates, hobbies, references and additional fields.",
   },
+];
+
+const summarySuggestions = [
+  "Results-driven professional with strong experience improving operations, reporting, service delivery and team performance in fast-paced business environments.",
+  "Motivated and detail-focused professional with proven ability to manage tasks, communicate effectively and deliver high-quality results.",
+  "Experienced professional with strong organisational, problem-solving and communication skills, focused on improving efficiency and supporting business goals.",
+  "Dedicated professional with a strong background in administration, coordination and service delivery, with a focus on accuracy and continuous improvement.",
+];
+
+const experienceSuggestions = [
+  "Improved reporting accuracy by 38% through better workflow controls and clear documentation.",
+  "Managed daily operations, internal communication, schedules, records and stakeholder updates.",
+  "Supported senior management with reporting, data entry, meeting preparation and process improvement.",
+  "Handled customer queries professionally while maintaining accurate records and service standards.",
+  "Coordinated team tasks, tracked deadlines and improved overall operational efficiency.",
+];
+
+const skillSuggestions = [
+  "Microsoft Excel",
+  "Customer Service",
+  "Team Coordination",
+  "Operations Management",
+  "Administration",
+  "Data Entry",
+  "Leadership",
+  "Communication",
+  "Problem Solving",
+  "Reporting",
+  "CRM Management",
+  "Project Coordination",
+];
+
+const languageSuggestions = [
+  "English",
+  "Arabic",
+  "Urdu",
+  "Hindi",
+  "French",
+  "German",
+  "Spanish",
+];
+
+const levelOptions = ["Basic", "Good", "Very Good", "Excellent", "Expert"];
+const proficiencyOptions = [
+  "Beginner",
+  "Intermediate",
+  "Professional",
+  "Fluent",
+  "Native",
 ];
 
 export default function CreateCVPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+        <main className="flex min-h-screen items-center justify-center bg-[#101116] text-white">
           <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
             Loading Builder...
           </p>
@@ -196,10 +250,13 @@ function CreateCVContent() {
 
   const [form, setForm] = useState(emptyForm);
   const [currentStep, setCurrentStep] = useState(0);
+  const [mobileMode, setMobileMode] = useState("create");
 
   const [skillInput, setSkillInput] = useState("");
   const [languageInput, setLanguageInput] = useState("");
   const [strengthInput, setStrengthInput] = useState("");
+  const [achievementInput, setAchievementInput] = useState("");
+  const [hobbyInput, setHobbyInput] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -207,13 +264,18 @@ function CreateCVContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [cvId, setCvId] = useState(null);
 
-  const config =
-    templateConfig[form.template] || templateConfig["ats-professional"];
+  const baseConfig = templateConfig[form.template] || templateConfig["clean-ats"];
+  const config = {
+    ...baseConfig,
+    accent: form.selectedColor || baseConfig.accent,
+    selectedColor: form.selectedColor || baseConfig.accent,
+  };
 
   const templateSupportsPhoto = config.photo;
 
   useEffect(() => {
-    const template = searchParams.get("template") || "ats-professional";
+    const template = searchParams.get("template") || "clean-ats";
+    const color = searchParams.get("color");
     const editId = searchParams.get("edit");
     const hasOldCV = searchParams.get("oldcv") === "yes";
 
@@ -243,7 +305,8 @@ function CreateCVContent() {
 
     setForm((prev) => ({
       ...prev,
-      template,
+      template: templateConfig[template] ? template : "clean-ats",
+      selectedColor: color || oldCVData?.selectedColor || prev.selectedColor,
 
       fullName: oldCVData?.fullName || prev.fullName,
       jobTitle: oldCVData?.jobTitle || prev.jobTitle,
@@ -288,6 +351,7 @@ function CreateCVContent() {
   const livePreviewCV = useMemo(
     () => ({
       ...form,
+      atsScore: calculateATSScore(form),
       experience: formatExperience(form.experiences),
       education: formatEducation(form.educations),
       projects: formatProjects(form.projectsList),
@@ -320,7 +384,11 @@ function CreateCVContent() {
 
       setForm({
         ...emptyForm,
-        template: cvData.template || "ats-professional",
+        template: templateConfig[cvData.template] ? cvData.template : "clean-ats",
+        selectedColor:
+          cvData.selectedColor ||
+          templateConfig[cvData.template]?.accent ||
+          "#2563EB",
         fullName: cvData.fullName || "",
         jobTitle: cvData.jobTitle || "",
         email: cvData.email || "",
@@ -330,12 +398,29 @@ function CreateCVContent() {
         github: cvData.github || "",
         portfolio: cvData.portfolio || "",
         website: cvData.website || "",
+
         photo: cvData.photo || "",
+        photoZoom: cvData.photoZoom || 1,
+        photoPositionX: cvData.photoPositionX || 50,
+        photoPositionY: cvData.photoPositionY || 50,
+
         summary: cvData.summary || "",
 
         skills: Array.isArray(cvData.skills) ? cvData.skills : [],
+        skillLevels: Array.isArray(cvData.skillLevels)
+          ? cvData.skillLevels
+          : [],
         languages: Array.isArray(cvData.languages) ? cvData.languages : [],
+        languageLevels: Array.isArray(cvData.languageLevels)
+          ? cvData.languageLevels
+          : [],
         strengths: Array.isArray(cvData.strengths) ? cvData.strengths : [],
+        achievements: Array.isArray(cvData.achievements)
+          ? cvData.achievements
+          : [],
+        hobbies: Array.isArray(cvData.hobbies) ? cvData.hobbies : [],
+        references: cvData.references || "",
+        additionalSections: Array.isArray(cvData.additionalSections) ? cvData.additionalSections : [],
 
         certifications: Array.isArray(cvData.certifications)
           ? cvData.certifications
@@ -432,6 +517,74 @@ function CreateCVContent() {
     }));
   };
 
+  const addSkill = (skillName, level = "Excellent") => {
+    const clean = skillName.trim();
+
+    if (!clean) return;
+
+    setForm((prev) => ({
+      ...prev,
+      skills: [...prev.skills, clean],
+      skillLevels: [...(prev.skillLevels || []), level],
+    }));
+
+    setSkillInput("");
+  };
+
+  const removeSkill = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      skills: prev.skills.filter((_, i) => i !== index),
+      skillLevels: (prev.skillLevels || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateSkillLevel = (index, value) => {
+    setForm((prev) => {
+      const levels = [...(prev.skillLevels || [])];
+      levels[index] = value;
+
+      return {
+        ...prev,
+        skillLevels: levels,
+      };
+    });
+  };
+
+  const addLanguage = (languageName, level = "Fluent") => {
+    const clean = languageName.trim();
+
+    if (!clean) return;
+
+    setForm((prev) => ({
+      ...prev,
+      languages: [...prev.languages, clean],
+      languageLevels: [...(prev.languageLevels || []), level],
+    }));
+
+    setLanguageInput("");
+  };
+
+  const removeLanguage = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      languages: prev.languages.filter((_, i) => i !== index),
+      languageLevels: (prev.languageLevels || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateLanguageLevel = (index, value) => {
+    setForm((prev) => {
+      const levels = [...(prev.languageLevels || [])];
+      levels[index] = value;
+
+      return {
+        ...prev,
+        languageLevels: levels,
+      };
+    });
+  };
+
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
 
@@ -455,7 +608,13 @@ function CreateCVContent() {
       const reader = new FileReader();
 
       reader.onloadend = () => {
-        updateField("photo", reader.result);
+        setForm((prev) => ({
+          ...prev,
+          photo: reader.result,
+          photoZoom: 1,
+          photoPositionX: 50,
+          photoPositionY: 50,
+        }));
         setUploadingPhoto(false);
       };
 
@@ -475,7 +634,13 @@ function CreateCVContent() {
   };
 
   const handleRemoveImage = () => {
-    updateField("photo", "");
+    setForm((prev) => ({
+      ...prev,
+      photo: "",
+      photoZoom: 1,
+      photoPositionX: 50,
+      photoPositionY: 50,
+    }));
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -539,6 +704,7 @@ function CreateCVContent() {
 
       const payload = {
         template: form.template,
+        selectedColor: form.selectedColor || config.accent,
         fullName: form.fullName,
         jobTitle: form.jobTitle,
         email: form.email,
@@ -548,12 +714,25 @@ function CreateCVContent() {
         github: form.github,
         portfolio: form.portfolio,
         website: form.website,
+
         photo: form.photo,
+        photoZoom: form.photoZoom,
+        photoPositionX: form.photoPositionX,
+        photoPositionY: form.photoPositionY,
+
         summary: form.summary,
 
         skills: form.skills,
+        skillLevels: form.skillLevels,
         languages: form.languages,
+        languageLevels: form.languageLevels,
         strengths: form.strengths,
+        achievements: form.achievements,
+        hobbies: form.hobbies,
+        references: form.references,
+        additionalSections: form.additionalSections,
+
+        atsScore: calculateATSScore(form),
 
         experience: formatExperience(form.experiences),
         education: formatEducation(form.educations),
@@ -607,9 +786,13 @@ function CreateCVContent() {
   };
 
   const clearForm = () => {
+    const resetTemplate = searchParams.get("template") || "clean-ats";
+    const safeTemplate = templateConfig[resetTemplate] ? resetTemplate : "clean-ats";
+
     setForm({
       ...emptyForm,
-      template: searchParams.get("template") || "ats-professional",
+      template: safeTemplate,
+      selectedColor: templateConfig[safeTemplate]?.accent || "#2563EB",
     });
 
     localStorage.removeItem("qorliq-old-cv-data");
@@ -617,7 +800,13 @@ function CreateCVContent() {
     setSkillInput("");
     setLanguageInput("");
     setStrengthInput("");
-    handleRemoveImage();
+    setAchievementInput("");
+    setHobbyInput("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     setIsEditMode(false);
     setCvId(null);
     setCurrentStep(0);
@@ -625,7 +814,7 @@ function CreateCVContent() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#101116] text-white">
         <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
           Loading CV Data...
         </p>
@@ -634,50 +823,44 @@ function CreateCVContent() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050505] px-4 py-8 text-white md:px-6">
+    <main className="min-h-screen overflow-hidden bg-[#101116] px-4 pb-40 pt-6 text-white md:px-6 md:py-8 lg:pb-8">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-160px] top-[-160px] h-[420px] w-[420px] rounded-full bg-qorliqGold/20 blur-[120px]" />
+        <div className="absolute left-[-160px] top-[-160px] h-[420px] w-[420px] rounded-full bg-qorliqGold/16 blur-[120px]" />
         <div className="absolute right-[-160px] top-[25%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[130px]" />
         <div className="absolute bottom-[-180px] left-[35%] h-[420px] w-[420px] rounded-full bg-white/5 blur-[120px]" />
       </div>
 
       <section className="relative mx-auto max-w-[1600px]">
-        <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
-              <span className="h-2 w-2 rounded-full bg-qorliqGold" />
-              <span className="text-xs font-black uppercase tracking-[0.22em] text-white/70">
-                Qorliq CV Builder
-              </span>
-            </div>
+        <BuilderHero isEditMode={isEditMode} atsScore={calculateATSScore(form)} />
 
-            <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[0.95] tracking-[-0.05em] md:text-6xl">
-              {isEditMode
-                ? "Edit your professional CV"
-                : "Create your professional CV"}
-            </h1>
+        <BetterCVStepper currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
-              Fill your CV step by step. The preview updates automatically on
-              the right side.
-            </p>
-          </div>
+        <MobileCreatePreviewSwitch
+          mode={mobileMode}
+          setMode={setMobileMode}
+          atsScore={livePreviewCV.atsScore}
+          templateName={config.name}
+        />
 
-          <div className="rounded-full border border-qorliqGold/30 bg-qorliqGold/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
-            {isEditMode ? "Edit Mode" : "Create Mode"}
-          </div>
-        </div>
-
- <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,600px)_minmax(0,1fr)]">
-       <form
-  onSubmit={handlePreview}
-  className="min-w-0 rounded-[1.4rem] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-xl sm:rounded-[2rem] sm:p-5 md:p-6"
->
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
+          <form
+           onSubmit={handlePreview}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+  }}
+            className={`min-w-0 rounded-[1.4rem] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-xl sm:rounded-[2rem] sm:p-5 md:p-6 ${
+              mobileMode === "create" ? "block" : "hidden lg:block"
+            }`}
+          >
             <StepHeader
               steps={steps}
               currentStep={currentStep}
               setCurrentStep={setCurrentStep}
             />
+
+            <ATSInlineCard score={livePreviewCV.atsScore} />
 
             <div className="mt-7">
               {currentStep === 0 ? (
@@ -726,24 +909,39 @@ function CreateCVContent() {
                   setStrengthInput={setStrengthInput}
                   addSimpleItem={addSimpleItem}
                   removeSimpleItem={removeSimpleItem}
+                  addSkill={addSkill}
+                  removeSkill={removeSkill}
+                  updateSkillLevel={updateSkillLevel}
+                  addLanguage={addLanguage}
+                  removeLanguage={removeLanguage}
+                  updateLanguageLevel={updateLanguageLevel}
                 />
               ) : null}
 
               {currentStep === 5 ? (
-                <ProjectsStep
+                <ProjectsAchievementsStep
                   form={form}
                   updateArrayItem={updateArrayItem}
                   addArrayItem={addArrayItem}
                   removeArrayItem={removeArrayItem}
+                  achievementInput={achievementInput}
+                  setAchievementInput={setAchievementInput}
+                  addSimpleItem={addSimpleItem}
+                  removeSimpleItem={removeSimpleItem}
                 />
               ) : null}
 
               {currentStep === 6 ? (
-                <CertificationsStep
+                <CertificationsExtraStep
                   form={form}
+                  updateField={updateField}
                   updateArrayItem={updateArrayItem}
                   addArrayItem={addArrayItem}
                   removeArrayItem={removeArrayItem}
+                  hobbyInput={hobbyInput}
+                  setHobbyInput={setHobbyInput}
+                  addSimpleItem={addSimpleItem}
+                  removeSimpleItem={removeSimpleItem}
                 />
               ) : null}
             </div>
@@ -768,59 +966,247 @@ function CreateCVContent() {
                   Clear
                 </button>
 
-                {currentStep < steps.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCurrentStep((prev) =>
-                        Math.min(prev + 1, steps.length - 1)
-                      )
-                    }
-                    className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {saving
-                      ? "Saving..."
-                      : isEditMode
-                      ? "Update CV"
-                      : "Save & Preview"}
-                  </button>
-                )}
+           {currentStep < steps.length - 1 ? (
+  <button
+    type="button"
+    onClick={() =>
+      setCurrentStep((prev) =>
+        Math.min(prev + 1, steps.length - 1)
+      )
+    }
+    disabled={saving}
+    className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    Next
+  </button>
+) : (
+  <button
+    type="button"
+    onClick={handlePreview}
+    disabled={saving}
+    className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {saving
+      ? "Saving..."
+      : isEditMode
+      ? "Update CV"
+      : "Save & Preview"}
+  </button>
+)}
               </div>
             </div>
           </form>
 
-      <aside className="min-w-0 h-fit rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-3 shadow-2xl backdrop-blur-xl sm:rounded-[2rem] sm:p-4 lg:sticky lg:top-6">
+          <aside
+            className={`min-w-0 rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-3 shadow-2xl backdrop-blur-xl sm:rounded-[2rem] sm:p-4 lg:sticky lg:top-6 lg:self-start ${
+              mobileMode === "preview" ? "block" : "hidden lg:block"
+            }`}
+          >
             <div className="mb-4 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-qorliqGold">
                   Live Preview
                 </p>
-                <p className="mt-1 text-xs text-white/45">{config.name}</p>
+                <p className="mt-1 text-xs text-white/45">
+                  {config.name} · ATS {livePreviewCV.atsScore}% · PDF-like layout
+                </p>
               </div>
 
-              <p className="rounded-full border border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
-                Auto Updating
-              </p>
+              <button
+                type="button"
+                onClick={() => setMobileMode("create")}
+                className="rounded-full border border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/55 transition hover:border-qorliqGold hover:text-qorliqGold lg:hidden"
+              >
+                Back to Create
+              </button>
             </div>
-<div className="w-full overflow-hidden rounded-2xl bg-white/5 p-2 sm:p-3 lg:max-h-[calc(100vh-145px)] lg:overflow-auto">
-  <div className="relative mx-auto h-[470px] w-full overflow-hidden sm:h-[620px] md:h-[720px] lg:h-[760px] xl:h-[880px]">
-    <div className="absolute left-1/2 top-0 origin-top -translate-x-1/2 scale-[0.40] sm:scale-[0.52] md:scale-[0.62] lg:scale-[0.66] xl:scale-[0.76]">
-      <TemplateRenderer cv={livePreviewCV} config={config} />
-    </div>
-  </div>
-</div>
-          </aside>
-        </div>
+
+            <div className="w-full overflow-visible rounded-2xl bg-white/5 p-2 sm:p-3">
+              <div className="flex justify-center">
+                <div className="origin-top [zoom:.43] sm:[zoom:.62] md:[zoom:.82] lg:[zoom:.72] xl:[zoom:.9] 2xl:[zoom:1]">
+                  <TemplateRenderer cv={livePreviewCV} config={config} />
+                </div>
+              </div>
+            </div>
+          </aside>        </div>
       </section>
+
+      <div className="fixed inset-x-0 bottom-0 z-[80] border-t border-white/10 bg-[#17181D]/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden">
+      
+
+        {currentStep < steps.length - 1 ? (
+          <button
+            type="button"
+            onClick={() => {
+              setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+              setMobileMode("create");
+            }}
+            disabled={saving}
+            className="mt-3 w-full rounded-full bg-qorliqGold px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-black transition active:scale-[0.98] disabled:opacity-60"
+          >
+            Continue
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={saving}
+            className="mt-3 w-full rounded-full bg-white px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-black transition active:scale-[0.98] disabled:opacity-60"
+          >
+            {saving ? "Saving..." : isEditMode ? "Update & Preview" : "Save & Preview"}
+          </button>
+        )}
+
+        <p className="mt-1 text-center text-[10px] font-semibold text-white/45">
+          ATS Score: {livePreviewCV.atsScore}% · {config.name}
+        </p>
+      </div>
     </main>
+  );
+}
+
+function MobileCreatePreviewSwitch({ mode, setMode, atsScore, templateName }) {
+  return (
+    <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.045] p-2 shadow-sm backdrop-blur lg:hidden">
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("create")}
+          className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
+            mode === "create" ? "bg-qorliqGold text-black" : "text-white/55"
+          }`}
+        >
+          Create
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMode("preview")}
+          className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
+            mode === "preview" ? "bg-qorliqGold text-black" : "text-white/55"
+          }`}
+        >
+          Preview
+        </button>
+      </div>
+
+      <p className="mt-2 text-center text-[10px] font-semibold text-white/45">
+        ATS {atsScore}% · {templateName}
+      </p>
+    </div>
+  );
+}
+
+function ATSInlineCard({ score }) {
+  const label = score >= 85 ? "Strong" : score >= 70 ? "Good" : "Needs more details";
+
+  return (
+    <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
+            Live ATS Score
+          </p>
+          <p className="mt-1 text-xs text-white/45">
+            Add clear job titles, dates, skills and measurable achievements to improve your score.
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-3xl font-black text-white">{score}%</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
+            {label}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-qorliqGold transition-all"
+          style={{ width: `${Math.min(score, 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BuilderHero({ isEditMode, atsScore }) {
+  return (
+    <div className="mb-8 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
+          <span className="h-2 w-2 rounded-full bg-qorliqGold" />
+          <span className="text-xs font-black uppercase tracking-[0.22em] text-white/70">
+            Qorliq CV Builder
+          </span>
+        </div>
+
+        <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[0.95] tracking-[-0.05em] md:text-6xl">
+          {isEditMode ? "Edit your professional CV" : "Create your professional CV"}
+        </h1>
+
+        <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
+          Build your CV step by step with smart suggestions, ATS score, photo
+          controls and live preview.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <StatBox value={`${atsScore}%`} label="ATS Score" />
+        <StatBox value="10k+" label="Happy Users" />
+        <StatBox value="PDF" label="Export Ready" />
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ value, label }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
+      <p className="text-xl font-black text-qorliqGold">{value}</p>
+      <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-white/40">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function BetterCVStepper({ currentStep, setCurrentStep }) {
+  const miniSteps = ["Choose template", "Enter details", "Download CV"];
+
+  return (
+    <div className="mb-7 grid rounded-2xl border border-white/10 bg-white/[0.045] p-2 shadow-sm backdrop-blur sm:grid-cols-3">
+      {miniSteps.map((label, index) => {
+        const active =
+          (currentStep <= 1 && index === 0) ||
+          (currentStep > 1 && currentStep < 6 && index === 1) ||
+          (currentStep === 6 && index === 2);
+
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => {
+              if (index === 0) setCurrentStep(0);
+              if (index === 1) setCurrentStep(1);
+              if (index === 2) setCurrentStep(6);
+            }}
+            className={`flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-bold transition ${
+              active ? "bg-qorliqGold text-black" : "text-white/45"
+            }`}
+          >
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${
+                active ? "bg-black text-white" : "bg-white/10 text-white/50"
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -849,13 +1235,13 @@ function StepHeader({ steps, currentStep, setCurrentStep }) {
         />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {steps.map((step, index) => (
           <button
             key={step.title}
             type="button"
             onClick={() => setCurrentStep(index)}
-            className={`rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
+            className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
               currentStep === index
                 ? "bg-qorliqGold text-black"
                 : "border border-white/10 text-white/45 hover:border-qorliqGold hover:text-qorliqGold"
@@ -879,143 +1265,200 @@ function BasicInfoStep({
   handlePhotoUpload,
   handleRemoveImage,
 }) {
+  const atsScore = calculateATSScore(form);
+
   return (
-    <div className="grid gap-5 md:grid-cols-2">
-      <Input
-        label="Full Name"
-        value={form.fullName}
-        onChange={(value) => updateField("fullName", value)}
-        placeholder="e.g. Qandeel Faryad"
-        required
-      />
-
-      <Input
-        label="Job Title"
-        value={form.jobTitle}
-        onChange={(value) => updateField("jobTitle", value)}
-        placeholder="e.g. Operations Manager"
-        required
-      />
-
-      <Input
-        label="Email Address"
-        value={form.email}
-        onChange={(value) => updateField("email", value)}
-        placeholder="name@email.com"
-        type="email"
-        required
-      />
-
-      <Input
-        label="Phone Number"
-        value={form.phone}
-        onChange={(value) => updateField("phone", value)}
-        placeholder="+44 7000 000000"
-      />
-
-      <Input
-        label="Location"
-        value={form.location}
-        onChange={(value) => updateField("location", value)}
-        placeholder="London, United Kingdom"
-      />
-
-      <div>
-        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
-          CV Template
-        </label>
-
-        <select
-          value={form.template}
-          onChange={(e) => updateField("template", e.target.value)}
-          className="h-14 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition focus:border-qorliqGold"
-        >
-          {cvTemplates.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name}
-            </option>
-          ))}
-        </select>
+    <div className="space-y-6">
+      <div className="grid gap-4 rounded-3xl border border-white/10 bg-black/25 p-4 sm:grid-cols-3">
+        <MiniStat value={`${atsScore}%`} label="ATS Score" />
+        <MiniStat value="10k+" label="Happy Customers" />
+        <MiniStat value="4.8★" label="User Rating" />
       </div>
 
-      <Input
-        label="LinkedIn Profile"
-        value={form.linkedIn}
-        onChange={(value) => updateField("linkedIn", value)}
-        placeholder="https://linkedin.com/in/yourname"
-      />
+      <div className="grid gap-5 md:grid-cols-2">
+        <Input
+          label="Full Name"
+          value={form.fullName}
+          onChange={(value) => updateField("fullName", value)}
+          placeholder="e.g. Qandeel Faryad"
+          required
+        />
 
-      <Input
-        label="GitHub Profile"
-        value={form.github}
-        onChange={(value) => updateField("github", value)}
-        placeholder="https://github.com/yourusername"
-      />
+        <Input
+          label="Job Title"
+          value={form.jobTitle}
+          onChange={(value) => updateField("jobTitle", value)}
+          placeholder="e.g. Operations Manager"
+          required
+        />
 
-      <Input
-        label="Portfolio"
-        value={form.portfolio}
-        onChange={(value) => updateField("portfolio", value)}
-        placeholder="https://yourportfolio.com"
-      />
+        <Input
+          label="Email Address"
+          value={form.email}
+          onChange={(value) => updateField("email", value)}
+          placeholder="name@email.com"
+          type="email"
+          required
+        />
 
-      <Input
-        label="Website"
-        value={form.website}
-        onChange={(value) => updateField("website", value)}
-        placeholder="https://yourwebsite.com"
-      />
+        <Input
+          label="Phone Number"
+          value={form.phone}
+          onChange={(value) => updateField("phone", value)}
+          placeholder="+44 7000 000000"
+        />
 
-      <div className="md:col-span-2">
-        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
-          Profile Image
-        </label>
+        <Input
+          label="Location"
+          value={form.location}
+          onChange={(value) => updateField("location", value)}
+          placeholder="London, United Kingdom"
+        />
 
-        <div className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-black/30 p-5 sm:flex-row sm:items-center">
-          <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black/50">
-            {form.photo ? (
-              <img
-                src={form.photo}
-                alt="Profile preview"
-                className="h-full w-full object-cover"
+        <div>
+          <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+            CV Template
+          </label>
+
+          <select
+            value={form.template}
+            onChange={(e) => {
+              const nextTemplate = e.target.value;
+              const selected = cvTemplates.find((item) => item.id === nextTemplate);
+              updateField("template", nextTemplate);
+              updateField("selectedColor", selected?.colors?.[0] || "#2563EB");
+            }}
+            className="h-14 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition focus:border-qorliqGold"
+          >
+            {cvTemplates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Input
+          label="LinkedIn Profile"
+          value={form.linkedIn}
+          onChange={(value) => updateField("linkedIn", value)}
+          placeholder="https://linkedin.com/in/yourname"
+        />
+
+        <Input
+          label="Portfolio / Website"
+          value={form.website}
+          onChange={(value) => updateField("website", value)}
+          placeholder="https://yourwebsite.com"
+        />
+
+        <Input
+          label="GitHub Profile"
+          value={form.github}
+          onChange={(value) => updateField("github", value)}
+          placeholder="https://github.com/yourusername"
+        />
+
+        <Input
+          label="Portfolio Link"
+          value={form.portfolio}
+          onChange={(value) => updateField("portfolio", value)}
+          placeholder="https://portfolio.com"
+        />
+
+        <div className="md:col-span-2">
+          <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+            Profile Photo
+          </label>
+
+          <div className="grid gap-5 rounded-3xl border border-white/10 bg-black/30 p-5 md:grid-cols-[160px_1fr]">
+            <div className="flex justify-center">
+              <div className="flex h-36 w-36 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black/50">
+                {form.photo ? (
+                  <img
+                    src={form.photo}
+                    alt="Profile preview"
+                    className="h-full w-full object-cover"
+                    style={{
+                      transform: `scale(${form.photoZoom || 1})`,
+                      objectPosition: `${form.photoPositionX || 50}% ${
+                        form.photoPositionY || 50
+                      }%`,
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs font-black uppercase tracking-[0.16em] text-white/30">
+                    Photo
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={uploadingPhoto || !templateSupportsPhoto}
+                onChange={handlePhotoUpload}
+                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-qorliqGold file:px-5 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-[0.12em] file:text-black hover:file:bg-white disabled:cursor-not-allowed disabled:opacity-40"
               />
-            ) : (
-              <span className="text-xs font-black uppercase tracking-[0.16em] text-white/30">
-                Optional
-              </span>
-            )}
-          </div>
 
-          <div className="flex-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              disabled={uploadingPhoto || !templateSupportsPhoto}
-              onChange={handlePhotoUpload}
-              className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-qorliqGold file:px-5 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-[0.12em] file:text-black hover:file:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-            />
+              {templateSupportsPhoto ? (
+                <p className="mt-3 text-xs leading-6 text-white/45">
+                  Upload JPG, PNG or WEBP. Use zoom and position controls to fit
+                  the image properly.
+                </p>
+              ) : (
+                <p className="mt-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-xs font-bold leading-6 text-yellow-100">
+                  This selected template does not support profile image.
+                </p>
+              )}
 
-            {templateSupportsPhoto ? (
-              <p className="mt-3 text-xs leading-6 text-white/45">
-                Upload JPG, PNG or WEBP. Recommended square image under 2MB.
-              </p>
-            ) : (
-              <p className="mt-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 text-xs font-bold leading-6 text-yellow-100">
-                This selected template does not support profile image.
-              </p>
-            )}
+              {form.photo ? (
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <RangeInput
+                    label="Zoom"
+                    min="1"
+                    max="2"
+                    step="0.05"
+                    value={form.photoZoom || 1}
+                    onChange={(value) => updateField("photoZoom", Number(value))}
+                  />
 
-            {form.photo ? (
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                disabled={uploadingPhoto}
-                className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-red-300 transition hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Remove Image
-              </button>
-            ) : null}
+                  <RangeInput
+                    label="Move X"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={form.photoPositionX || 50}
+                    onChange={(value) =>
+                      updateField("photoPositionX", Number(value))
+                    }
+                  />
+
+                  <RangeInput
+                    label="Move Y"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={form.photoPositionY || 50}
+                    onChange={(value) =>
+                      updateField("photoPositionY", Number(value))
+                    }
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    disabled={uploadingPhoto}
+                    className="text-left text-xs font-black uppercase tracking-[0.16em] text-red-300 transition hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-3"
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -1023,15 +1466,38 @@ function BasicInfoStep({
   );
 }
 
+function MiniStat({ value, label }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+      <p className="text-2xl font-black text-qorliqGold">{value}</p>
+      <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/45">
+        {label}
+      </p>
+    </div>
+  );
+}
+
 function SummaryStep({ form, updateField }) {
   return (
-    <Textarea
-      label="Professional Summary"
-      value={form.summary}
-      onChange={(value) => updateField("summary", value)}
-      placeholder="Example: Results-driven operations professional with 8+ years of experience improving workflows, reporting and business performance..."
-      rows={9}
-    />
+    <div className="space-y-5">
+      <Textarea
+        label="Professional Summary"
+        value={form.summary}
+        onChange={(value) => updateField("summary", value)}
+        placeholder="Write a short professional summary..."
+        rows={8}
+      />
+
+      <SuggestionPanel title="Suggested Summaries">
+        {summarySuggestions.map((item) => (
+          <SuggestionButton
+            key={item}
+            text={item}
+            onClick={() => updateField("summary", item)}
+          />
+        ))}
+      </SuggestionPanel>
+    </div>
   );
 }
 
@@ -1098,32 +1564,160 @@ function SkillsStep({
   setStrengthInput,
   addSimpleItem,
   removeSimpleItem,
+  addSkill,
+  removeSkill,
+  updateSkillLevel,
+  addLanguage,
+  removeLanguage,
+  updateLanguageLevel,
 }) {
   return (
     <div className="grid gap-5">
-      <DynamicListInput
-        label="Skills"
-        value={skillInput}
-        onChange={setSkillInput}
-        onAdd={() => addSimpleItem("skills", skillInput, setSkillInput)}
-        onRemove={(index) => removeSimpleItem("skills", index)}
-        items={form.skills}
-        placeholder="e.g. Microsoft Excel, React, Customer Service"
-        buttonText="Add Skill"
-      />
+      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+          Skills & Levels
+        </label>
 
-      <DynamicListInput
-        label="Languages"
-        value={languageInput}
-        onChange={setLanguageInput}
-        onAdd={() =>
-          addSimpleItem("languages", languageInput, setLanguageInput)
-        }
-        onRemove={(index) => removeSimpleItem("languages", index)}
-        items={form.languages}
-        placeholder="e.g. English - Fluent"
-        buttonText="Add Language"
-      />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            value={skillInput}
+            onChange={(e) => setSkillInput(e.target.value)}
+            placeholder="e.g. Microsoft Excel"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addSkill(skillInput);
+              }
+            }}
+            className="h-14 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+          />
+
+          <button
+            type="button"
+            onClick={() => addSkill(skillInput)}
+            className="rounded-2xl bg-qorliqGold px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+          >
+            Add Skill
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {skillSuggestions.map((skill) => (
+            <button
+              key={skill}
+              type="button"
+              onClick={() => addSkill(skill)}
+              className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white/65 hover:border-qorliqGold hover:text-qorliqGold"
+            >
+              + {skill}
+            </button>
+          ))}
+        </div>
+
+        {form.skills?.length ? (
+          <div className="mt-5 space-y-3">
+            {form.skills.map((item, index) => (
+              <div
+                key={`${item}-${index}`}
+                className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:grid-cols-[1fr_160px_auto]"
+              >
+                <p className="text-sm font-bold text-white/80">{item}</p>
+
+                <select
+                  value={form.skillLevels?.[index] || "Excellent"}
+                  onChange={(e) => updateSkillLevel(index, e.target.value)}
+                  className="h-10 rounded-xl border border-white/10 bg-black/45 px-3 text-xs font-bold text-white outline-none focus:border-qorliqGold"
+                >
+                  {levelOptions.map((level) => (
+                    <option key={level}>{level}</option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => removeSkill(index)}
+                  className="rounded-xl border border-red-300/20 px-3 py-2 text-xs font-black text-red-200 hover:bg-red-300 hover:text-black"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+          Languages & Proficiency
+        </label>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            value={languageInput}
+            onChange={(e) => setLanguageInput(e.target.value)}
+            placeholder="e.g. English"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addLanguage(languageInput);
+              }
+            }}
+            className="h-14 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+          />
+
+          <button
+            type="button"
+            onClick={() => addLanguage(languageInput)}
+            className="rounded-2xl bg-qorliqGold px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+          >
+            Add Language
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {languageSuggestions.map((language) => (
+            <button
+              key={language}
+              type="button"
+              onClick={() => addLanguage(language)}
+              className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white/65 hover:border-qorliqGold hover:text-qorliqGold"
+            >
+              + {language}
+            </button>
+          ))}
+        </div>
+
+        {form.languages?.length ? (
+          <div className="mt-5 space-y-3">
+            {form.languages.map((item, index) => (
+              <div
+                key={`${item}-${index}`}
+                className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:grid-cols-[1fr_160px_auto]"
+              >
+                <p className="text-sm font-bold text-white/80">{item}</p>
+
+                <select
+                  value={form.languageLevels?.[index] || "Fluent"}
+                  onChange={(e) => updateLanguageLevel(index, e.target.value)}
+                  className="h-10 rounded-xl border border-white/10 bg-black/45 px-3 text-xs font-bold text-white outline-none focus:border-qorliqGold"
+                >
+                  {proficiencyOptions.map((level) => (
+                    <option key={level}>{level}</option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => removeLanguage(index)}
+                  className="rounded-xl border border-red-300/20 px-3 py-2 text-xs font-black text-red-200 hover:bg-red-300 hover:text-black"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       <DynamicListInput
         label="Key Strengths"
@@ -1141,7 +1735,16 @@ function SkillsStep({
   );
 }
 
-function ProjectsStep({ form, updateArrayItem, addArrayItem, removeArrayItem }) {
+function ProjectsAchievementsStep({
+  form,
+  updateArrayItem,
+  addArrayItem,
+  removeArrayItem,
+  achievementInput,
+  setAchievementInput,
+  addSimpleItem,
+  removeSimpleItem,
+}) {
   return (
     <div className="space-y-5">
       {form.projectsList.map((item, index) => (
@@ -1160,15 +1763,33 @@ function ProjectsStep({ form, updateArrayItem, addArrayItem, removeArrayItem }) 
         text="Add Project"
         onClick={() => addArrayItem("projectsList", emptyProject)}
       />
+
+      <DynamicListInput
+        label="Career Achievements"
+        value={achievementInput}
+        onChange={setAchievementInput}
+        onAdd={() =>
+          addSimpleItem("achievements", achievementInput, setAchievementInput)
+        }
+        onRemove={(index) => removeSimpleItem("achievements", index)}
+        items={form.achievements}
+        placeholder="e.g. Improved reporting accuracy by 38%"
+        buttonText="Add Achievement"
+      />
     </div>
   );
 }
 
-function CertificationsStep({
+function CertificationsExtraStep({
   form,
+  updateField,
   updateArrayItem,
   addArrayItem,
   removeArrayItem,
+  hobbyInput,
+  setHobbyInput,
+  addSimpleItem,
+  removeSimpleItem,
 }) {
   return (
     <div className="space-y-5">
@@ -1186,10 +1807,84 @@ function CertificationsStep({
 
       <AddButton
         text="Add Certification"
-        onClick={() =>
-          addArrayItem("certificationsList", emptyCertification)
-        }
+        onClick={() => addArrayItem("certificationsList", emptyCertification)}
       />
+
+      <DynamicListInput
+        label="Hobbies / Interests"
+        value={hobbyInput}
+        onChange={setHobbyInput}
+        onAdd={() => addSimpleItem("hobbies", hobbyInput, setHobbyInput)}
+        onRemove={(index) => removeSimpleItem("hobbies", index)}
+        items={form.hobbies}
+        placeholder="e.g. Reading, volunteering, travelling"
+        buttonText="Add Hobby"
+      />
+
+      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-lg font-black">Additional Sections</p>
+            <p className="mt-1 text-xs text-white/45">
+              Add awards, publications, volunteering, memberships or any custom CV section.
+            </p>
+          </div>
+
+          <AddButton
+            text="Add Section"
+            onClick={() => addArrayItem("additionalSections", emptyAdditionalSection)}
+          />
+        </div>
+
+        <div className="mt-5 space-y-4">
+          {form.additionalSections.map((item, index) => (
+            <AdditionalSectionCard
+              key={index}
+              index={index}
+              item={item}
+              onChange={(field, value) =>
+                updateArrayItem("additionalSections", index, field, value)
+              }
+              onRemove={() => removeArrayItem("additionalSections", index)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <Textarea
+        label="References"
+        value={form.references}
+        onChange={(value) => updateField("references", value)}
+        placeholder="Available upon request, or add referee details..."
+        rows={4}
+      />
+    </div>
+  );
+}
+
+function AdditionalSectionCard({ index, item, onChange, onRemove }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+      <CardTop title={`Additional Section ${index + 1}`} onRemove={onRemove} />
+
+      <div className="mt-4 grid gap-4">
+        <Input
+          label="Section Title"
+          value={item.title}
+          onChange={(value) => onChange("title", value)}
+          placeholder="e.g. Awards, Publications, Volunteering"
+        />
+
+        <Textarea
+          label="Section Details"
+          value={item.description}
+          onChange={(value) => onChange("description", value)}
+          placeholder={`Example:
+• Volunteer Coordinator — Local Community Centre
+• Supported event planning, communication and documentation`}
+          rows={4}
+        />
+      </div>
     </div>
   );
 }
@@ -1260,8 +1955,23 @@ function ExperienceCard({ index, item, onChange, onRemove }) {
 • Improved reporting accuracy by 38%
 • Managed supplier communication and internal workflows
 • Reduced operational delays through process improvement`}
-            rows={5}
+            rows={6}
           />
+
+          <SuggestionPanel title="Suggested Descriptions">
+            {experienceSuggestions.map((suggestion) => (
+              <SuggestionButton
+                key={suggestion}
+                text={suggestion}
+                onClick={() => {
+                  const next = item.description
+                    ? `${item.description}\n• ${suggestion}`
+                    : `• ${suggestion}`;
+                  onChange("description", next);
+                }}
+              />
+            ))}
+          </SuggestionPanel>
         </div>
       </div>
     </div>
@@ -1468,6 +2178,29 @@ function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
   );
 }
 
+function RangeInput({ label, value, onChange, min, max, step }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <label className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
+          {label}
+        </label>
+        <span className="text-[10px] font-bold text-white/40">{value}</span>
+      </div>
+
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full accent-[#C8A24A]"
+      />
+    </div>
+  );
+}
+
 function DynamicListInput({
   label,
   value,
@@ -1542,38 +2275,521 @@ function AddButton({ text, onClick }) {
   );
 }
 
+function SuggestionPanel({ title, children }) {
+  return (
+    <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
+        {title}
+      </p>
+
+      <div className="mt-4 grid gap-3">{children}</div>
+    </div>
+  );
+}
+
+function SuggestionButton({ text, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left text-sm leading-7 text-white/65 transition hover:border-qorliqGold hover:text-white"
+    >
+      {text}
+    </button>
+  );
+}
+
 function TemplateRenderer({ cv, config }) {
-  if (config.layout === "modern" || config.layout === "healthcare") {
-    return <ModernTemplate cv={cv} config={config} />;
-  }
+  return <ExactTemplateRenderer cv={cv} config={config} />;
+}
 
-  if (config.layout === "executive") {
-    return <ExecutiveTemplate cv={cv} config={config} />;
-  }
+function ExactTemplateRenderer({ cv, config }) {
+  const layout = config.layout || "clean-ats";
 
-  if (config.layout === "creative") {
-    return <CreativeTemplate cv={cv} config={config} />;
-  }
+  if (layout === "berlin-side-photo") return <BerlinSidePhotoCV cv={cv} config={config} />;
+  if (layout === "eu-photo-document") return <EUPhotoDocumentCV cv={cv} config={config} />;
+  if (layout === "corporate-circle-photo") return <CorporateCirclePhotoCV cv={cv} config={config} />;
+  if (layout === "creative-blob-photo") return <CreativeBlobPhotoCV cv={cv} config={config} />;
+  if (layout === "luxury-oval-photo") return <LuxuryOvalPhotoCV cv={cv} config={config} />;
+  if (layout === "london-executive") return <LondonExecutiveCV cv={cv} config={config} />;
+  if (layout === "classic-pro") return <ClassicProExactCV cv={cv} config={config} />;
+  if (layout === "tech-minimal") return <TechMinimalCV cv={cv} config={config} />;
+  if (layout === "graduate-fresh") return <GraduateFreshCV cv={cv} config={config} />;
+  if (layout === "formal-uk") return <FormalUKCV cv={cv} config={config} />;
+  if (layout === "senior-director") return <SeniorDirectorCV cv={cv} config={config} />;
+  if (layout === "admin-professional") return <AdminProfessionalCV cv={cv} config={config} />;
+  if (layout === "healthcare-clinical") return <HealthcareClinicalCV cv={cv} config={config} />;
+  if (layout === "sales-leader") return <SalesLeaderCV cv={cv} config={config} />;
+  if (layout === "finance-analyst") return <FinanceAnalystCV cv={cv} config={config} />;
+  if (layout === "stockholm-clean") return <StockholmCleanCV cv={cv} config={config} />;
+  if (layout === "dubai-corporate") return <DubaiCorporateCV cv={cv} config={config} />;
+  if (layout === "canada-simple") return <CanadaSimpleCV cv={cv} config={config} />;
+  if (layout === "academic-scholar") return <AcademicScholarCV cv={cv} config={config} />;
+  if (layout === "legal-advisor") return <LegalAdvisorCV cv={cv} config={config} />;
+  if (layout === "hospitality-premium") return <HospitalityPremiumCV cv={cv} config={config} />;
+  if (layout === "engineer-grid") return <EngineerGridCV cv={cv} config={config} />;
+  if (layout === "teacher-friendly") return <TeacherFriendlyCV cv={cv} config={config} />;
+  if (layout === "project-manager") return <ProjectManagerCV cv={cv} config={config} />;
+  if (layout === "customer-service") return <CustomerServiceCV cv={cv} config={config} />;
+  if (layout === "marketing-bold") return <MarketingBoldCV cv={cv} config={config} />;
+  if (layout === "hr-professional") return <HRProfessionalCV cv={cv} config={config} />;
+  if (layout === "data-analyst") return <DataAnalystCV cv={cv} config={config} />;
+  if (layout === "premium-monogram") return <PremiumMonogramCV cv={cv} config={config} />;
 
-  if (
-    config.layout === "student" ||
-    config.layout === "trade" ||
-    config.layout === "europass"
-  ) {
-    return <PhotoHeaderTemplate cv={cv} config={config} />;
-  }
+  return <CleanATSExactCV cv={cv} config={config} />;
+}
 
-  return <ATSTemplate cv={cv} config={config} />;
+function exactDark(config) {
+  return config.colors?.find((color) => color !== config.accent) || config.colors?.[1] || "#111827";
+}
+
+function ExactPhoto({ cv, config, large = false, light = false }) {
+  if (!config.photo) return null;
+
+  const shape = {
+    eu: "rounded-md",
+    square: "rounded-xl",
+    "circle-ring": "rounded-full ring-4 ring-white",
+    blob: "rounded-[42%_58%_55%_45%/48%_42%_58%_52%]",
+    oval: "rounded-[45%]",
+  }[config.photoShape] || "rounded-full";
+
+  return (
+    <div
+      className={`${large ? "h-32 w-32" : "h-24 w-24"} ${shape} flex shrink-0 items-center justify-center overflow-hidden shadow-sm ring-1 ${light ? "bg-white/15 ring-white/30" : "bg-slate-100 ring-black/10"}`}
+      style={{ border: `2px solid ${config.accent}` }}
+    >
+      {cv.photo ? (
+        <img
+          src={cv.photo}
+          alt={cv.fullName || "Profile"}
+          className="h-full w-full object-cover"
+          style={{
+            transform: `scale(${cv.photoZoom || 1})`,
+            objectPosition: `${cv.photoPositionX || 50}% ${cv.photoPositionY || 50}%`,
+          }}
+        />
+      ) : (
+        <span className={`text-3xl font-black ${light ? "text-white" : "text-slate-700"}`}>
+          {getInitials(cv.fullName)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ExactTitle({ title, accent, light = false }) {
+  return (
+    <h2
+      className="mb-3 border-b pb-2 text-xs font-black uppercase tracking-[0.18em]"
+      style={{ color: light ? "#fff" : accent, borderColor: light ? "rgba(255,255,255,.28)" : `${accent}55` }}
+    >
+      {title}
+    </h2>
+  );
+}
+
+
+function ExactHeader({ cv, config, label = "Professional CV", centered = false }) {
+  return (
+    <header className={centered ? "text-center" : ""}>
+      <p className="text-xs font-black uppercase tracking-[0.25em]" style={{ color: config.accent }}>{label}</p>
+      <h1 className="mt-2 text-5xl font-black leading-tight tracking-[-0.055em] text-black">{cv.fullName || "Your Name"}</h1>
+      <p className="mt-2 text-xl font-bold" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p>
+      <ContactLine cv={cv} />
+      <ATSBadge cv={cv} accent={config.accent} />
+    </header>
+  );
+}
+
+function ExactSideBlock({ cv, config, light = false }) {
+  return (
+    <>
+      <div>
+        <ExactTitle title="Contact" accent={config.accent} light={light} />
+        <ContactStack cv={cv} dark={light} />
+      </div>
+      <SideCVSections cv={cv} accent={config.accent} dark={light} />
+    </>
+  );
+}
+
+function CleanATSExactCV({ cv, config }) {
+  return (
+    <CVPage>
+      <ExactHeader cv={cv} config={config} label="ATS Optimised" />
+      <main className="mt-8 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main>
+    </CVPage>
+  );
+}
+
+function EUPhotoDocumentCV({ cv, config }) {
+  return (
+    <div id="cv-download" className="grid bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px", gridTemplateColumns: "280px 514px" }}>
+      <aside className="bg-slate-100 px-8 py-10">
+        <ExactPhoto cv={cv} config={config} large />
+        <h1 className="mt-6 text-3xl font-black leading-tight">{cv.fullName || "Your Name"}</h1>
+        <p className="mt-2 text-sm font-bold" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p>
+        <div className="mt-8"><ExactSideBlock cv={cv} config={config} /></div>
+      </aside>
+      <main className="space-y-8 px-10 py-10">
+        <ExactTitle title="European CV Profile" accent={config.accent} />
+        {hasText(cv.summary) ? <Paragraph text={cv.summary} /> : null}
+        <MainCVSections cv={cv} accent={config.accent} skipSummary />
+      </main>
+    </div>
+  );
+}
+
+function BerlinSidePhotoCV({ cv, config }) {
+  const dark = exactDark(config);
+  return (
+    <div id="cv-download" className="grid bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px", gridTemplateColumns: "285px 509px" }}>
+      <aside className="px-8 py-10 text-white" style={{ background: `linear-gradient(180deg, ${dark}, ${config.accent})` }}>
+        <ExactPhoto cv={cv} config={config} large light />
+        <h1 className="mt-6 text-3xl font-black leading-tight">{cv.fullName || "Your Name"}</h1>
+        <p className="mt-2 text-sm font-semibold text-white/75">{cv.jobTitle || "Professional Title"}</p>
+        <div className="mt-8 space-y-8"><ExactSideBlock cv={cv} config={config} light /></div>
+      </aside>
+      <main className="space-y-8 px-10 py-10">
+        <section className="rounded-[1.5rem] p-6" style={{ backgroundColor: `${config.accent}12` }}>
+          <ExactTitle title="Profile" accent={config.accent} />
+          <Paragraph text={cv.summary} />
+        </section>
+        <MainCVSections cv={cv} accent={config.accent} skipSummary />
+      </main>
+    </div>
+  );
+}
+
+function CorporateCirclePhotoCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="flex items-center gap-6 border-b pb-7" style={{ borderColor: `${config.accent}45` }}>
+        <ExactPhoto cv={cv} config={config} large />
+        <div><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-xl font-bold" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /><ATSBadge cv={cv} accent={config.accent} /></div>
+      </header>
+      <main className="mt-9 grid gap-9 grid-cols-[0.62fr_0.38fr]"><div className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></div><aside className="rounded-[1.7rem] p-6" style={{ backgroundColor: `${config.accent}10` }}><SideCVSections cv={cv} accent={config.accent} /></aside></main>
+    </CVPage>
+  );
+}
+
+function CreativeBlobPhotoCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="rounded-[2rem] p-7" style={{ background: `linear-gradient(135deg, ${config.accent}22, #fff)`, border: `1px solid ${config.accent}25` }}>
+        <div className="flex items-center gap-6"><ExactPhoto cv={cv} config={config} large /><div><ExactHeader cv={cv} config={config} label="Creative CV" /></div></div>
+      </header>
+      <main className="mt-8 grid gap-6 grid-cols-2">
+        <section className="rounded-[1.5rem] bg-slate-50 p-6 col-span-2"><MainCVSections cv={cv} accent={config.accent} /></section>
+        <section className="rounded-[1.5rem] bg-slate-50 p-6"><SideCVSections cv={cv} accent={config.accent} /></section>
+        <section className="rounded-[1.5rem] bg-slate-50 p-6"><MainCVSections cv={cv} accent={config.accent} skipSummary skipExperience /></section>
+      </main>
+    </CVPage>
+  );
+}
+
+function LuxuryOvalPhotoCV({ cv, config }) {
+  return (
+    <CVPage ivory>
+      <header className="text-center">
+        <div className="flex justify-center">
+          <ExactPhoto cv={cv} config={config} large />
+        </div>
+
+        <p
+          className="mt-4 text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: config.accent }}
+        >
+          Premium CV
+        </p>
+
+        <h1 className="mt-2 font-serif text-5xl font-bold">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} center />
+
+        <div
+          className="mx-auto mt-5 h-1 w-24 rounded-full"
+          style={{ backgroundColor: config.accent }}
+        />
+      </header>
+
+      <main className="mt-10 grid gap-10 grid-cols-[0.36fr_0.64fr]">
+        <aside className="space-y-8">
+          {hasList(cv.skills) ? (
+            <CVSection title="Skills" accent={config.accent}>
+              <SkillPills items={cv.skills} levels={cv.skillLevels} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.languages) ? (
+            <CVSection title="Languages" accent={config.accent}>
+              <LanguageList items={cv.languages} levels={cv.languageLevels} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.strengths) ? (
+            <CVSection title="Strengths" accent={config.accent}>
+              <BulletList items={cv.strengths} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.hobbies) ? (
+            <CVSection title="Interests" accent={config.accent}>
+              <BulletList items={cv.hobbies} />
+            </CVSection>
+          ) : null}
+
+          {hasText(cv.references) ? (
+            <CVSection title="References" accent={config.accent}>
+              <Paragraph text={cv.references} />
+            </CVSection>
+          ) : null}
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+function GraduateFreshCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header
+        className="rounded-[32px] p-8"
+        style={{ backgroundColor: `${config.accent}14` }}
+      >
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: config.accent }}
+        >
+          Graduate CV
+        </p>
+
+        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p
+          className="mt-2 text-lg font-bold"
+          style={{ color: config.accent }}
+        >
+          {cv.jobTitle || "Graduate / Entry Level"}
+        </p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-8 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8 rounded-3xl border border-slate-200 p-6">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside
+          className="rounded-3xl p-6"
+          style={{ backgroundColor: `${config.accent}10` }}
+        >
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function LondonExecutiveCV({ cv, config }) {
+  return (
+    <div className="overflow-hidden bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px" }}>
+      <header className="px-10 py-12 text-white" style={{ background: `linear-gradient(135deg, ${exactDark(config)}, #020617)` }}><p className="text-xs font-black uppercase tracking-[0.3em]" style={{ color: config.accent }}>Executive Profile</p><h1 className="mt-3 text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-3 text-xl font-semibold text-white/70">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /><div className="mt-6 h-1.5 w-24 rounded-full" style={{ backgroundColor: config.accent }} /></header>
+      <main className="grid gap-10 px-10 py-10 grid-cols-[0.36fr_0.64fr]"><aside className="space-y-8"><SideCVSections cv={cv} accent={config.accent} /></aside><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section></main>
+    </div>
+  );
+}
+
+function ClassicProExactCV({ cv, config }) {
+  return <CVPage><header className="text-center"><h1 className="font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-sm font-black uppercase tracking-[0.22em]" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><div className="my-8 h-px" style={{ backgroundColor: config.accent }} /><main className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function TechMinimalCV({ cv, config }) {
+  return <CVPage><header className="rounded-[1.7rem] bg-slate-950 p-8 text-white"><p className="font-mono text-xs" style={{ color: config.accent }}>const candidate =</p><h1 className="mt-2 font-mono text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/65">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><main className="mt-9 grid gap-9 grid-cols-[0.58fr_0.42fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside className="space-y-8"><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+}
+
+
+function FormalUKCV({ cv, config }) {
+  return <CVPage><header className="border-4 p-7 text-center" style={{ borderColor: config.accent }}><h1 className="text-4xl font-bold uppercase tracking-[0.12em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-base text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function SeniorDirectorCV({ cv, config }) {
+  return <div className="overflow-hidden bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px" }}><div className="h-5" style={{ backgroundColor: config.accent }} /><div className="p-12"><h1 className="text-6xl font-black tracking-[-0.06em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-sm font-black uppercase tracking-[0.22em]" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /><main className="mt-10 grid gap-10 grid-cols-[0.40fr_0.60fr]"><aside><SideCVSections cv={cv} accent={config.accent} /></aside><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section></main></div></div>;
+}
+
+function AdminProfessionalCV({ cv, config }) {
+  return <CVPage><header className="flex items-stretch"><div className="w-3 rounded-full" style={{ backgroundColor: config.accent }} /><div className="pl-6"><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></div></header><main className="mt-9 space-y-8"><section className="border-l-4 pl-6" style={{ borderColor: config.accent }}><MainCVSections cv={cv} accent={config.accent} /></section><SideCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function HealthcareClinicalCV({ cv, config }) {
+  return <CVPage><header className="flex items-center justify-between border-b pb-7" style={{ borderColor: `${config.accent}40` }}><div><ExactHeader cv={cv} config={config} label="Clinical CV" /></div><div className="flex h-20 w-20 items-center justify-center rounded-full text-4xl font-black text-white" style={{ backgroundColor: config.accent }}>+</div></header><main className="mt-9 grid gap-9 grid-cols-[0.60fr_0.40fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside className="rounded-[1.7rem] p-6" style={{ backgroundColor: `${config.accent}12` }}><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+}
+
+function SalesLeaderCV({ cv, config }) {
+  return <CVPage><header className="rounded-[1.8rem] p-8 text-white" style={{ background: `linear-gradient(135deg, ${config.accent}, ${exactDark(config)})` }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/75">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><div className="mt-6 grid grid-cols-3 gap-4 text-center"><div className="rounded-xl bg-slate-50 p-4"><b className="text-2xl">128%</b><p className="text-xs">Target</p></div><div className="rounded-xl bg-slate-50 p-4"><b className="text-2xl">42</b><p className="text-xs">Clients</p></div><div className="rounded-xl bg-slate-50 p-4"><b className="text-2xl">£2M</b><p className="text-xs">Pipeline</p></div></div><main className="mt-8 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function FinanceAnalystCV({ cv, config }) {
+  return <CVPage><ExactHeader cv={cv} config={config} label="Finance CV" /><div className="mt-8 grid h-28 grid-cols-5 items-end gap-2">{[35,55,45,70,60].map((height, index) => <div key={index} className="rounded-t" style={{ height: `${height}%`, backgroundColor: config.accent }} />)}</div><main className="mt-9 grid gap-9 grid-cols-[0.58fr_0.42fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+}
+
+function StockholmCleanCV({ cv, config }) {
+  return <CVPage><header className="flex justify-between"><div><h1 className="text-5xl font-light tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg font-bold" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></div><div className="h-24 w-24 rounded-full" style={{ backgroundColor: `${config.accent}18` }} /></header><main className="mt-10 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function DubaiCorporateCV({ cv, config }) {
+  return <div className="overflow-hidden bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px" }}><header className="p-10 text-right text-white" style={{ backgroundColor: exactDark(config) }}><p className="text-xs uppercase tracking-[0.3em]" style={{ color: config.accent }}>Corporate Profile</p><h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/70">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><main className="grid gap-10 p-10 grid-cols-[0.34fr_0.66fr]"><aside><SideCVSections cv={cv} accent={config.accent} /></aside><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section></main></div>;
+}
+
+function CanadaSimpleCV({ cv, config }) {
+  return <CVPage><header className="border-l-[14px] pl-6" style={{ borderColor: config.accent }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /><SideCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function AcademicScholarCV({ cv, config }) {
+  return <CVPage><header><p className="text-xs uppercase tracking-[0.3em]" style={{ color: config.accent }}>Curriculum Vitae</p><h1 className="mt-2 font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /><CVSection title="Publications" accent={config.accent}><Paragraph text="Add publications, conference talks or research outputs in Additional Sections." /></CVSection></main></CVPage>;
+}
+
+function LegalAdvisorCV({ cv, config }) {
+  return <CVPage><header className="text-center"><div className="mx-auto mb-4 h-20 w-20 rounded-full border-4" style={{ borderColor: config.accent }} /><h1 className="font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-sm uppercase tracking-[0.22em]" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function HospitalityPremiumCV({ cv, config }) {
+  return <CVPage ivory><header className="rounded-t-[2rem] p-8 text-white" style={{ backgroundColor: config.accent }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/80">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><main className="mt-9 grid gap-9 grid-cols-[0.58fr_0.42fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+}
+function EngineerGridCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="grid grid-cols-[0.70fr_0.30fr] gap-6">
+        <div>
+          <h1 className="text-5xl font-black tracking-[-0.055em]">
+            {cv.fullName || "Your Name"}
+          </h1>
+
+          <p className="mt-2 text-lg" style={{ color: config.accent }}>
+            {cv.jobTitle || "Professional Title"}
+          </p>
+
+          <ContactLine cv={cv} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <span
+              key={index}
+              className="rounded-xl"
+              style={{
+                backgroundColor: `${config.accent}${index % 2 ? "22" : "55"}`,
+              }}
+            />
+          ))}
+        </div>
+      </header>
+
+      <main className="mt-9 grid gap-6 grid-cols-2">
+        {/* Block 1: Main content only */}
+        <section className="rounded-2xl border p-6 col-span-2">
+          <div className="space-y-8">
+            {hasText(cv.summary) ? (
+              <CVSection title="Professional Summary" accent={config.accent}>
+                <Paragraph text={cv.summary} />
+              </CVSection>
+            ) : null}
+
+            {hasValidExperience(cv) ? (
+              <CVSection title="Work Experience" accent={config.accent}>
+                <ExperienceContent cv={cv} />
+              </CVSection>
+            ) : null}
+          </div>
+        </section>
+
+        {/* Block 2: Side content */}
+        <aside className="rounded-2xl border p-6">
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+
+        {/* Block 3: Extra main content only, no duplicate summary/experience */}
+        <section className="rounded-2xl border p-6">
+          <div className="space-y-8">
+            {hasValidEducation(cv) ? (
+              <CVSection title="Education" accent={config.accent}>
+                <EducationContent cv={cv} />
+              </CVSection>
+            ) : null}
+
+            {hasValidProjects(cv) ? (
+              <CVSection title="Projects" accent={config.accent}>
+                <ProjectsContent cv={cv} />
+              </CVSection>
+            ) : null}
+
+            {hasList(cv.achievements) ? (
+              <CVSection title="Achievements" accent={config.accent}>
+                <BulletList items={cv.achievements} />
+              </CVSection>
+            ) : null}
+
+            {hasValidCertifications(cv) ? (
+              <CVSection title="Certifications" accent={config.accent}>
+                <CertificationContent cv={cv} />
+              </CVSection>
+            ) : null}
+
+            <AdditionalSectionsContent cv={cv} accent={config.accent} />
+          </div>
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+
+function TeacherFriendlyCV({ cv, config }) {
+  return <CVPage><header className="rounded-[1.8rem] p-8" style={{ backgroundColor: `${config.accent}16` }}><ExactHeader cv={cv} config={config} label="Education CV" /></header><main className="mt-9"><section className="rounded-[1.5rem] border-l-8 p-7" style={{ borderColor: config.accent }}><MainCVSections cv={cv} accent={config.accent} /></section><aside className="mt-8"><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+}
+
+function ProjectManagerCV({ cv, config }) {
+  return <CVPage><ExactHeader cv={cv} config={config} label="Project CV" /><main className="mt-9 grid gap-9 grid-cols-[0.30fr_0.70fr]"><aside>{["Plan", "Build", "Lead"].map((item) => <div key={item} className="mb-3 rounded-xl p-4 text-sm font-black text-white" style={{ backgroundColor: config.accent }}>{item}</div>)}<SideCVSections cv={cv} accent={config.accent} /></aside><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section></main></CVPage>;
+}
+
+function CustomerServiceCV({ cv, config }) {
+  return <CVPage><header className="flex items-center gap-6"><div className="flex h-24 w-24 items-center justify-center rounded-[1.5rem] text-4xl text-white" style={{ backgroundColor: config.accent }}>★</div><div><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></div></header><main className="mt-9"><section className="rounded-[1.7rem] bg-slate-50 p-7"><MainCVSections cv={cv} accent={config.accent} /></section><aside className="mt-8"><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+}
+
+function MarketingBoldCV({ cv, config }) {
+  return <div className="overflow-hidden bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px" }}><header className="p-10 text-white" style={{ background: `linear-gradient(135deg, ${config.accent}, #fff)` }}><p className="text-xs font-black uppercase tracking-[0.3em]">Marketing</p><h1 className="mt-2 text-6xl font-black tracking-[-0.06em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/80">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><main className="grid gap-9 p-10 grid-cols-[0.62fr_0.38fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside><SideCVSections cv={cv} accent={config.accent} /></aside></main></div>;
+}
+
+function HRProfessionalCV({ cv, config }) {
+  return <CVPage><header className="rounded-[1.5rem] border-2 p-7" style={{ borderColor: config.accent }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 grid gap-9 grid-cols-[0.45fr_0.55fr]"><aside><SideCVSections cv={cv} accent={config.accent} /></aside><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section></main></CVPage>;
+}
+
+function DataAnalystCV({ cv, config }) {
+  return <CVPage><ExactHeader cv={cv} config={config} label="Data CV" /><div className="mt-7 grid grid-cols-4 gap-3">{["SQL", "BI", "KPI", "ETL"].map((item) => <div key={item} className="rounded-xl p-4 text-center text-sm font-black" style={{ backgroundColor: `${config.accent}18`, color: config.accent }}>{item}</div>)}</div><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /><SideCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+}
+
+function PremiumMonogramCV({ cv, config }) {
+  const initials = getInitials(cv.fullName) || "CV";
+  return <CVPage ivory><header className="text-center"><div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full border-2 font-serif text-4xl font-bold" style={{ borderColor: config.accent, color: config.accent }}>{initials}</div><h1 className="mt-5 font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-10 grid gap-10 grid-cols-[0.36fr_0.64fr]"><aside><SideCVSections cv={cv} accent={config.accent} /></aside><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section></main></CVPage>;
 }
 
 function ATSTemplate({ cv, config }) {
   const accent = config.accent;
 
   return (
-    <div
-      className="bg-white px-12 py-12 text-black shadow-2xl"
-      style={{ width: "794px", minHeight: "1123px" }}
-    >
+    <CVPage>
       <header className="border-b pb-6" style={{ borderColor: `${accent}55` }}>
         <h1 className="text-5xl font-black tracking-[-0.05em]">
           {cv.fullName || "Your Name"}
@@ -1584,64 +2800,13 @@ function ATSTemplate({ cv, config }) {
         </p>
 
         <ContactLine cv={cv} />
+        <ATSBadge cv={cv} accent={accent} />
       </header>
 
       <main className="mt-8 space-y-8">
-        {hasText(cv.summary) ? (
-          <CVSection title="Professional Summary" accent={accent}>
-            <Paragraph text={cv.summary} />
-          </CVSection>
-        ) : null}
-
-        {hasValidExperience(cv) ? (
-          <CVSection title="Work Experience" accent={accent}>
-            <ExperienceContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        <div className="grid gap-8 grid-cols-[0.58fr_0.42fr]">
-          <div className="space-y-8">
-            {hasValidEducation(cv) ? (
-              <CVSection title="Education" accent={accent}>
-                <EducationContent cv={cv} />
-              </CVSection>
-            ) : null}
-
-            {hasValidProjects(cv) ? (
-              <CVSection title="Projects" accent={accent}>
-                <ProjectsContent cv={cv} />
-              </CVSection>
-            ) : null}
-          </div>
-
-          <aside className="space-y-8">
-            {hasList(cv.skills) ? (
-              <CVSection title="Skills" accent={accent}>
-                <SkillPills items={cv.skills} accent={accent} />
-              </CVSection>
-            ) : null}
-
-            {hasList(cv.languages) ? (
-              <CVSection title="Languages" accent={accent}>
-                <BulletList items={cv.languages} />
-              </CVSection>
-            ) : null}
-
-            {hasValidCertifications(cv) ? (
-              <CVSection title="Certifications" accent={accent}>
-                <CertificationContent cv={cv} />
-              </CVSection>
-            ) : null}
-
-            {hasList(cv.strengths) ? (
-              <CVSection title="Key Strengths" accent={accent}>
-                <BulletList items={cv.strengths} />
-              </CVSection>
-            ) : null}
-          </aside>
-        </div>
+        <MainCVSections cv={cv} accent={accent} />
       </main>
-    </div>
+    </CVPage>
   );
 }
 
@@ -1677,58 +2842,11 @@ function ModernTemplate({ cv, config }) {
           <ContactStack cv={cv} dark />
         </div>
 
-        {hasList(cv.skills) ? (
-          <div className="mt-8">
-            <SmallTitle title="Skills" dark />
-            <SkillPills items={cv.skills} dark />
-          </div>
-        ) : null}
-
-        {hasList(cv.languages) ? (
-          <div className="mt-8">
-            <SmallTitle title="Languages" dark />
-            <BulletList items={cv.languages} dark />
-          </div>
-        ) : null}
-
-        {hasList(cv.strengths) ? (
-          <div className="mt-8">
-            <SmallTitle title="Strengths" dark />
-            <BulletList items={cv.strengths} dark />
-          </div>
-        ) : null}
+        <SideCVSections cv={cv} dark accent={accent} />
       </aside>
 
       <main className="space-y-8 px-10 py-10">
-        {hasText(cv.summary) ? (
-          <CVSection title="Professional Summary" accent={accent}>
-            <Paragraph text={cv.summary} />
-          </CVSection>
-        ) : null}
-
-        {hasValidExperience(cv) ? (
-          <CVSection title="Employment History" accent={accent}>
-            <ExperienceContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        {hasValidEducation(cv) ? (
-          <CVSection title="Education" accent={accent}>
-            <EducationContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        {hasValidProjects(cv) ? (
-          <CVSection title="Projects" accent={accent}>
-            <ProjectsContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        {hasValidCertifications(cv) ? (
-          <CVSection title="Certifications" accent={accent}>
-            <CertificationContent cv={cv} />
-          </CVSection>
-        ) : null}
+        <MainCVSections cv={cv} accent={accent} />
       </main>
     </div>
   );
@@ -1765,49 +2883,11 @@ function ExecutiveTemplate({ cv, config }) {
 
       <div className="grid gap-10 px-10 py-10 grid-cols-[0.36fr_0.64fr]">
         <aside className="space-y-8">
-          {hasList(cv.skills) ? (
-            <CVSection title="Core Skills" accent={accent}>
-              <SkillPills items={cv.skills} accent={accent} />
-            </CVSection>
-          ) : null}
-
-          {hasValidEducation(cv) ? (
-            <CVSection title="Education" accent={accent}>
-              <EducationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.languages) ? (
-            <CVSection title="Languages" accent={accent}>
-              <BulletList items={cv.languages} />
-            </CVSection>
-          ) : null}
+          <SideCVSections cv={cv} accent={accent} />
         </aside>
 
         <main className="space-y-8">
-          {hasText(cv.summary) ? (
-            <CVSection title="Professional Profile" accent={accent}>
-              <Paragraph text={cv.summary} />
-            </CVSection>
-          ) : null}
-
-          {hasValidExperience(cv) ? (
-            <CVSection title="Leadership Experience" accent={accent}>
-              <ExperienceContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          {hasValidProjects(cv) ? (
-            <CVSection title="Projects" accent={accent}>
-              <ProjectsContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          {hasValidCertifications(cv) ? (
-            <CVSection title="Certifications" accent={accent}>
-              <CertificationContent cv={cv} />
-            </CVSection>
-          ) : null}
+          <MainCVSections cv={cv} accent={accent} />
         </main>
       </div>
     </div>
@@ -1818,10 +2898,7 @@ function CreativeTemplate({ cv, config }) {
   const accent = config.accent;
 
   return (
-    <div
-      className="bg-white px-10 py-10 text-black shadow-2xl"
-      style={{ width: "794px", minHeight: "1123px" }}
-    >
+    <CVPage>
       <header
         className="flex gap-6 rounded-[2rem] p-7"
         style={{ backgroundColor: `${accent}15` }}
@@ -1850,72 +2927,22 @@ function CreativeTemplate({ cv, config }) {
 
       <main className="mt-10 grid gap-9 grid-cols-[0.62fr_0.38fr]">
         <div className="space-y-8">
-          {hasText(cv.summary) ? (
-            <CVSection title="Creative Profile" accent={accent}>
-              <Paragraph text={cv.summary} />
-            </CVSection>
-          ) : null}
-
-          {hasValidExperience(cv) ? (
-            <CVSection title="Experience" accent={accent}>
-              <ExperienceContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          {hasValidProjects(cv) ? (
-            <CVSection title="Projects" accent={accent}>
-              <ProjectsContent cv={cv} />
-            </CVSection>
-          ) : null}
+          <MainCVSections cv={cv} accent={accent} />
         </div>
 
         <aside className="space-y-8 rounded-[1.8rem] border border-black/5 bg-black/[0.025] p-6">
-          {hasList(cv.skills) ? (
-            <CVSection title="Skills" accent={accent}>
-              <SkillPills items={cv.skills} accent={accent} />
-            </CVSection>
-          ) : null}
-
-          {hasValidEducation(cv) ? (
-            <CVSection title="Education" accent={accent}>
-              <EducationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.languages) ? (
-            <CVSection title="Languages" accent={accent}>
-              <BulletList items={cv.languages} />
-            </CVSection>
-          ) : null}
-
-          {hasValidCertifications(cv) ? (
-            <CVSection title="Certifications" accent={accent}>
-              <CertificationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
+          <SideCVSections cv={cv} accent={accent} />
         </aside>
       </main>
-    </div>
+    </CVPage>
   );
 }
 
 function PhotoHeaderTemplate({ cv, config }) {
   const accent = config.accent;
 
-  const label =
-    config.layout === "europass"
-      ? "European / International CV Format"
-      : config.layout === "student"
-      ? "Graduate CV"
-      : config.layout === "trade"
-      ? "Skilled Trade CV"
-      : "Professional CV";
-
   return (
-    <div
-      className="bg-white px-10 py-10 text-black shadow-2xl"
-      style={{ width: "794px", minHeight: "1123px" }}
-    >
+    <CVPage>
       <header
         className="flex gap-6 border-b pb-8"
         style={{ borderColor: `${accent}40` }}
@@ -1927,7 +2954,7 @@ function PhotoHeaderTemplate({ cv, config }) {
             className="text-xs font-black uppercase tracking-[0.25em]"
             style={{ color: accent }}
           >
-            {label}
+            Professional CV
           </p>
 
           <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
@@ -1943,55 +2970,303 @@ function PhotoHeaderTemplate({ cv, config }) {
       </header>
 
       <main className="mt-9 space-y-8">
+        <MainCVSections cv={cv} accent={accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function EuropassTemplate({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <div
+      className="grid bg-white text-black shadow-2xl"
+      style={{
+        width: "794px",
+        minHeight: "1123px",
+        gridTemplateColumns: "260px 534px",
+      }}
+    >
+      <aside className="bg-slate-100 px-7 py-10">
+        <ProfilePhoto cv={cv} accent={accent} square />
+
+        <h1 className="mt-6 text-3xl font-black leading-tight">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p className="mt-2 text-sm font-bold" style={{ color: accent }}>
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <div className="mt-8">
+          <SmallTitle title="Contact" />
+          <ContactStack cv={cv} />
+        </div>
+
+        <SideCVSections cv={cv} accent={accent} />
+      </aside>
+
+      <main className="space-y-8 px-10 py-10">
+        <p
+          className="text-xs font-black uppercase tracking-[0.25em]"
+          style={{ color: accent }}
+        >
+          European / International CV Format
+        </p>
+        <MainCVSections cv={cv} accent={accent} />
+      </main>
+    </div>
+  );
+}
+
+function LuxuryTemplate({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage ivory>
+      <header className="text-center">
+        <div className="flex justify-center">
+          <ProfilePhoto cv={cv} accent={accent} rounded />
+        </div>
+
+        <p
+          className="mt-5 text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: accent }}
+        >
+          Premium CV
+        </p>
+
+        <h1 className="mt-3 font-serif text-5xl font-bold">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p className="mt-3 text-xl font-semibold text-black/65">
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} />
+
+        <div
+          className="mx-auto mt-5 h-1 w-24 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+      </header>
+
+      <main className="mt-10 space-y-8">
+        <MainCVSections cv={cv} accent={accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function ClassicTemplate({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage>
+      <header className="text-center">
+        <h1 className="font-serif text-5xl font-bold">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p
+          className="mt-2 text-lg font-bold uppercase tracking-[0.2em]"
+          style={{ color: accent }}
+        >
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} />
+
+        <div
+          className="mx-auto mt-5 h-px w-full"
+          style={{ backgroundColor: `${accent}55` }}
+        />
+      </header>
+
+      <main className="mt-8 space-y-8">
+        <MainCVSections cv={cv} accent={accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function TimelineTemplate({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage>
+      <header>
+        <h1 className="text-5xl font-black tracking-[-0.05em]">
+          {cv.fullName || "Your Name"}
+        </h1>
+        <p className="mt-2 text-xl font-bold" style={{ color: accent }}>
+          {cv.jobTitle || "Professional Title"}
+        </p>
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 space-y-8">
         {hasText(cv.summary) ? (
-          <CVSection title="Profile" accent={accent}>
+          <CVSection title="Professional Summary" accent={accent}>
             <Paragraph text={cv.summary} />
           </CVSection>
         ) : null}
 
         {hasValidExperience(cv) ? (
-          <CVSection title="Employment History" accent={accent}>
-            <ExperienceContent cv={cv} />
+          <CVSection title="Career Timeline" accent={accent}>
+            <div className="space-y-6 border-l-2 pl-6" style={{ borderColor: accent }}>
+              <ExperienceContent cv={cv} timeline accent={accent} />
+            </div>
           </CVSection>
         ) : null}
 
-        <div className="grid gap-9 grid-cols-2">
-          {hasValidEducation(cv) ? (
-            <CVSection title="Education" accent={accent}>
-              <EducationContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.skills) ? (
-            <CVSection title="Skills" accent={accent}>
-              <SkillPills items={cv.skills} accent={accent} />
-            </CVSection>
-          ) : null}
-        </div>
-
-        <div className="grid gap-9 grid-cols-2">
-          {hasValidProjects(cv) ? (
-            <CVSection title="Projects" accent={accent}>
-              <ProjectsContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          <div className="space-y-8">
-            {hasList(cv.languages) ? (
-              <CVSection title="Languages" accent={accent}>
-                <BulletList items={cv.languages} />
-              </CVSection>
-            ) : null}
-
-            {hasValidCertifications(cv) ? (
-              <CVSection title="Certifications" accent={accent}>
-                <CertificationContent cv={cv} />
-              </CVSection>
-            ) : null}
-          </div>
-        </div>
+        <MainCVSections cv={cv} accent={accent} skipSummary skipExperience />
       </main>
+    </CVPage>
+  );
+}
+
+function CVPage({ children, ivory = false }) {
+  return (
+    <div
+      className={`px-12 py-12 text-black shadow-2xl ${
+        ivory ? "bg-[#FBF7EF]" : "bg-white"
+      }`}
+      style={{ width: "794px", minHeight: "1123px" }}
+    >
+      {children}
     </div>
+  );
+}
+
+function MainCVSections({ cv, accent, skipSummary = false, skipExperience = false }) {
+  return (
+    <>
+      {!skipSummary && hasText(cv.summary) ? (
+        <CVSection title="Professional Summary" accent={accent}>
+          <Paragraph text={cv.summary} />
+        </CVSection>
+      ) : null}
+
+      {!skipExperience && hasValidExperience(cv) ? (
+        <CVSection title="Work Experience" accent={accent}>
+          <ExperienceContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasValidEducation(cv) ? (
+        <CVSection title="Education" accent={accent}>
+          <EducationContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasValidProjects(cv) ? (
+        <CVSection title="Projects" accent={accent}>
+          <ProjectsContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasList(cv.achievements) ? (
+        <CVSection title="Achievements" accent={accent}>
+          <BulletList items={cv.achievements} />
+        </CVSection>
+      ) : null}
+
+      {hasList(cv.strengths) ? (
+        <CVSection title="Key Strengths" accent={accent}>
+          <BulletList items={cv.strengths} />
+        </CVSection>
+      ) : null}
+
+      {hasValidCertifications(cv) ? (
+        <CVSection title="Certifications" accent={accent}>
+          <CertificationContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasValidAdditionalSections(cv) ? (
+        <AdditionalSectionsContent cv={cv} accent={accent} />
+      ) : null}
+
+      {hasText(cv.references) ? (
+        <CVSection title="References" accent={accent}>
+          <Paragraph text={cv.references} />
+        </CVSection>
+      ) : null}
+    </>
+  );
+}
+
+function AdditionalSectionsContent({ cv, accent }) {
+  const items = Array.isArray(cv.additionalSections)
+    ? cv.additionalSections.filter(
+        (item) => hasText(item.title) || hasText(item.description)
+      )
+    : [];
+
+  return (
+    <>
+      {items.map((item, index) => (
+        <CVSection
+          key={`${item.title || "section"}-${index}`}
+          title={item.title || "Additional Information"}
+          accent={accent}
+        >
+          <Paragraph text={item.description} />
+        </CVSection>
+      ))}
+    </>
+  );
+}
+function SideCVSections({ cv, accent = "#111827", dark = false }) {
+  return (
+    <>
+      {hasList(cv.skills) ? (
+        <div className="mt-8 first:mt-0">
+          <SmallTitle title="Skills" dark={dark} />
+          <SkillPills
+            items={cv.skills}
+            levels={cv.skillLevels}
+            dark={dark}
+            accent={accent}
+          />
+        </div>
+      ) : null}
+
+      {hasList(cv.languages) ? (
+        <div className="mt-8">
+          <SmallTitle title="Languages" dark={dark} />
+          <LanguageList
+            items={cv.languages}
+            levels={cv.languageLevels}
+            dark={dark}
+          />
+        </div>
+      ) : null}
+
+      {hasList(cv.strengths) ? (
+        <div className="mt-8">
+          <SmallTitle title="Strengths" dark={dark} />
+          <BulletList items={cv.strengths} dark={dark} />
+        </div>
+      ) : null}
+
+      {hasList(cv.hobbies) ? (
+        <div className="mt-8">
+          <SmallTitle title="Interests" dark={dark} />
+          <BulletList items={cv.hobbies} dark={dark} />
+        </div>
+      ) : null}
+
+      {hasText(cv.references) ? (
+        <div className="mt-8">
+          <SmallTitle title="References" dark={dark} />
+          <Paragraph text={cv.references} dark={dark} />
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -2015,12 +3290,13 @@ function CVSection({ title, children, accent }) {
   );
 }
 
-function ExperienceContent({ cv }) {
+function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
   const items = Array.isArray(cv.experiences)
     ? cv.experiences.filter(
         (item) =>
           hasText(item.jobTitle) ||
           hasText(item.company) ||
+          hasText(item.location) ||
           hasText(item.description)
       )
     : [];
@@ -2032,7 +3308,14 @@ function ExperienceContent({ cv }) {
   return (
     <div className="space-y-6">
       {items.map((item, index) => (
-        <div key={index}>
+        <div key={index} className="relative">
+          {timeline ? (
+            <span
+              className="absolute -left-[31px] top-2 h-3 w-3 rounded-full"
+              style={{ backgroundColor: accent }}
+            />
+          ) : null}
+
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-black">
@@ -2060,7 +3343,7 @@ function ExperienceContent({ cv }) {
   );
 }
 
-function EducationContent({ cv, compact = false }) {
+function EducationContent({ cv }) {
   const items = Array.isArray(cv.educations)
     ? cv.educations.filter(
         (item) =>
@@ -2075,7 +3358,7 @@ function EducationContent({ cv, compact = false }) {
   }
 
   return (
-    <div className={compact ? "space-y-4" : "space-y-5"}>
+    <div className="space-y-5">
       {items.map((item, index) => (
         <div key={index}>
           <div className="flex items-start justify-between gap-4">
@@ -2107,7 +3390,9 @@ function EducationContent({ cv, compact = false }) {
 
 function ProjectsContent({ cv }) {
   const items = Array.isArray(cv.projectsList)
-    ? cv.projectsList.filter((item) => hasText(item.title) || hasText(item.description))
+    ? cv.projectsList.filter(
+        (item) => hasText(item.title) || hasText(item.description)
+      )
     : [];
 
   if (!items.length) {
@@ -2145,7 +3430,7 @@ function ProjectsContent({ cv }) {
   );
 }
 
-function CertificationContent({ cv, compact = false }) {
+function CertificationContent({ cv }) {
   const items = Array.isArray(cv.certificationsList)
     ? cv.certificationsList.filter(
         (item) => hasText(item.name) || hasText(item.issuer) || hasText(item.date)
@@ -2159,7 +3444,7 @@ function CertificationContent({ cv, compact = false }) {
   }
 
   return (
-    <div className={compact ? "space-y-3" : "space-y-4"}>
+    <div className="space-y-4">
       {items.map((item, index) => (
         <div key={index}>
           <h3 className="text-sm font-black text-black">
@@ -2209,10 +3494,8 @@ function BulletList({ items, dark = false }) {
     </ul>
   );
 }
-
-function SkillPills({ items, accent = "#111827", dark = false }) {
+function SkillPills({ items, levels = [], dark = false, accent = "#111827" }) {
   const list = normalizeList(items);
-
   if (!list.length) return null;
 
   return (
@@ -2220,15 +3503,43 @@ function SkillPills({ items, accent = "#111827", dark = false }) {
       {list.map((item, index) => (
         <span
           key={`${item}-${index}`}
-          className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-            dark ? "bg-white/15 text-white" : "text-white"
-          }`}
-          style={dark ? undefined : { backgroundColor: accent }}
+          className="rounded-full px-3 py-1.5 text-[10.5px] font-bold"
+          style={{
+            backgroundColor: dark ? "rgba(255,255,255,0.16)" : accent,
+            color: "#ffffff",
+            border: dark
+              ? "1px solid rgba(255,255,255,0.22)"
+              : `1px solid ${accent}`,
+          }}
         >
           {item}
+          {levels?.[index] ? ` · ${levels[index]}` : ""}
         </span>
       ))}
     </div>
+  );
+}
+
+function LanguageList({ items, levels = [], dark = false }) {
+  const list = normalizeList(items);
+
+  if (!list.length) return null;
+
+  return (
+    <ul
+      className={`space-y-2 text-sm leading-7 ${
+        dark ? "text-white/78" : "text-black/70"
+      }`}
+    >
+      {list.map((item, index) => (
+        <li key={`${item}-${index}`} className="flex justify-between gap-3">
+          <span>{item}</span>
+          <span className={dark ? "text-white/50" : "text-black/45"}>
+            {levels?.[index] || "Fluent"}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -2241,6 +3552,14 @@ function SmallTitle({ title, dark = false }) {
     >
       {title}
     </p>
+  );
+}
+
+function ATSBadge({ cv, accent }) {
+  return (
+    <div className="mt-4 inline-flex rounded-full px-4 py-2 text-xs font-black text-white" style={{ backgroundColor: accent }}>
+      ATS Score: {cv.atsScore || 0}%
+    </div>
   );
 }
 
@@ -2325,90 +3644,150 @@ function ClickableUrl({ value, className = "" }) {
   );
 }
 
-function ProfilePhoto({ cv, accent, dark = false, rounded = false }) {
+function ProfilePhoto({ cv, accent, dark = false, rounded = false, square = false }) {
+  const initials = getInitials(cv.fullName);
+
+  const shape = square
+    ? "rounded-2xl"
+    : rounded
+    ? "rounded-[2rem]"
+    : "rounded-full";
+
   return (
     <div
-      className={`flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden border ${
-        rounded ? "rounded-[1.8rem]" : "rounded-full"
-      } ${dark ? "border-white/25 bg-white/10" : "border-black/5 bg-black/5"}`}
-      style={{ boxShadow: `0 18px 45px ${accent}25` }}
+      className={`flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden ${shape} ${
+        dark ? "bg-white/15 ring-white/30" : "bg-black/5 ring-black/10"
+      } ring-1`}
     >
-      {hasText(cv.photo) ? (
+      {cv.photo ? (
         <img
           src={cv.photo}
           alt={cv.fullName || "Profile"}
           className="h-full w-full object-cover"
+          style={{
+            transform: `scale(${cv.photoZoom || 1})`,
+            objectPosition: `${cv.photoPositionX || 50}% ${
+              cv.photoPositionY || 50
+            }%`,
+          }}
         />
       ) : (
         <span
-          className={`text-4xl font-black ${
-            dark ? "text-white/50" : "text-black/35"
+          className={`text-3xl font-black ${
+            dark ? "text-white" : "text-white"
           }`}
+          style={{ color: dark ? "#fff" : accent }}
         >
-          {getInitials(cv.fullName)}
+          {initials}
         </span>
       )}
     </div>
   );
 }
 
-function formatExperience(items) {
-  return items
-    .filter((item) => item.jobTitle || item.company || item.description)
-    .map((item) => {
-      const date = `${item.startDate || ""} - ${
-        item.current ? "Present" : item.endDate || ""
-      }`;
+function calculateATSScore(cv) {
+  let score = 35;
 
-      return `${item.jobTitle || "Job Title"} | ${item.company || "Company"} | ${
-        item.location || "Location"
-      } | ${date}\n${item.description || ""}`;
+  if (hasText(cv.fullName)) score += 8;
+  if (hasText(cv.jobTitle)) score += 8;
+  if (hasText(cv.email)) score += 8;
+  if (hasText(cv.phone)) score += 5;
+  if (hasText(cv.location)) score += 5;
+  if (hasText(cv.summary) && cv.summary.length >= 80) score += 10;
+
+  const validExperience = Array.isArray(cv.experiences)
+    ? cv.experiences.filter(
+        (item) => item.jobTitle && item.company && item.startDate
+      )
+    : [];
+
+  const validEducation = Array.isArray(cv.educations)
+    ? cv.educations.filter((item) => item.degree && item.institution)
+    : [];
+
+  if (validExperience.length) score += 10;
+  if (validEducation.length) score += 6;
+  if (Array.isArray(cv.skills) && cv.skills.length >= 4) score += 5;
+  if (Array.isArray(cv.languages) && cv.languages.length >= 1) score += 3;
+  if (Array.isArray(cv.certificationsList) && cv.certificationsList.length)
+    score += 2;
+
+  return Math.min(score, 99);
+}
+
+function formatExperience(items = []) {
+  return items
+    .filter(
+      (item) =>
+        hasText(item.jobTitle) ||
+        hasText(item.company) ||
+        hasText(item.description)
+    )
+    .map((item) => {
+      const date = formatDateRange(item.startDate, item.endDate, item.current);
+
+      return [
+        item.jobTitle,
+        [item.company, item.location].filter(Boolean).join(", "),
+        date,
+        item.description,
+      ]
+        .filter(Boolean)
+        .join("\n");
     })
     .join("\n\n");
 }
 
-function formatEducation(items) {
+function formatEducation(items = []) {
   return items
-    .filter((item) => item.degree || item.institution || item.description)
+    .filter(
+      (item) =>
+        hasText(item.degree) ||
+        hasText(item.institution) ||
+        hasText(item.description)
+    )
     .map((item) => {
-      const date = `${item.startDate || ""} - ${item.endDate || ""}`;
+      const date = [item.startDate, item.endDate].filter(Boolean).join(" — ");
 
-      return `${item.degree || "Degree"} | ${
-        item.institution || "Institution"
-      } | ${item.location || "Location"} | ${date}\n${
-        item.description || ""
-      }`;
+      return [
+        item.degree,
+        [item.institution, item.location].filter(Boolean).join(", "),
+        date,
+        item.description,
+      ]
+        .filter(Boolean)
+        .join("\n");
     })
     .join("\n\n");
 }
 
-function formatProjects(items) {
+function formatProjects(items = []) {
   return items
-    .filter((item) => item.title || item.description)
-    .map((item) => {
-      return `${item.title || "Project"} | ${item.role || ""} | ${
-        item.date || ""
-      }\nTechnologies: ${item.technologies || ""}\n${item.description || ""}`;
-    })
+    .filter((item) => hasText(item.title) || hasText(item.description))
+    .map((item) =>
+      [
+        item.title,
+        [item.role, item.technologies].filter(Boolean).join(" · "),
+        item.date,
+        item.description,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    )
     .join("\n\n");
 }
 
-function formatCertifications(items) {
+function formatCertifications(items = []) {
   return items
-    .filter((item) => item.name || item.issuer)
-    .map((item) => {
-      const parts = [item.name, item.issuer, item.date].filter(Boolean);
-      return parts.join(" | ");
-    });
+    .filter((item) => hasText(item.name) || hasText(item.issuer))
+    .map((item) => [item.name, item.issuer, item.date].filter(Boolean).join(" · "))
+    .join("\n");
 }
 
 function formatDateRange(startDate, endDate, current) {
-  const start = hasText(startDate) ? startDate : "";
-  const end = current ? "Present" : hasText(endDate) ? endDate : "";
+  if (!startDate && !endDate && !current) return "";
 
-  if (!start && !end) return "";
-  if (start && end) return `${start} — ${end}`;
-  return start || end;
+  return [startDate, current ? "Present" : endDate].filter(Boolean).join(" — ");
 }
 
 function normalizeList(value) {
@@ -2498,6 +3877,15 @@ function hasValidCertifications(cv) {
 
   return hasList(cv.certifications);
 }
+function hasValidAdditionalSections(cv) {
+  return (
+    Array.isArray(cv.additionalSections) &&
+    cv.additionalSections.some(
+      (item) => hasText(item.title) || hasText(item.description)
+    )
+  );
+}
+
 
 function getInitials(name = "") {
   const clean = String(name || "").trim();

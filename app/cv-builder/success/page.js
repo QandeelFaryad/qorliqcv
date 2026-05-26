@@ -1,100 +1,86 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toJpeg } from "html-to-image";
 import jsPDF from "jspdf";
 
-// ---------- TEMPLATE CONFIG ----------
-const templateConfig = {
-  "ats-professional": {
-    layout: "ats",
-    name: "ATS Professional",
-    accent: "#111827",
-    photo: false,
-  },
-  "modern-corporate": {
-    layout: "modern",
-    name: "Modern Corporate",
-    accent: "#2563EB",
-    photo: true,
-  },
-  "executive-leadership": {
-    layout: "executive",
-    name: "Executive Leadership",
-    accent: "#B88A2C",
-    photo: false,
-  },
-  "creative-portfolio": {
-    layout: "creative",
-    name: "Creative Portfolio",
-    accent: "#7C3AED",
-    photo: true,
-  },
-  "graduate-entry": {
-    layout: "student",
-    name: "Graduate Entry",
-    accent: "#059669",
-    photo: true,
-  },
-  "technical-it": {
-    layout: "technical",
-    name: "Technical IT",
-    accent: "#0891B2",
-    photo: false,
-  },
-  "academic-research": {
-    layout: "academic",
-    name: "Academic Research",
-    accent: "#4338CA",
-    photo: false,
-  },
-  "healthcare-clinical": {
-    layout: "healthcare",
-    name: "Healthcare Clinical",
-    accent: "#0F766E",
-    photo: true,
-  },
-  "skilled-trade": {
-    layout: "trade",
-    name: "Skilled Trade",
-    accent: "#EA580C",
-    photo: true,
-  },
-  "international-europass": {
-    layout: "europass",
-    name: "International Europass",
-    accent: "#1D4ED8",
-    photo: true,
-  },
+/* =========================
+   TEMPLATE CONFIG
+========================= */
 
-  executive: {
-    layout: "executive",
-    name: "Executive Leadership",
-    accent: "#B88A2C",
-    photo: false,
-  },
-  modern: {
-    layout: "modern",
-    name: "Modern Corporate",
-    accent: "#2563EB",
-    photo: true,
-  },
-  creative: {
-    layout: "creative",
-    name: "Creative Portfolio",
-    accent: "#7C3AED",
-    photo: true,
-  },
-  minimal: {
-    layout: "ats",
-    name: "ATS Professional",
-    accent: "#111827",
-    photo: false,
-  },
+const colorSets = {
+  blue: ["#2563EB", "#1D4ED8", "#0F172A", "#60A5FA", "#DBEAFE"],
+  gold: ["#B88A2C", "#A16207", "#111827", "#FACC15", "#FEF3C7"],
+  black: ["#111827", "#020617", "#374151", "#94A3B8", "#F1F5F9"],
+  purple: ["#7C3AED", "#5B21B6", "#312E81", "#A78BFA", "#EDE9FE"],
+  green: ["#059669", "#047857", "#064E3B", "#34D399", "#D1FAE5"],
+  teal: ["#0F766E", "#115E59", "#134E4A", "#5EEAD4", "#CCFBF1"],
+  red: ["#DC2626", "#B91C1C", "#7F1D1D", "#F87171", "#FEE2E2"],
+  cyan: ["#0891B2", "#0E7490", "#164E63", "#67E8F9", "#CFFAFE"],
+  rose: ["#DB2777", "#BE123C", "#831843", "#FDA4AF", "#FFE4E6"],
+  slate: ["#475569", "#334155", "#0F172A", "#CBD5E1", "#F8FAFC"],
+  orange: ["#EA580C", "#C2410C", "#7C2D12", "#FDBA74", "#FFEDD5"],
+};
+
+const cvTemplates = [
+  { id: "eu-photo-document", name: "EU Photo Document", layout: "eu-photo-document", photo: true, photoShape: "eu", colors: colorSets.blue },
+  { id: "berlin-side-photo", name: "Berlin Side Photo", layout: "berlin-side-photo", photo: true, photoShape: "square", colors: colorSets.black },
+  { id: "corporate-circle-photo", name: "Corporate Circle Photo", layout: "corporate-circle-photo", photo: true, photoShape: "circle-ring", colors: colorSets.blue },
+  { id: "creative-blob-photo", name: "Creative Blob Photo", layout: "creative-blob-photo", photo: true, photoShape: "blob", colors: colorSets.purple },
+  { id: "luxury-oval-photo", name: "Luxury Oval Photo", layout: "luxury-oval-photo", photo: true, photoShape: "oval", colors: colorSets.gold },
+  { id: "london-executive", name: "London Executive", layout: "london-executive", photo: false, colors: colorSets.gold },
+  { id: "clean-ats", name: "Clean ATS", layout: "clean-ats", photo: false, colors: colorSets.blue },
+  { id: "classic-pro", name: "Classic Pro", layout: "classic-pro", photo: false, colors: colorSets.slate },
+  { id: "tech-minimal", name: "Tech Minimal", layout: "tech-minimal", photo: false, colors: colorSets.cyan },
+  { id: "graduate-fresh", name: "Graduate Fresh", layout: "graduate-fresh", photo: false, colors: colorSets.green },
+  { id: "formal-uk", name: "Formal UK", layout: "formal-uk", photo: false, colors: colorSets.black },
+  { id: "senior-director", name: "Senior Director", layout: "senior-director", photo: false, colors: colorSets.orange },
+  { id: "admin-professional", name: "Admin Professional", layout: "admin-professional", photo: false, colors: colorSets.slate },
+  { id: "healthcare-clinical", name: "Healthcare Clinical", layout: "healthcare-clinical", photo: false, colors: colorSets.teal },
+  { id: "sales-leader", name: "Sales Leader", layout: "sales-leader", photo: false, colors: colorSets.red },
+  { id: "finance-analyst", name: "Finance Analyst", layout: "finance-analyst", photo: false, colors: colorSets.cyan },
+  { id: "stockholm-clean", name: "Stockholm Clean", layout: "stockholm-clean", photo: false, colors: colorSets.blue },
+  { id: "dubai-corporate", name: "Dubai Corporate", layout: "dubai-corporate", photo: false, colors: colorSets.teal },
+  { id: "canada-simple", name: "Canada Simple", layout: "canada-simple", photo: false, colors: colorSets.red },
+  { id: "academic-scholar", name: "Academic Scholar", layout: "academic-scholar", photo: false, colors: colorSets.purple },
+  { id: "legal-advisor", name: "Legal Advisor", layout: "legal-advisor", photo: false, colors: colorSets.slate },
+  { id: "hospitality-premium", name: "Hospitality Premium", layout: "hospitality-premium", photo: false, colors: colorSets.rose },
+  { id: "engineer-grid", name: "Engineer Grid", layout: "engineer-grid", photo: false, colors: colorSets.orange },
+  { id: "teacher-friendly", name: "Teacher Friendly", layout: "teacher-friendly", photo: false, colors: colorSets.green },
+  { id: "project-manager", name: "Project Manager", layout: "project-manager", photo: false, colors: colorSets.purple },
+  { id: "customer-service", name: "Customer Service", layout: "customer-service", photo: false, colors: colorSets.blue },
+  { id: "marketing-bold", name: "Marketing Bold", layout: "marketing-bold", photo: false, colors: colorSets.rose },
+  { id: "hr-professional", name: "HR Professional", layout: "hr-professional", photo: false, colors: colorSets.slate },
+  { id: "data-analyst", name: "Data Analyst", layout: "data-analyst", photo: false, colors: colorSets.cyan },
+  { id: "premium-monogram", name: "Premium Monogram", layout: "premium-monogram", photo: false, colors: colorSets.gold },
+];
+
+const templateConfig = cvTemplates.reduce((acc, template) => {
+  acc[template.id] = {
+    ...template,
+    accent: template.colors?.[0] || "#2563EB",
+  };
+  return acc;
+}, {});
+
+const legacyTemplateMap = {
+  "ats-professional": "clean-ats",
+  "modern-corporate": "berlin-side-photo",
+  "executive-leadership": "london-executive",
+  "creative-portfolio": "creative-blob-photo",
+  "graduate-entry": "graduate-fresh",
+  "technical-it": "tech-minimal",
+  "academic-research": "academic-scholar",
+  "international-europass": "eu-photo-document",
+  executive: "london-executive",
+  modern: "berlin-side-photo",
+  creative: "creative-blob-photo",
+  minimal: "clean-ats",
 };
 
 const emptyCV = {
-  template: "ats-professional",
+  template: "clean-ats",
+  selectedColor: "",
   fullName: "",
   jobTitle: "",
   email: "",
@@ -105,129 +91,33 @@ const emptyCV = {
   portfolio: "",
   website: "",
   photo: "",
+  photoZoom: 1,
+  photoPositionX: 50,
+  photoPositionY: 50,
   summary: "",
-  experience: "",
-  projects: "",
-  education: "",
   skills: [],
+  skillLevels: [],
   languages: [],
+  languageLevels: [],
   certifications: [],
   strengths: [],
+  achievements: [],
+  hobbies: [],
+  references: "",
+  experience: "",
+  education: "",
+  projects: "",
   experiences: [],
   educations: [],
   projectsList: [],
   certificationsList: [],
+  additionalSections: [],
+  atsScore: 0,
 };
 
-// ---------- HELPERS ----------
-function normalizeList(value) {
-  if (Array.isArray(value)) {
-    return value.map((i) => String(i || "").trim()).filter(Boolean);
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(/,|\n|·/)
-      .map((i) => i.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
-function hasText(value) {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function hasList(value) {
-  return normalizeList(value).length > 0;
-}
-
-function hasContact(cv) {
-  return (
-    hasText(cv.email) ||
-    hasText(cv.phone) ||
-    hasText(cv.location) ||
-    hasText(cv.linkedIn) ||
-    hasText(cv.github) ||
-    hasText(cv.portfolio) ||
-    hasText(cv.website)
-  );
-}
-
-function hasValidExperience(cv) {
-  if (Array.isArray(cv.experiences)) {
-    const valid = cv.experiences.filter(
-      (e) =>
-        hasText(e.jobTitle) ||
-        hasText(e.company) ||
-        hasText(e.location) ||
-        hasText(e.startDate) ||
-        hasText(e.endDate) ||
-        hasText(e.description)
-    );
-
-    if (valid.length > 0) return true;
-  }
-
-  return hasText(cv.experience);
-}
-
-function hasValidEducation(cv) {
-  if (Array.isArray(cv.educations)) {
-    const valid = cv.educations.filter(
-      (e) =>
-        hasText(e.degree) ||
-        hasText(e.institution) ||
-        hasText(e.location) ||
-        hasText(e.startDate) ||
-        hasText(e.endDate) ||
-        hasText(e.description)
-    );
-
-    if (valid.length > 0) return true;
-  }
-
-  return hasText(cv.education);
-}
-
-function hasValidProjects(cv) {
-  if (Array.isArray(cv.projectsList)) {
-    const valid = cv.projectsList.filter(
-      (p) =>
-        hasText(p.title) ||
-        hasText(p.role) ||
-        hasText(p.technologies) ||
-        hasText(p.date) ||
-        hasText(p.description)
-    );
-
-    if (valid.length > 0) return true;
-  }
-
-  return hasText(cv.projects);
-}
-
-function hasValidCertifications(cv) {
-  if (Array.isArray(cv.certificationsList)) {
-    const valid = cv.certificationsList.filter(
-      (c) => hasText(c.name) || hasText(c.issuer) || hasText(c.date)
-    );
-
-    if (valid.length > 0) return true;
-  }
-
-  return hasList(cv.certifications);
-}
-
-function formatDateRange(startDate, endDate, current) {
-  const start = hasText(startDate) ? startDate : "";
-  const end = current ? "Present" : hasText(endDate) ? endDate : "";
-
-  if (!start && !end) return "";
-  if (start && end) return `${start} — ${end}`;
-  return start || end;
-}
+/* =========================
+   EXPORT HELPERS
+========================= */
 
 function safeFileName(name) {
   const clean = String(name || "qorliq-cv")
@@ -237,14 +127,6 @@ function safeFileName(name) {
     .toLowerCase();
 
   return clean || "qorliq-cv";
-}
-
-function normalizeUrl(value) {
-  if (!value) return "";
-  const clean = String(value).trim();
-  if (!clean) return "";
-  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
-  return `https://${clean}`;
 }
 
 function waitForImages(container) {
@@ -270,10 +152,8 @@ function waitForImages(container) {
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-
     reader.onloadend = () => resolve(reader.result);
     reader.onerror = reject;
-
     reader.readAsDataURL(blob);
   });
 }
@@ -281,9 +161,7 @@ function blobToDataUrl(blob) {
 async function imageSrcToDataUrl(src) {
   if (!src) return "";
 
-  if (src.startsWith("data:image/")) {
-    return src;
-  }
+  if (src.startsWith("data:image/")) return src;
 
   try {
     const response = await fetch(src, {
@@ -319,9 +197,7 @@ async function prepareImagesForPDF(container) {
 
     img.removeAttribute("crossorigin");
 
-    if (dataUrl) {
-      img.src = dataUrl;
-    }
+    if (dataUrl) img.src = dataUrl;
 
     await new Promise((resolve) => {
       if (img.complete && img.naturalWidth > 0) {
@@ -391,7 +267,10 @@ function getWordHtml(innerHtml) {
 `;
 }
 
-// ---------- PAGE ----------
+/* =========================
+   PAGE
+========================= */
+
 export default function SuccessPage() {
   const cvRef = useRef(null);
   const previewShellRef = useRef(null);
@@ -400,97 +279,121 @@ export default function SuccessPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [accessChecking, setAccessChecking] = useState(true);
-const [hasAccess, setHasAccess] = useState(false);
-const [accessError, setAccessError] = useState("");
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessError, setAccessError] = useState("");
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [downloadingWord, setDownloadingWord] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
   const [previewHeight, setPreviewHeight] = useState(1123);
 
-useEffect(() => {
-  async function verifyAccessAndLoadCV() {
-    try {
-      setAccessChecking(true);
-      setLoading(true);
-      setError("");
-      setAccessError("");
+  const config = useMemo(() => getTemplateConfig(cv), [cv]);
 
-      const verifyRes = await fetch("/api/stripe/sync-subscription", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+  useEffect(() => {
+    async function verifyAccessAndLoadCV() {
+      try {
+        setAccessChecking(true);
+        setLoading(true);
+        setError("");
+        setAccessError("");
 
-      const verifyData = await verifyRes.json();
+        const verifyRes = await fetch("/api/stripe/sync-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-      console.log("Success page verify response:", verifyData);
+        const verifyData = await verifyRes.json();
 
-      if (!verifyRes.ok || !verifyData.success) {
-        setHasAccess(false);
-        setAccessError(
-          verifyData.error || "Please complete payment to download your CV."
-        );
+        if (!verifyRes.ok || !verifyData.success) {
+          setHasAccess(false);
+          setAccessError(
+            verifyData.error || "Please complete payment to download your CV."
+          );
+          setLoading(false);
+          return;
+        }
+
+        const active =
+          verifyData.databaseStatus === "active" ||
+          verifyData.hasActiveSubscription === true ||
+          verifyData.hasAccess === true;
+
+        if (!active) {
+          setHasAccess(false);
+          setAccessError("Your subscription is inactive or expired.");
+          setLoading(false);
+          return;
+        }
+
+        setHasAccess(true);
+
+        const params = new URLSearchParams(window.location.search);
+        const cvId = params.get("cvId");
+
+        if (!cvId) {
+          setError("CV ID missing. Please create your CV again.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`/api/cv/${cvId}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Unable to load CV.");
+        }
+
+        const loadedCV = data.cv || data.data;
+
+        if (!loadedCV) {
+          throw new Error("CV data not found.");
+        }
+
+        setCv({
+          ...emptyCV,
+          ...loadedCV,
+          template: resolveTemplateId(loadedCV.template),
+          selectedColor: loadedCV.selectedColor || loadedCV.color || "",
+          skills: normalizeList(loadedCV.skills),
+          skillLevels: normalizeList(loadedCV.skillLevels),
+          languages: normalizeList(loadedCV.languages),
+          languageLevels: normalizeList(loadedCV.languageLevels),
+          certifications: normalizeList(loadedCV.certifications),
+          strengths: normalizeList(loadedCV.strengths),
+          achievements: normalizeList(loadedCV.achievements),
+          hobbies: normalizeList(loadedCV.hobbies),
+          experiences: Array.isArray(loadedCV.experiences)
+            ? loadedCV.experiences
+            : [],
+          educations: Array.isArray(loadedCV.educations)
+            ? loadedCV.educations
+            : [],
+          projectsList: Array.isArray(loadedCV.projectsList)
+            ? loadedCV.projectsList
+            : [],
+          certificationsList: Array.isArray(loadedCV.certificationsList)
+            ? loadedCV.certificationsList
+            : [],
+          additionalSections: Array.isArray(loadedCV.additionalSections)
+            ? loadedCV.additionalSections
+            : [],
+        });
+      } catch (error) {
+        console.error("Load CV/access error:", error);
+        setError(error.message || "Unable to load CV.");
+      } finally {
+        setAccessChecking(false);
         setLoading(false);
-        return;
       }
-
-      const active =
-        verifyData.databaseStatus === "active" ||
-        verifyData.hasActiveSubscription === true;
-
-      if (!active) {
-        setHasAccess(false);
-        setAccessError("Your subscription is inactive or expired.");
-        setLoading(false);
-        return;
-      }
-
-      setHasAccess(true);
-
-      const params = new URLSearchParams(window.location.search);
-      const cvId = params.get("cvId");
-
-      if (!cvId) {
-        setError("CV ID missing. Please create your CV again.");
-        setLoading(false);
-        return;
-      }
-
-      const res = await fetch(`/api/cv/${cvId}`, {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Unable to load CV.");
-      }
-
-      const loadedCV = data.cv || data.data;
-
-      if (!loadedCV) {
-        throw new Error("CV data not found.");
-      }
-
-      setCv({
-        ...emptyCV,
-        ...loadedCV,
-      });
-    } catch (error) {
-      console.error("Load CV/access error:", error);
-      setError(error.message || "Unable to load CV.");
-    } finally {
-      setAccessChecking(false);
-      setLoading(false);
     }
-  }
 
-  verifyAccessAndLoadCV();
-}, []);
-
-  const config = templateConfig[cv.template] || templateConfig["ats-professional"];
+    verifyAccessAndLoadCV();
+  }, []);
 
   const updatePreviewSize = () => {
     const shell = previewShellRef.current;
@@ -519,13 +422,8 @@ useEffect(() => {
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(updatePreviewSize);
 
-      if (previewShellRef.current) {
-        resizeObserver.observe(previewShellRef.current);
-      }
-
-      if (cvRef.current) {
-        resizeObserver.observe(cvRef.current);
-      }
+      if (previewShellRef.current) resizeObserver.observe(previewShellRef.current);
+      if (cvRef.current) resizeObserver.observe(cvRef.current);
     }
 
     window.addEventListener("resize", updatePreviewSize);
@@ -540,18 +438,16 @@ useEffect(() => {
       window.removeEventListener("resize", updatePreviewSize);
       clearTimeout(timer);
 
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
+      if (resizeObserver) resizeObserver.disconnect();
     };
   }, [loading, cv, config.layout]);
-  function createExportClone(element) {
+
+function createExportClone(element) {
   if (!element) return null;
 
   const clone = element.cloneNode(true);
 
   clone.id = "qorliq-cv-export-clone";
-
   clone.style.width = "794px";
   clone.style.minWidth = "794px";
   clone.style.maxWidth = "794px";
@@ -560,35 +456,34 @@ useEffect(() => {
   clone.style.padding = "0";
   clone.style.position = "fixed";
   clone.style.top = "0";
-  clone.style.left = "-10000px";
-  clone.style.right = "auto";
-  clone.style.bottom = "auto";
+  clone.style.left = "0";
   clone.style.transform = "none";
   clone.style.transformOrigin = "top left";
-  clone.style.scale = "none";
   clone.style.opacity = "1";
   clone.style.visibility = "visible";
   clone.style.pointerEvents = "none";
-  clone.style.zIndex = "-1";
+  clone.style.zIndex = "999999";
   clone.style.overflow = "visible";
+  clone.style.boxShadow = "none";
 
   document.body.appendChild(clone);
 
   return clone;
 }
 
-function removeExportClone(clone) {
-  if (clone && clone.parentNode) {
-    clone.parentNode.removeChild(clone);
+  function removeExportClone(clone) {
+    if (clone && clone.parentNode) {
+      clone.parentNode.removeChild(clone);
+    }
   }
-}
-
 const downloadPDF = async () => {
   if (downloadingPDF) return;
-if (!hasAccess) {
-  alert("Your subscription is inactive or expired. Please renew your plan.");
-  return;
-}
+
+  if (!hasAccess) {
+    alert("Your subscription is inactive or expired. Please renew your plan.");
+    return;
+  }
+
   const previewElement = cvRef.current;
 
   if (!previewElement) {
@@ -602,9 +497,7 @@ if (!hasAccess) {
   try {
     setDownloadingPDF(true);
 
-    if (document.fonts?.ready) {
-      await document.fonts.ready;
-    }
+    if (document.fonts?.ready) await document.fonts.ready;
 
     exportElement = createExportClone(previewElement);
 
@@ -615,59 +508,79 @@ if (!hasAccess) {
     restoreImages = await prepareImagesForPDF(exportElement);
     await waitForImages(exportElement);
 
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const exportWidth = 794;
-    const exportHeight = Math.max(1123, exportElement.scrollHeight);
+    const a4Height = 1123;
 
-    const dataUrl = await toPng(exportElement, {
+    const realHeight = Math.max(
+      a4Height,
+      exportElement.scrollHeight || exportElement.offsetHeight || a4Height
+    );
+
+    exportElement.style.width = `${exportWidth}px`;
+    exportElement.style.minWidth = `${exportWidth}px`;
+    exportElement.style.maxWidth = `${exportWidth}px`;
+    exportElement.style.height = `${realHeight}px`;
+    exportElement.style.minHeight = `${realHeight}px`;
+    exportElement.style.background = "#ffffff";
+    exportElement.style.margin = "0";
+    exportElement.style.padding = "0";
+    exportElement.style.transform = "none";
+    exportElement.style.boxShadow = "none";
+    exportElement.style.overflow = "visible";
+
+    const pixelRatio = 1.45;
+
+    const dataUrl = await toJpeg(exportElement, {
       cacheBust: true,
-      pixelRatio: 2.5,
+      quality: 0.72,
+      pixelRatio,
       backgroundColor: "#ffffff",
       width: exportWidth,
-      height: exportHeight,
-      canvasWidth: exportWidth * 2.5,
-      canvasHeight: exportHeight * 2.5,
+      height: realHeight,
+      canvasWidth: exportWidth * pixelRatio,
+      canvasHeight: realHeight * pixelRatio,
       style: {
         width: `${exportWidth}px`,
         minWidth: `${exportWidth}px`,
         maxWidth: `${exportWidth}px`,
-        height: `${exportHeight}px`,
+        height: `${realHeight}px`,
+        minHeight: `${realHeight}px`,
         background: "#ffffff",
         margin: "0",
         padding: "0",
-        position: "static",
         transform: "none",
-        transformOrigin: "top left",
         boxShadow: "none",
         overflow: "visible",
       },
     });
 
-    const pdf = new jsPDF("p", "mm", "a4");
-
-    const pdfWidth = 210;
-    const pdfHeight = 297;
-
-    const imgProps = pdf.getImageProperties(dataUrl);
-    const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
-    heightLeft -= pdfHeight;
-
-    while (heightLeft > 0) {
-      position -= pdfHeight;
-      pdf.addPage();
-      pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight;
+    if (!dataUrl || dataUrl === "data:,") {
+      throw new Error("PDF capture failed. Please try again.");
     }
 
-    pdf.save(`${safeFileName(cv.fullName || "qorliq-cv")}.pdf`);
+    const pdf = new jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
+
+    /*
+      One-page PDF:
+      Full captured CV image will be compressed into one A4 page.
+      No addPage.
+      No while loop.
+    */
+    pdf.addImage(dataUrl, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+
+    const fileName = `${safeFileName(cv.fullName || "qorliq-cv")}.pdf`;
+
+    pdf.save(fileName);
   } catch (error) {
-    console.error("PDF download real error:", error);
+    console.error("PDF download error:", error);
     alert(error?.message || "PDF download failed.");
   } finally {
     if (restoreImages) restoreImages();
@@ -676,92 +589,94 @@ if (!hasAccess) {
   }
 };
 
-const downloadWord = async () => {
-  if (downloadingWord) return;
+  const downloadWord = async () => {
+    if (downloadingWord) return;
 
-  const previewElement = cvRef.current;
-
-  if (!previewElement) {
-    alert("CV preview not found. Please refresh and try again.");
-    return;
-  }
-
-  let exportElement = null;
-  let restoreImages = null;
-
-  try {
-    setDownloadingWord(true);
-
-    if (document.fonts?.ready) {
-      await document.fonts.ready;
+    if (!hasAccess) {
+      alert("Your subscription is inactive or expired. Please renew your plan.");
+      return;
     }
 
-    exportElement = createExportClone(previewElement);
+    const previewElement = cvRef.current;
 
-    if (!exportElement) {
-      throw new Error("Unable to prepare CV for Word.");
+    if (!previewElement) {
+      alert("CV preview not found. Please refresh and try again.");
+      return;
     }
 
-    restoreImages = await prepareImagesForPDF(exportElement);
-    await waitForImages(exportElement);
+    let exportElement = null;
+    let restoreImages = null;
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      setDownloadingWord(true);
 
-    const htmlDocx = await import("html-docx-js/dist/html-docx");
-    const { saveAs } = await import("file-saver");
+      if (document.fonts?.ready) await document.fonts.ready;
 
-    const html = getWordHtml(exportElement.innerHTML);
-    const blob = htmlDocx.default.asBlob(html);
+      exportElement = createExportClone(previewElement);
 
-    saveAs(blob, `${safeFileName(cv.fullName || "qorliq-cv")}.docx`);
-  } catch (error) {
-    console.error("Word download error:", error);
-    alert(error?.message || "Word download failed.");
-  } finally {
-    if (restoreImages) restoreImages();
-    removeExportClone(exportElement);
-    setDownloadingWord(false);
-  }
-};
+      if (!exportElement) throw new Error("Unable to prepare CV for Word.");
 
-if (loading || accessChecking) {
+      restoreImages = await prepareImagesForPDF(exportElement);
+      await waitForImages(exportElement);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const htmlDocx = await import("html-docx-js/dist/html-docx");
+      const { saveAs } = await import("file-saver");
+
+      const html = getWordHtml(exportElement.innerHTML);
+      const blob = htmlDocx.default.asBlob(html);
+
+      saveAs(blob, `${safeFileName(cv.fullName || "qorliq-cv")}.docx`);
+    } catch (error) {
+      console.error("Word download error:", error);
+      alert(error?.message || "Word download failed.");
+    } finally {
+      if (restoreImages) restoreImages();
+      removeExportClone(exportElement);
+      setDownloadingWord(false);
+    }
+  };
+
+  if (loading || accessChecking) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
-      Checking your access...
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-[#B88A2C]">
+          Checking your access...
         </p>
       </main>
     );
   }
+
   if (accessError || !hasAccess) {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
-      <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
-          Access Required
-        </p>
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
+        <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
+            Access Required
+          </p>
 
-        <h1 className="mt-4 text-3xl font-black">Subscription Required</h1>
+          <h1 className="mt-4 text-3xl font-black">Subscription Required</h1>
 
-        <p className="mt-4 text-sm leading-7 text-white/55">
-          {accessError || "Please choose a plan to download your CV."}
-        </p>
+          <p className="mt-4 text-sm leading-7 text-white/55">
+            {accessError || "Please choose a plan to download your CV."}
+          </p>
 
-        <button
-          onClick={() => {
-            const params = new URLSearchParams(window.location.search);
-            const cvId = params.get("cvId") || "";
-            const template = params.get("template") || "";
-            window.location.href = `/pricing?cvId=${cvId}&template=${template}`;
-          }}
-          className="mt-6 rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
-        >
-          Choose Plan
-        </button>
-      </div>
-    </main>
-  );
-}
+          <button
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              const cvId = params.get("cvId") || "";
+              const template = params.get("template") || "";
+              window.location.href = `/pricing?cvId=${cvId}&template=${template}`;
+            }}
+            className="mt-6 rounded-full bg-[#B88A2C] px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
+          >
+            Choose Plan
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   if (error) {
     return (
@@ -782,9 +697,9 @@ if (loading || accessChecking) {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050505] px-3 py-8 text-white sm:px-4 md:px-6 md:py-10">
       <div className="mx-auto w-full max-w-7xl">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-8 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-[#B88A2C]">
               Payment Successful
             </p>
 
@@ -793,23 +708,27 @@ if (loading || accessChecking) {
             </h1>
 
             <p className="mt-2 text-sm text-white/50">
-              Selected template: {config.name}. Your CV is ready for export.
+              Selected template:{" "}
+              <span className="font-bold text-[#B88A2C]">{config.name}</span>.
+              Your CV is ready for export.
             </p>
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <button
+              type="button"
               onClick={downloadPDF}
               disabled={downloadingPDF || downloadingWord}
-              className="w-full rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="w-full rounded-full bg-[#B88A2C] px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {downloadingPDF ? "Preparing PDF..." : "Download PDF"}
             </button>
 
             <button
+              type="button"
               onClick={downloadWord}
               disabled={downloadingPDF || downloadingWord}
-              className="w-full rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-qorliqGold hover:text-qorliqGold disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              className="w-full rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-[#B88A2C] hover:text-[#B88A2C] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {downloadingWord ? "Preparing Word..." : "Download Word"}
             </button>
@@ -853,542 +772,1343 @@ if (loading || accessChecking) {
   );
 }
 
-// ---------- TEMPLATE RENDERER ----------
+/* =========================
+   TEMPLATE RENDERER
+========================= */
+
 function TemplateRenderer({ cv, config }) {
-  if (config.layout === "modern" || config.layout === "healthcare") {
-    return <ModernTemplate cv={cv} config={config} />;
-  }
+  const layout = config.layout || config.id || "clean-ats";
 
-  if (config.layout === "executive") {
-    return <ExecutiveTemplate cv={cv} config={config} />;
-  }
+  const map = {
+    "eu-photo-document": <EUPhotoDocumentCV cv={cv} config={config} />,
+    "berlin-side-photo": <BerlinSidePhotoCV cv={cv} config={config} />,
+    "corporate-circle-photo": <CorporateCirclePhotoCV cv={cv} config={config} />,
+    "creative-blob-photo": <CreativeBlobPhotoCV cv={cv} config={config} />,
+    "luxury-oval-photo": <LuxuryOvalPhotoCV cv={cv} config={config} />,
+    "london-executive": <LondonExecutiveCV cv={cv} config={config} />,
+    "clean-ats": <CleanATSCV cv={cv} config={config} />,
+    "classic-pro": <ClassicProCV cv={cv} config={config} />,
+    "tech-minimal": <TechMinimalCV cv={cv} config={config} />,
+    "graduate-fresh": <GraduateFreshCV cv={cv} config={config} />,
+    "formal-uk": <FormalUKCV cv={cv} config={config} />,
+    "senior-director": <SeniorDirectorCV cv={cv} config={config} />,
+    "admin-professional": <AdminProfessionalCV cv={cv} config={config} />,
+    "healthcare-clinical": <HealthcareClinicalCV cv={cv} config={config} />,
+    "sales-leader": <SalesLeaderCV cv={cv} config={config} />,
+    "finance-analyst": <FinanceAnalystCV cv={cv} config={config} />,
+    "stockholm-clean": <StockholmCleanCV cv={cv} config={config} />,
+    "dubai-corporate": <DubaiCorporateCV cv={cv} config={config} />,
+    "canada-simple": <CanadaSimpleCV cv={cv} config={config} />,
+    "academic-scholar": <AcademicScholarCV cv={cv} config={config} />,
+    "legal-advisor": <LegalAdvisorCV cv={cv} config={config} />,
+    "hospitality-premium": <HospitalityPremiumCV cv={cv} config={config} />,
+    "engineer-grid": <EngineerGridCV cv={cv} config={config} />,
+    "teacher-friendly": <TeacherFriendlyCV cv={cv} config={config} />,
+    "project-manager": <ProjectManagerCV cv={cv} config={config} />,
+    "customer-service": <CustomerServiceCV cv={cv} config={config} />,
+    "marketing-bold": <MarketingBoldCV cv={cv} config={config} />,
+    "hr-professional": <HRProfessionalCV cv={cv} config={config} />,
+    "data-analyst": <DataAnalystCV cv={cv} config={config} />,
+    "premium-monogram": <PremiumMonogramCV cv={cv} config={config} />,
+  };
 
-  if (config.layout === "creative") {
-    return <CreativeTemplate cv={cv} config={config} />;
-  }
-
-  if (
-    config.layout === "student" ||
-    config.layout === "trade" ||
-    config.layout === "europass"
-  ) {
-    return <PhotoHeaderTemplate cv={cv} config={config} />;
-  }
-
-  return <ATSTemplate cv={cv} config={config} />;
+  return map[layout] || <CleanATSCV cv={cv} config={config} />;
 }
 
-// ---------- TEMPLATE DESIGNS ----------
-function ATSTemplate({ cv, config }) {
-  const accent = config.accent;
+/* =========================
+   TEMPLATE DESIGNS
+========================= */
+
+function HeaderBackground({ children, accent, dark = false, className = "" }) {
+  const safeAccent = accent || "#111827";
 
   return (
-    <div className="min-h-[1120px] bg-white px-12 py-12 text-black shadow-2xl">
-      <header
-        className="border-b pb-6"
-        style={{ borderColor: `${accent}55` }}
-      >
-        {hasText(cv.fullName) ? (
-          <h1 className="text-5xl font-black tracking-[-0.05em]">
-            {cv.fullName}
-          </h1>
-        ) : null}
-
-        {hasText(cv.jobTitle) ? (
-          <p className="mt-2 text-xl font-bold" style={{ color: accent }}>
-            {cv.jobTitle}
-          </p>
-        ) : null}
-
-        {hasContact(cv) ? <ContactLine cv={cv} /> : null}
-      </header>
-
-      <main className="mt-8 space-y-8">
-        {hasText(cv.summary) ? (
-          <CVSection title="Professional Summary" accent={accent}>
-            <CvParagraph text={cv.summary} />
-          </CVSection>
-        ) : null}
-
-        {hasValidExperience(cv) ? (
-          <CVSection title="Work Experience" accent={accent}>
-            <ExperienceContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        <div
-          className="grid gap-8"
-          style={{
-            gridTemplateColumns: "0.58fr 0.42fr",
-          }}
-        >
-          <div className="space-y-8">
-            {hasValidEducation(cv) ? (
-              <CVSection title="Education" accent={accent}>
-                <EducationContent cv={cv} />
-              </CVSection>
-            ) : null}
-
-            {hasValidProjects(cv) ? (
-              <CVSection title="Projects" accent={accent}>
-                <ProjectsContent cv={cv} />
-              </CVSection>
-            ) : null}
-          </div>
-
-          <aside className="space-y-8">
-            {hasList(cv.skills) ? (
-              <CVSection title="Skills" accent={accent}>
-                <TagList items={cv.skills} accent={accent} />
-              </CVSection>
-            ) : null}
-
-            {hasList(cv.languages) ? (
-              <CVSection title="Languages" accent={accent}>
-                <BulletList items={cv.languages} />
-              </CVSection>
-            ) : null}
-
-            {hasValidCertifications(cv) ? (
-              <CVSection title="Certifications" accent={accent}>
-                <CertificationContent cv={cv} />
-              </CVSection>
-            ) : null}
-
-            {hasList(cv.strengths) ? (
-              <CVSection title="Key Strengths" accent={accent}>
-                <BulletList items={cv.strengths} />
-              </CVSection>
-            ) : null}
-          </aside>
-        </div>
-      </main>
-    </div>
+    <header
+      className={`rounded-[32px] p-8 ${
+        dark ? "text-white" : "text-black"
+      } ${className}`}
+      style={{
+        background: dark
+          ? `linear-gradient(135deg, ${safeAccent}, #020617)`
+          : `${safeAccent}14`,
+      }}
+    >
+      {children}
+    </header>
   );
 }
 
-function ModernTemplate({ cv, config }) {
-  const accent = config.accent || "#0f7f70";
+function EUPhotoDocumentCV({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage>
+      <div className="grid min-h-[1027px] grid-cols-[280px_1fr] -m-12">
+        <aside className="bg-slate-100 px-8 py-10">
+          <ProfilePhoto cv={cv} config={config} large />
+
+          <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
+            {name(cv)}
+          </h1>
+
+          <p
+            className="mt-2 text-sm font-bold uppercase tracking-[0.12em]"
+            style={{ color: accent }}
+          >
+            {title(cv)}
+          </p>
+
+          <div className="mt-5">
+            <ContactLine cv={cv} />
+          </div>
+
+          <div className="mt-8">
+            <SideCVSections cv={cv} accent={accent} />
+          </div>
+        </aside>
+
+        <main className="space-y-8 px-10 py-10">
+          <section>
+            <p
+              className="text-xs font-black uppercase tracking-[0.3em]"
+              style={{ color: accent }}
+            >
+              European CV
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
+              Professional Profile
+            </h2>
+
+            <div
+              className="mt-4 h-[3px] w-24 rounded-full"
+              style={{ backgroundColor: accent }}
+            />
+
+            {hasText(cv.summary) ? (
+              <p className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">
+                {cv.summary}
+              </p>
+            ) : null}
+          </section>
+
+          <MainCVSections cv={cv} accent={accent} skipSummary />
+        </main>
+      </div>
+    </CVPage>
+  );
+}
+
+function BerlinSidePhotoCV({ cv, config }) {
+  const accent = config.accent;
+  const dark = exactDark(config) || "#0F172A";
 
   return (
     <div
-      className="grid shrink-0 bg-white text-black shadow-2xl"
+      id="cv-download"
+      className="grid bg-white text-black shadow-2xl print:shadow-none"
       style={{
         width: "794px",
-        height: "1123px",
         minHeight: "1123px",
-        gridTemplateColumns: "270px 524px",
-        alignItems: "stretch",
-        overflow: "hidden",
-        boxSizing: "border-box",
+        gridTemplateColumns: "285px 509px",
       }}
     >
       <aside
-        className="flex flex-col px-8 py-10 text-white"
+        className="px-8 py-10 text-white"
         style={{
-          backgroundColor: accent,
-          width: "270px",
-          height: "1123px",
-          minHeight: "1123px",
-          boxSizing: "border-box",
-          overflow: "hidden",
+          background: `linear-gradient(180deg, ${dark} 0%, ${dark} 45%, ${accent} 100%)`,
         }}
       >
-        {hasText(cv.photo) || hasText(cv.fullName) ? (
-          <ProfilePhoto cv={cv} accent={accent} dark />
-        ) : null}
+        <ProfilePhoto cv={cv} config={config} large dark />
 
-        {hasText(cv.fullName) ? (
-          <h1 className="mt-6 text-3xl font-black leading-tight">
-            {cv.fullName}
-          </h1>
-        ) : null}
+        <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-white">
+          {name(cv)}
+        </h1>
 
-        {hasText(cv.jobTitle) ? (
-          <p className="mt-2 text-sm font-semibold text-white/75">
-            {cv.jobTitle}
-          </p>
-        ) : null}
+        <p className="mt-2 text-sm font-semibold text-white/75">
+          {title(cv)}
+        </p>
 
-        {hasContact(cv) ? (
-          <div className="mt-8">
-            <SmallTitle title="Contact" dark />
-            <ContactStack cv={cv} dark />
-          </div>
-        ) : null}
+        <div className="mt-8">
+          <SmallTitle title="Contact" dark />
+          <ContactStack cv={cv} dark />
+        </div>
 
-        {hasList(cv.skills) ? (
-          <div className="mt-8">
-            <SmallTitle title="Skills" dark />
-            <SkillPills items={cv.skills} dark />
-          </div>
-        ) : null}
-
-        {hasList(cv.languages) ? (
-          <div className="mt-8">
-            <SmallTitle title="Languages" dark />
-            <BulletList items={cv.languages} dark />
-          </div>
-        ) : null}
-
-        {hasList(cv.strengths) ? (
-          <div className="mt-8">
-            <SmallTitle title="Strengths" dark />
-            <BulletList items={cv.strengths} dark />
-          </div>
-        ) : null}
+        <div className="mt-8 space-y-8 [&_*]:text-white [&_p]:text-white/75 [&_li]:text-white/75 [&_span]:text-white/75">
+          <SideCVSections cv={cv} accent="#ffffff" dark />
+        </div>
       </aside>
 
-      <main
-        className="space-y-8 px-10 py-10"
-        style={{
-          width: "524px",
-          height: "1123px",
-          minHeight: "1123px",
-          boxSizing: "border-box",
-          backgroundColor: "#ffffff",
-          overflow: "hidden",
-        }}
-      >
-        {hasText(cv.summary) ? (
-          <CVSection title="Professional Summary" accent={accent}>
-            <CvParagraph text={cv.summary} />
+      <main className="space-y-8 px-10 py-10">
+        <section
+          className="rounded-[1.5rem] p-6"
+          style={{ backgroundColor: `${accent}12` }}
+        >
+          <CVSection title="Profile" accent={accent}>
+            <Paragraph text={cv.summary} />
           </CVSection>
-        ) : null}
+        </section>
 
-        {hasValidExperience(cv) ? (
-          <CVSection title="Employment History" accent={accent}>
-            <ExperienceContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        {hasValidEducation(cv) ? (
-          <CVSection title="Education" accent={accent}>
-            <EducationContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        {hasValidProjects(cv) ? (
-          <CVSection title="Projects" accent={accent}>
-            <ProjectsContent cv={cv} />
-          </CVSection>
-        ) : null}
-
-        {hasValidCertifications(cv) ? (
-          <CVSection title="Certifications" accent={accent}>
-            <CertificationContent cv={cv} />
-          </CVSection>
-        ) : null}
+        <MainCVSections cv={cv} accent={accent} skipSummary />
       </main>
     </div>
   );
 }
 
-function ExecutiveTemplate({ cv, config }) {
+function CorporateCirclePhotoCV({ cv, config }) {
   const accent = config.accent;
 
   return (
-    <div className="min-h-[1120px] overflow-hidden bg-white text-black shadow-2xl">
-      <div className="bg-neutral-950 px-10 py-12 text-white">
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-white/45">
-          Executive CV
+    <CVPage>
+      <header className="flex items-center gap-7">
+        <ProfilePhoto
+          cv={cv}
+          config={{ ...config, photoShape: "circle-ring" }}
+          large
+        />
+
+        <div>
+          <h1 className="text-5xl font-black tracking-[-0.055em]">
+            {name(cv)}
+          </h1>
+
+          <p className="mt-2 text-lg font-bold" style={{ color: accent }}>
+            {title(cv)}
+          </p>
+
+          <ContactLine cv={cv} />
+        </div>
+      </header>
+
+      <main className="mt-10 grid grid-cols-[1fr_260px] gap-9">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
+
+        <aside
+          className="rounded-[28px] p-6"
+          style={{ backgroundColor: `${accent}10` }}
+        >
+          <SideCVSections cv={cv} accent={accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function CreativeBlobPhotoCV({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage>
+      <header
+        className="rounded-[36px] p-8"
+        style={{ background: `linear-gradient(135deg, ${accent}20, #fff)` }}
+      >
+        <div className="flex items-center gap-7">
+          <ProfilePhoto
+            cv={cv}
+            config={{ ...config, photoShape: "blob" }}
+            large
+          />
+
+          <div>
+            <p
+              className="text-xs font-black uppercase tracking-[0.3em]"
+              style={{ color: accent }}
+            >
+              Creative Profile
+            </p>
+
+            <h1 className="mt-2 text-5xl font-black tracking-[-0.06em]">
+              {name(cv)}
+            </h1>
+
+            <p className="mt-2 text-lg font-bold" style={{ color: accent }}>
+              {title(cv)}
+            </p>
+
+            <ContactLine cv={cv} />
+          </div>
+        </div>
+      </header>
+
+      <main className="mt-8 grid grid-cols-2 gap-7">
+        <section className="space-y-7">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
+
+        <aside className="space-y-7">
+          <SideCVSections cv={cv} accent={accent} />
+          <AdditionalSectionsContent cv={cv} accent={accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function LuxuryOvalPhotoCV({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage ivory>
+      <header className="text-center">
+        <div className="flex justify-center">
+          <ProfilePhoto
+            cv={cv}
+            config={{ ...config, photoShape: "oval" }}
+            large
+          />
+        </div>
+
+        <p
+          className="mt-5 text-xs font-black uppercase tracking-[0.32em]"
+          style={{ color: accent }}
+        >
+          Premium CV
         </p>
 
-        {hasText(cv.fullName) ? (
-          <h1 className="mt-3 text-5xl font-black tracking-[-0.055em]">
-            {cv.fullName}
-          </h1>
-        ) : null}
+        <h1 className="mt-3 font-serif text-5xl font-bold">{name(cv)}</h1>
 
-        {hasText(cv.jobTitle) ? (
-          <p className="mt-3 text-xl font-semibold text-white/70">
-            {cv.jobTitle}
-          </p>
-        ) : null}
+        <p className="mt-3 text-xl font-semibold text-black/65">
+          {title(cv)}
+        </p>
 
-        {hasContact(cv) ? <ContactLine cv={cv} dark /> : null}
+        <ContactLine cv={cv} />
+
+        <div
+          className="mx-auto mt-5 h-1 w-24 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+      </header>
+
+      <main className="mt-10 grid grid-cols-[240px_1fr] gap-9">
+        <aside className="space-y-8">
+          <SideCVSections cv={cv} accent={accent} />
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+
+function LondonExecutiveCV({ cv, config }) {
+  const accent = config.accent || "#B88A2C";
+  const dark = exactDark(config) || "#111827";
+
+  return (
+    <div
+      id="cv-download"
+      className="bg-white text-black shadow-2xl print:shadow-none"
+      style={{
+        width: "794px",
+        minHeight: "1123px",
+        overflow: "visible",
+      }}
+    >
+      <header
+        className="px-10 py-12 text-white"
+        style={{
+          background: `linear-gradient(135deg, ${dark} 0%, #020617 100%)`,
+        }}
+      >
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: accent }}
+        >
+          Executive Profile
+        </p>
+
+        <h1 className="mt-3 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-3 text-xl font-semibold text-white/70">
+          {title(cv)}
+        </p>
+
+        <ContactLine cv={cv} dark />
 
         <div
           className="mt-6 h-1.5 w-24 rounded-full"
           style={{ backgroundColor: accent }}
         />
-      </div>
-
-      <div
-        className="grid gap-10 px-10 py-10"
-        style={{
-          gridTemplateColumns: "0.36fr 0.64fr",
-        }}
-      >
-        <aside className="space-y-8">
-          {hasList(cv.skills) ? (
-            <CVSection title="Core Skills" accent={accent}>
-              <SkillPills items={cv.skills} accent={accent} />
-            </CVSection>
-          ) : null}
-
-          {hasValidEducation(cv) ? (
-            <CVSection title="Education" accent={accent}>
-              <EducationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.languages) ? (
-            <CVSection title="Languages" accent={accent}>
-              <BulletList items={cv.languages} />
-            </CVSection>
-          ) : null}
-
-          {hasValidCertifications(cv) ? (
-            <CVSection title="Certifications" accent={accent}>
-              <CertificationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.strengths) ? (
-            <CVSection title="Key Strengths" accent={accent}>
-              <BulletList items={cv.strengths} />
-            </CVSection>
-          ) : null}
-        </aside>
-
-        <main className="space-y-8">
-          {hasText(cv.summary) ? (
-            <CVSection title="Professional Profile" accent={accent}>
-              <CvParagraph text={cv.summary} />
-            </CVSection>
-          ) : null}
-
-          {hasValidExperience(cv) ? (
-            <CVSection title="Leadership Experience" accent={accent}>
-              <ExperienceContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          {hasValidProjects(cv) ? (
-            <CVSection title="Projects" accent={accent}>
-              <ProjectsContent cv={cv} />
-            </CVSection>
-          ) : null}
-        </main>
-      </div>
-    </div>
-  );
-}
-
-function CreativeTemplate({ cv, config }) {
-  const accent = config.accent;
-
-  return (
-    <div className="min-h-[1120px] bg-white px-10 py-10 text-black shadow-2xl">
-      <header
-        className="flex flex-row items-center gap-6 rounded-[2rem] p-7"
-        style={{ backgroundColor: `${accent}15` }}
-      >
-        {hasText(cv.photo) || hasText(cv.fullName) ? (
-          <ProfilePhoto cv={cv} accent={accent} rounded />
-        ) : null}
-
-        <div>
-          <p
-            className="text-xs font-black uppercase tracking-[0.25em]"
-            style={{ color: accent }}
-          >
-            Creative Portfolio CV
-          </p>
-
-          {hasText(cv.fullName) ? (
-            <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
-              {cv.fullName}
-            </h1>
-          ) : null}
-
-          {hasText(cv.jobTitle) ? (
-            <p className="mt-2 text-xl font-bold" style={{ color: accent }}>
-              {cv.jobTitle}
-            </p>
-          ) : null}
-
-          {hasContact(cv) ? <ContactLine cv={cv} /> : null}
-        </div>
       </header>
 
-      <main
-        className="mt-10 grid gap-9"
-        style={{
-          gridTemplateColumns: "0.62fr 0.38fr",
-        }}
-      >
-        <div className="space-y-8">
-          {hasText(cv.summary) ? (
-            <CVSection title="Creative Profile" accent={accent}>
-              <CvParagraph text={cv.summary} />
-            </CVSection>
-          ) : null}
-
-          {hasValidExperience(cv) ? (
-            <CVSection title="Experience" accent={accent}>
-              <ExperienceContent cv={cv} />
-            </CVSection>
-          ) : null}
-
-          {hasValidProjects(cv) ? (
-            <CVSection title="Projects" accent={accent}>
-              <ProjectsContent cv={cv} />
-            </CVSection>
-          ) : null}
-        </div>
-
-        <aside className="space-y-8 rounded-[1.8rem] border border-black/5 bg-black/[0.025] p-6">
-          {hasList(cv.skills) ? (
-            <CVSection title="Skills" accent={accent}>
-              <SkillPills items={cv.skills} accent={accent} />
-            </CVSection>
-          ) : null}
-
-          {hasValidEducation(cv) ? (
-            <CVSection title="Education" accent={accent}>
-              <EducationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.languages) ? (
-            <CVSection title="Languages" accent={accent}>
-              <BulletList items={cv.languages} />
-            </CVSection>
-          ) : null}
-
-          {hasValidCertifications(cv) ? (
-            <CVSection title="Certifications" accent={accent}>
-              <CertificationContent cv={cv} compact />
-            </CVSection>
-          ) : null}
-
-          {hasList(cv.strengths) ? (
-            <CVSection title="Strengths" accent={accent}>
-              <BulletList items={cv.strengths} />
-            </CVSection>
-          ) : null}
+      <main className="grid grid-cols-[250px_1fr] gap-9 p-10">
+        <aside>
+          <SideCVSections cv={cv} accent={accent} />
         </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
       </main>
     </div>
   );
 }
 
-function PhotoHeaderTemplate({ cv, config }) {
+function CleanATSCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header
+        className="border-b pb-7"
+        style={{ borderColor: `${config.accent}55` }}
+      >
+        <h1 className="text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p
+          className="mt-2 text-sm font-black uppercase tracking-[0.2em]"
+          style={{ color: config.accent }}
+        >
+          {title(cv)}
+        </p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-8 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function ClassicProCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="text-center">
+        <h1 className="font-serif text-5xl font-bold">{name(cv)}</h1>
+
+        <p
+          className="mt-2 text-lg font-bold uppercase tracking-[0.22em]"
+          style={{ color: config.accent }}
+        >
+          {title(cv)}
+        </p>
+
+        <ContactLine cv={cv} center />
+
+        <div
+          className="mx-auto mt-5 h-px w-full"
+          style={{ backgroundColor: `${config.accent}55` }}
+        />
+      </header>
+
+      <main className="mt-8 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function TechMinimalCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="rounded-[32px] bg-slate-950 p-8 text-white">
+        <p
+          className="font-mono text-sm font-bold"
+          style={{ color: config.accent }}
+        >
+          const candidate =
+        </p>
+
+        <h1 className="mt-2 font-mono text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-white/65">{title(cv)}</p>
+
+        <ContactLine cv={cv} dark />
+      </header>
+
+      <main className="mt-9 grid grid-cols-[1fr_260px] gap-9">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside className="rounded-[28px] bg-slate-50 p-6">
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function GraduateFreshCV({ cv, config }) {
   const accent = config.accent;
 
-  const label =
-    config.layout === "europass"
-      ? "European / International CV Format"
-      : config.layout === "student"
-      ? "Graduate CV"
-      : config.layout === "trade"
-      ? "Skilled Trade CV"
-      : "Professional CV";
+  return (
+    <CVPage>
+      <HeaderBackground accent={accent}>
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: accent }}
+        >
+          Graduate CV
+        </p>
+
+        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg font-bold" style={{ color: accent }}>
+          {title(cv)}
+        </p>
+
+        <ContactLine cv={cv} />
+      </HeaderBackground>
+
+      <main className="mt-8 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8 rounded-3xl border border-slate-200 p-6">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
+
+        <aside
+          className="rounded-3xl p-6"
+          style={{ backgroundColor: `${accent}10` }}
+        >
+          <SideCVSections cv={cv} accent={accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function FormalUKCV({ cv, config }) {
+  const accent = config.accent || "#111827";
 
   return (
-    <div className="min-h-[1120px] bg-white px-10 py-10 text-black shadow-2xl">
+    <CVPage>
       <header
-        className="flex flex-row items-center gap-6 border-b pb-8"
-        style={{ borderColor: `${accent}40` }}
+        className="border-4 p-7 text-center"
+        style={{ borderColor: accent }}
       >
-        {hasText(cv.photo) || hasText(cv.fullName) ? (
-          <ProfilePhoto cv={cv} accent={accent} />
-        ) : null}
+        <h1 className="text-4xl font-bold uppercase tracking-[0.12em] text-black">
+          {name(cv)}
+        </h1>
 
-        <div>
-          <p
-            className="text-xs font-black uppercase tracking-[0.25em]"
-            style={{ color: accent }}
-          >
-            {label}
-          </p>
+        <p className="mt-2 text-base text-black/60">{title(cv)}</p>
 
-          {hasText(cv.fullName) ? (
-            <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
-              {cv.fullName}
-            </h1>
-          ) : null}
+        <ContactLine cv={cv} />
+      </header>
 
-          {hasText(cv.jobTitle) ? (
-            <p className="mt-2 text-xl font-bold" style={{ color: accent }}>
-              {cv.jobTitle}
-            </p>
-          ) : null}
+      <main className="mt-9 space-y-8">
+        <MainCVSections cv={cv} accent={accent} />
+      </main>
+    </CVPage>
+  );
+}
 
-          {hasContact(cv) ? <ContactLine cv={cv} /> : null}
+function AcademicScholarCV({ cv, config }) {
+  return <FormalCV cv={cv} config={config} label="Curriculum Vitae" serif />;
+}
+
+function LegalAdvisorCV({ cv, config }) {
+  return <FormalCV cv={cv} config={config} label="Legal Advisor CV" serif />;
+}
+
+function SeniorDirectorCV({ cv, config }) {
+  return (
+    <CVPage>
+      <div
+        className="mb-8 h-4 rounded-full"
+        style={{ backgroundColor: config.accent }}
+      />
+
+      <header>
+        <p
+          className="text-xs font-black uppercase tracking-[0.32em]"
+          style={{ color: config.accent }}
+        >
+          Senior Leadership Profile
+        </p>
+
+        <h1 className="mt-3 text-6xl font-black tracking-[-0.065em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-xl font-bold text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-10 grid grid-cols-[250px_1fr] gap-10">
+        <aside>
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+
+function AdminProfessionalCV({ cv, config }) {
+  const accent = config.accent || "#475569";
+
+  return (
+    <CVPage>
+      <header className="flex items-stretch">
+        <div className="w-3 rounded-full" style={{ backgroundColor: accent }} />
+
+        <div className="pl-6">
+          <h1 className="text-5xl font-black tracking-[-0.055em]">
+            {name(cv)}
+          </h1>
+
+          <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+          <ContactLine cv={cv} />
         </div>
       </header>
 
       <main className="mt-9 space-y-8">
-        {hasText(cv.summary) ? (
-          <CVSection title="Profile" accent={accent}>
-            <CvParagraph text={cv.summary} />
-          </CVSection>
-        ) : null}
+        <section className="border-l-4 pl-6" style={{ borderColor: accent }}>
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
 
-        {hasValidExperience(cv) ? (
-          <CVSection title="Employment History" accent={accent}>
-            <ExperienceContent cv={cv} />
-          </CVSection>
-        ) : null}
+        <SideCVSections cv={cv} accent={accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function HealthcareClinicalCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-5xl font-black tracking-[-0.055em]">
+            {name(cv)}
+          </h1>
+
+          <p
+            className="mt-2 text-lg font-bold"
+            style={{ color: config.accent }}
+          >
+            {title(cv)}
+          </p>
+
+          <ContactLine cv={cv} />
+        </div>
 
         <div
-          className="grid gap-9"
-          style={{
-            gridTemplateColumns: "1fr 1fr",
-          }}
+          className="flex h-20 w-20 items-center justify-center rounded-full text-4xl font-black text-white"
+          style={{ backgroundColor: config.accent }}
         >
-          {hasValidEducation(cv) ? (
-            <CVSection title="Education" accent={accent}>
-              <EducationContent cv={cv} />
-            </CVSection>
-          ) : null}
+          +
+        </div>
+      </header>
 
-          {hasList(cv.skills) ? (
-            <CVSection title="Skills" accent={accent}>
-              <SkillPills items={cv.skills} accent={accent} />
-            </CVSection>
-          ) : null}
+      <main className="mt-9 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside
+          className="rounded-3xl p-6"
+          style={{ backgroundColor: `${config.accent}10` }}
+        >
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function SalesLeaderCV({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage>
+      <HeaderBackground accent={accent} dark>
+        <h1 className="text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-white/75">{title(cv)}</p>
+
+        <ContactLine cv={cv} dark />
+      </HeaderBackground>
+
+      <div className="mt-7 grid grid-cols-3 gap-4 text-center">
+        <Metric value="128%" label="Target" />
+        <Metric value="42" label="Clients" />
+        <Metric value="£2M" label="Pipeline" />
+      </div>
+
+      <main className="mt-8 space-y-8">
+        <MainCVSections cv={cv} accent={accent} />
+        <SideCVSections cv={cv} accent={accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function FinanceAnalystCV({ cv, config }) {
+  const accent = config.accent || "#0891B2";
+
+  return (
+    <CVPage>
+      <header className="pb-7">
+        <p
+          className="text-xs font-black uppercase tracking-[0.32em]"
+          style={{ color: accent }}
+        >
+          Financial Profile
+        </p>
+
+        <h1 className="mt-3 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <div className="mt-8 grid h-28 grid-cols-5 items-end gap-2">
+        {[35, 55, 45, 70, 60].map((height, index) => (
+          <div
+            key={index}
+            className="rounded-t"
+            style={{
+              height: `${height}%`,
+              backgroundColor: accent,
+            }}
+          />
+        ))}
+      </div>
+
+      <main className="mt-9 grid grid-cols-[260px_1fr] gap-9">
+        <aside className="rounded-3xl bg-slate-50 p-6">
+          <SideCVSections cv={cv} accent={accent} />
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+
+function StockholmCleanCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="flex justify-between gap-6">
+        <div>
+          <h1 className="text-5xl font-light tracking-[-0.055em]">
+            {name(cv)}
+          </h1>
+
+          <p
+            className="mt-2 text-lg font-bold"
+            style={{ color: config.accent }}
+          >
+            {title(cv)}
+          </p>
+
+          <ContactLine cv={cv} />
         </div>
 
-        <div className="grid gap-9 md:grid-cols-2">
-          {hasValidProjects(cv) ? (
-            <CVSection title="Projects" accent={accent}>
-              <ProjectsContent cv={cv} />
-            </CVSection>
-          ) : null}
+        <div
+          className="h-24 w-24 rounded-full"
+          style={{ backgroundColor: `${config.accent}18` }}
+        />
+      </header>
 
-          <div className="space-y-8">
-            {hasList(cv.languages) ? (
-              <CVSection title="Languages" accent={accent}>
-                <BulletList items={cv.languages} />
-              </CVSection>
-            ) : null}
+      <main className="mt-10 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
 
-            {hasValidCertifications(cv) ? (
-              <CVSection title="Certifications" accent={accent}>
-                <CertificationContent cv={cv} />
-              </CVSection>
-            ) : null}
+function DubaiCorporateCV({ cv, config }) {
+  return (
+    <div
+      id="cv-download"
+      className="min-h-[1123px] w-[794px] overflow-visible bg-white text-black shadow-2xl print:shadow-none"
+    >
+      <header
+        className="p-10 text-right text-white"
+        style={{ backgroundColor: exactDark(config) }}
+      >
+        <p
+          className="text-xs uppercase tracking-[0.3em]"
+          style={{ color: config.accent }}
+        >
+          Corporate Profile
+        </p>
 
-            {hasList(cv.strengths) ? (
-              <CVSection title="Strengths" accent={accent}>
-                <BulletList items={cv.strengths} />
-              </CVSection>
-            ) : null}
-          </div>
-        </div>
+        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-white/70">{title(cv)}</p>
+
+        <ContactLine cv={cv} dark />
+      </header>
+
+      <main className="grid grid-cols-[260px_1fr] gap-10 p-10">
+        <aside>
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
       </main>
     </div>
   );
 }
 
-// ---------- REUSABLE COMPONENTS ----------
-function CVSection({ title, children, accent }) {
-  if (!children) return null;
+function CanadaSimpleCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header
+        className="border-l-[14px] pl-6"
+        style={{ borderColor: config.accent }}
+      >
+        <h1 className="text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
 
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function HospitalityPremiumCV({ cv, config }) {
+  return (
+    <CVPage ivory>
+      <header
+        className="rounded-[36px] p-8"
+        style={{ backgroundColor: `${config.accent}10` }}
+      >
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: config.accent }}
+        >
+          Hospitality Profile
+        </p>
+
+        <h1 className="mt-2 font-serif text-5xl font-bold">{name(cv)}</h1>
+
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside>
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function EngineerGridCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header>
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: config.accent }}
+        >
+          Engineering CV
+        </p>
+
+        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 grid grid-cols-2 gap-7">
+        <section className="space-y-7">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside className="space-y-7 rounded-3xl border border-slate-200 p-6">
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function TeacherFriendlyCV({ cv, config }) {
+  const accent = config.accent;
+
+  return (
+    <CVPage>
+      <HeaderBackground accent={accent}>
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: accent }}
+        >
+          Education CV
+        </p>
+
+        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </HeaderBackground>
+
+      <main className="mt-9">
+        <section
+          className="rounded-[1.5rem] border-l-8 p-7"
+          style={{ borderColor: accent }}
+        >
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
+
+        <aside className="mt-8">
+          <SideCVSections cv={cv} accent={accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function CustomerServiceCV({ cv, config }) {
+  return (
+    <BadgeHeaderCV cv={cv} config={config} badge="★" label="Service Profile" />
+  );
+}
+
+function ProjectManagerCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header>
+        <h1 className="text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p
+          className="mt-2 text-lg font-bold"
+          style={{ color: config.accent }}
+        >
+          {title(cv)}
+        </p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 space-y-8">
+        {hasText(cv.summary) ? (
+          <CVSection title="Professional Summary" accent={config.accent}>
+            <Paragraph text={cv.summary} />
+          </CVSection>
+        ) : null}
+
+        <CVSection title="Project Timeline" accent={config.accent}>
+          <div
+            className="space-y-6 border-l-2 pl-6"
+            style={{ borderColor: config.accent }}
+          >
+            <ExperienceContent cv={cv} timeline accent={config.accent} />
+          </div>
+        </CVSection>
+
+        <MainCVSections
+          cv={cv}
+          accent={config.accent}
+          skipSummary
+          skipExperience
+        />
+
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function MarketingBoldCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header
+        className="rounded-[36px] p-8 text-white"
+        style={{
+          background: `linear-gradient(135deg, ${config.accent}, ${exactDark(
+            config
+          )})`,
+        }}
+      >
+        <p className="text-xs font-black uppercase tracking-[0.3em] text-white/65">
+          Marketing Profile
+        </p>
+
+        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-white/75">{title(cv)}</p>
+
+        <ContactLine cv={cv} dark />
+      </header>
+
+      <main className="mt-8 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside>
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function HRProfessionalCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="grid grid-cols-[96px_1fr] gap-6">
+        <Monogram name={name(cv)} accent={config.accent} />
+
+        <div>
+          <p
+            className="text-xs font-black uppercase tracking-[0.3em]"
+            style={{ color: config.accent }}
+          >
+            Human Resources
+          </p>
+
+          <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+            {name(cv)}
+          </h1>
+
+          <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+          <ContactLine cv={cv} />
+        </div>
+      </header>
+
+      <main className="mt-9 grid grid-cols-[260px_1fr] gap-9">
+        <aside className="rounded-3xl bg-slate-50 p-6">
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+
+function DataAnalystCV({ cv, config }) {
+  return (
+    <CVPage>
+      <header className="rounded-[32px] border border-slate-200 p-8">
+        <p
+          className="font-mono text-xs font-black uppercase tracking-[0.25em]"
+          style={{ color: config.accent }}
+        >
+          Data Profile
+        </p>
+
+        <h1 className="mt-2 font-mono text-5xl font-black tracking-[-0.055em]">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <div className="mt-7 grid grid-cols-3 gap-4">
+        <Metric value="SQL" label="Analysis" />
+        <Metric value="BI" label="Reports" />
+        <Metric value="KPI" label="Tracking" />
+      </div>
+
+      <main className="mt-8 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside>
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function PremiumMonogramCV({ cv, config }) {
+  return (
+    <CVPage ivory>
+      <header className="text-center">
+        <div className="mx-auto">
+          <Monogram name={name(cv)} accent={config.accent} />
+        </div>
+
+        <p
+          className="mt-5 text-xs font-black uppercase tracking-[0.32em]"
+          style={{ color: config.accent }}
+        >
+          Premium Profile
+        </p>
+
+        <h1 className="mt-3 font-serif text-5xl font-bold">{name(cv)}</h1>
+
+        <p className="mt-3 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} center />
+      </header>
+
+      <main className="mt-10 grid grid-cols-[240px_1fr] gap-9">
+        <aside>
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
+}
+
+/* =========================
+   SHARED TEMPLATE BLOCKS
+========================= */
+
+function FormalCV({ cv, config, label = "Professional CV", serif = false }) {
+  return (
+    <CVPage>
+      <header className="text-center">
+        <p
+          className="text-xs font-black uppercase tracking-[0.32em]"
+          style={{ color: config.accent }}
+        >
+          {label}
+        </p>
+
+        <h1
+          className={`mt-3 text-5xl ${
+            serif ? "font-serif font-bold" : "font-black tracking-[-0.055em]"
+          }`}
+        >
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+        <ContactLine cv={cv} center />
+
+        <div
+          className="mx-auto mt-5 h-px w-full"
+          style={{ backgroundColor: `${config.accent}55` }}
+        />
+      </header>
+
+      <main className="mt-9 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
+
+function BadgeHeaderCV({
+  cv,
+  config,
+  badge = "✓",
+  label = "Professional Profile",
+}) {
+  return (
+    <CVPage>
+      <header className="flex items-center justify-between gap-6">
+        <div>
+          <p
+            className="text-xs font-black uppercase tracking-[0.3em]"
+            style={{ color: config.accent }}
+          >
+            {label}
+          </p>
+
+          <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+            {name(cv)}
+          </h1>
+
+          <p className="mt-2 text-lg text-black/60">{title(cv)}</p>
+
+          <ContactLine cv={cv} />
+        </div>
+
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-full text-4xl font-black text-white"
+          style={{ backgroundColor: config.accent }}
+        >
+          {badge}
+        </div>
+      </header>
+
+      <main className="mt-9 grid grid-cols-[1fr_260px] gap-8">
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+
+        <aside
+          className="rounded-3xl p-6"
+          style={{ backgroundColor: `${config.accent}10` }}
+        >
+          <SideCVSections cv={cv} accent={config.accent} />
+        </aside>
+      </main>
+    </CVPage>
+  );
+}
+
+function CVPage({ children, ivory = false }) {
+  return (
+    <div
+      id="cv-download"
+      className={`min-h-[1123px] w-[794px] overflow-visible px-12 py-12 text-black shadow-2xl print:min-h-0 print:w-full print:overflow-visible print:shadow-none ${
+        ivory ? "bg-[#FBF7EF]" : "bg-white"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MainCVSections({
+  cv,
+  accent,
+  skipSummary = false,
+  skipExperience = false,
+}) {
+  return (
+    <>
+      {!skipSummary && hasText(cv.summary) ? (
+        <CVSection title="Professional Summary" accent={accent}>
+          <Paragraph text={cv.summary} />
+        </CVSection>
+      ) : null}
+
+      {!skipExperience && hasValidExperience(cv) ? (
+        <CVSection title="Work Experience" accent={accent}>
+          <ExperienceContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasValidEducation(cv) ? (
+        <CVSection title="Education" accent={accent}>
+          <EducationContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasValidProjects(cv) ? (
+        <CVSection title="Projects" accent={accent}>
+          <ProjectsContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      {hasList(cv.achievements) ? (
+        <CVSection title="Achievements" accent={accent}>
+          <BulletList items={cv.achievements} />
+        </CVSection>
+      ) : null}
+
+      {hasValidCertifications(cv) ? (
+        <CVSection title="Certifications" accent={accent}>
+          <CertificationContent cv={cv} />
+        </CVSection>
+      ) : null}
+
+      <AdditionalSectionsContent cv={cv} accent={accent} />
+    </>
+  );
+}
+
+function SideCVSections({ cv, accent = "#111827", dark = false }) {
+  return (
+    <>
+      {hasList(cv.skills) ? (
+        <div className="mt-8 first:mt-0">
+          <SmallTitle title="Skills" dark={dark} />
+          <SkillPills
+            items={cv.skills}
+            levels={cv.skillLevels}
+            dark={dark}
+            accent={accent}
+          />
+        </div>
+      ) : null}
+
+      {hasList(cv.languages) ? (
+        <div className="mt-8">
+          <SmallTitle title="Languages" dark={dark} />
+          <LanguageList
+            items={cv.languages}
+            levels={cv.languageLevels}
+            dark={dark}
+          />
+        </div>
+      ) : null}
+
+      {hasList(cv.strengths) ? (
+        <div className="mt-8">
+          <SmallTitle title="Strengths" dark={dark} />
+          <BulletList items={cv.strengths} dark={dark} />
+        </div>
+      ) : null}
+
+      {hasList(cv.hobbies) ? (
+        <div className="mt-8">
+          <SmallTitle title="Interests" dark={dark} />
+          <BulletList items={cv.hobbies} dark={dark} />
+        </div>
+      ) : null}
+
+      {hasText(cv.references) ? (
+        <div className="mt-8">
+          <SmallTitle title="References" dark={dark} />
+          <Paragraph text={cv.references} dark={dark} />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function CVSection({ title, children, accent }) {
   return (
     <section>
       <h2
@@ -1408,13 +2128,25 @@ function CVSection({ title, children, accent }) {
   );
 }
 
-function CvParagraph({ text, dark = false, className = "" }) {
+function SmallTitle({ title, dark = false }) {
+  return (
+    <h3
+      className={`mb-3 text-xs font-black uppercase tracking-[0.2em] ${
+        dark ? "text-white" : "text-slate-950"
+      }`}
+    >
+      {title}
+    </h3>
+  );
+}
+
+function Paragraph({ text, dark = false, className = "" }) {
   if (!hasText(text)) return null;
 
   return (
     <p
-      className={`whitespace-pre-line text-sm leading-8 ${
-        dark ? "text-white/75" : "text-black/70"
+      className={`whitespace-pre-line text-[12px] leading-6 ${
+        dark ? "text-white/75" : "text-slate-600"
       } ${className}`}
     >
       {text}
@@ -1429,12 +2161,12 @@ function BulletList({ items, dark = false }) {
 
   return (
     <ul
-      className={`space-y-2 text-sm leading-7 ${
-        dark ? "text-white/78" : "text-black/70"
+      className={`space-y-2 text-[12px] leading-6 ${
+        dark ? "text-white/75" : "text-slate-600"
       }`}
     >
-      {list.map((item, idx) => (
-        <li key={`${item}-${idx}`} className="flex gap-3">
+      {list.map((item, index) => (
+        <li key={`${item}-${index}`} className="flex gap-2">
           <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
           <span>{item}</span>
         </li>
@@ -1443,150 +2175,323 @@ function BulletList({ items, dark = false }) {
   );
 }
 
-function TagList({ items, accent }) {
+function SkillPills({ items, levels = [], dark = false, accent = "#111827" }) {
   const list = normalizeList(items);
 
   if (!list.length) return null;
 
   return (
     <div className="flex flex-wrap gap-2">
-      {list.map((item, idx) => (
+      {list.map((item, index) => (
         <span
-          key={`${item}-${idx}`}
-          className="rounded-full px-3 py-1.5 text-xs font-bold text-white"
-          style={{ backgroundColor: accent }}
+          key={`${item}-${index}`}
+          className="rounded-full px-3 py-1.5 text-[10.5px] font-bold"
+          style={{
+            backgroundColor: dark ? "rgba(255,255,255,0.16)" : accent,
+            color: "#ffffff",
+            border: dark
+              ? "1px solid rgba(255,255,255,0.22)"
+              : `1px solid ${accent}`,
+          }}
         >
           {item}
+          {levels?.[index] ? ` · ${levels[index]}` : ""}
         </span>
       ))}
     </div>
   );
 }
 
-function SkillPills({ items, accent = "#111827", dark = false }) {
+function LanguageList({ items, levels = [], dark = false }) {
   const list = normalizeList(items);
 
   if (!list.length) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {list.map((item, idx) => (
-        <span
-          key={`${item}-${idx}`}
-          className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-            dark ? "bg-white/15 text-white" : "text-white"
+    <div className="space-y-2">
+      {list.map((item, index) => (
+        <p
+          key={`${item}-${index}`}
+          className={`text-[12px] ${
+            dark ? "text-white/75" : "text-slate-600"
           }`}
-          style={dark ? undefined : { backgroundColor: accent }}
         >
           {item}
-        </span>
+          {levels?.[index] ? ` — ${levels[index]}` : ""}
+        </p>
       ))}
     </div>
   );
 }
 
-function SmallTitle({ title, dark = false }) {
+function ContactLine({ cv, dark = false, center = false }) {
+  const items = [
+    cv.email,
+    cv.phone,
+    cv.location,
+    cv.linkedIn,
+    cv.github,
+    cv.portfolio,
+    cv.website,
+  ].filter(hasText);
+
+  if (!items.length) return null;
+
   return (
     <p
-      className={`mb-3 text-xs font-black uppercase tracking-[0.22em] ${
-        dark ? "text-white" : "text-black"
-      }`}
+      className={`mt-4 text-[11.5px] leading-6 ${
+        center ? "text-center" : ""
+      } ${dark ? "text-white/65" : "text-slate-500"}`}
     >
-      {title}
+      {items.join(" · ")}
     </p>
   );
 }
 
-function ClickableUrl({ value, className = "" }) {
-  if (!hasText(value)) return null;
-
-  const clean = String(value).trim();
-  const href = normalizeUrl(clean);
-
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`underline-offset-4 hover:underline ${className}`}
-    >
-      {clean}
-    </a>
-  );
-}
-
-function ContactLine({ cv, dark = false }) {
-  const baseClass = dark
-    ? "text-white/65 hover:text-white"
-    : "text-black/55 hover:text-black";
-
-  return (
-    <div
-      className={`mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm ${
-        dark ? "text-white/65" : "text-black/55"
-      }`}
-    >
-      {hasText(cv.email) ? (
-        <a className={baseClass} href={`mailto:${cv.email}`}>
-          {cv.email}
-        </a>
-      ) : null}
-
-      {hasText(cv.phone) ? <span>{cv.phone}</span> : null}
-      {hasText(cv.location) ? <span>{cv.location}</span> : null}
-
-      <ClickableUrl value={cv.linkedIn} className={baseClass} />
-      <ClickableUrl value={cv.github} className={baseClass} />
-      <ClickableUrl value={cv.portfolio} className={baseClass} />
-      <ClickableUrl value={cv.website} className={baseClass} />
-    </div>
-  );
-}
-
 function ContactStack({ cv, dark = false }) {
-  const baseClass = dark
-    ? "text-white/75 hover:text-white"
-    : "text-black/60 hover:text-black";
+  const items = [
+    cv.email,
+    cv.phone,
+    cv.location,
+    cv.linkedIn,
+    cv.github,
+    cv.portfolio,
+    cv.website,
+  ].filter(hasText);
+
+  if (!items.length) return null;
 
   return (
-    <div className="space-y-2 text-sm leading-6">
-      {hasText(cv.email) ? (
-        <a className={`block break-all ${baseClass}`} href={`mailto:${cv.email}`}>
-          {cv.email}
-        </a>
-      ) : null}
-
-      {hasText(cv.phone) ? (
-        <p className={dark ? "text-white/75" : "text-black/60"}>{cv.phone}</p>
-      ) : null}
-
-      {hasText(cv.location) ? (
-        <p className={dark ? "text-white/75" : "text-black/60"}>
-          {cv.location}
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <p
+          key={`${item}-${index}`}
+          className={`break-all text-[11.5px] leading-5 ${
+            dark ? "text-white/75" : "text-slate-600"
+          }`}
+        >
+          {item}
         </p>
-      ) : null}
-
-      <ClickableUrl value={cv.linkedIn} className={`block break-all ${baseClass}`} />
-      <ClickableUrl value={cv.github} className={`block break-all ${baseClass}`} />
-      <ClickableUrl value={cv.portfolio} className={`block break-all ${baseClass}`} />
-      <ClickableUrl value={cv.website} className={`block break-all ${baseClass}`} />
+      ))}
     </div>
   );
 }
 
-function ProfilePhoto({ cv, accent, dark = false, rounded = false }) {
+function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
+  const items = getValidExperience(cv);
+
+  if (!items.length) {
+    return hasText(cv.experience) ? <Paragraph text={cv.experience} /> : null;
+  }
+
+  return (
+    <div className="space-y-6">
+      {items.map((item, index) => (
+        <div key={index} className="relative">
+          {timeline ? (
+            <span
+              className="absolute -left-[31px] top-1 h-3 w-3 rounded-full"
+              style={{ backgroundColor: accent }}
+            />
+          ) : null}
+
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              {hasText(item.jobTitle) ? (
+                <h3 className="text-[13px] font-black text-slate-950">
+                  {item.jobTitle}
+                </h3>
+              ) : null}
+
+              {[item.company, item.location].filter(hasText).length ? (
+                <p className="mt-1 text-[11.5px] font-semibold text-slate-500">
+                  {[item.company, item.location].filter(hasText).join(" · ")}
+                </p>
+              ) : null}
+            </div>
+
+            {[item.startDate, item.current ? "Present" : item.endDate].filter(
+              hasText
+            ).length ? (
+              <p className="whitespace-nowrap text-[11px] font-bold text-slate-400">
+                {[item.startDate, item.current ? "Present" : item.endDate]
+                  .filter(hasText)
+                  .join(" — ")}
+              </p>
+            ) : null}
+          </div>
+
+          {hasText(item.description) ? (
+            <Paragraph text={item.description} className="mt-2" />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EducationContent({ cv }) {
+  const items = getValidEducation(cv);
+
+  if (!items.length) {
+    return hasText(cv.education) ? <Paragraph text={cv.education} /> : null;
+  }
+
+  return (
+    <div className="space-y-5">
+      {items.map((item, index) => (
+        <div key={index}>
+          {hasText(item.degree) ? (
+            <h3 className="text-[13px] font-black text-slate-950">
+              {item.degree}
+            </h3>
+          ) : null}
+
+          {[item.institution, item.location].filter(hasText).length ? (
+            <p className="mt-1 text-[11.5px] font-semibold text-slate-500">
+              {[item.institution, item.location].filter(hasText).join(" · ")}
+            </p>
+          ) : null}
+
+          {[item.startDate, item.endDate].filter(hasText).length ? (
+            <p className="mt-1 text-[11px] font-bold text-slate-400">
+              {[item.startDate, item.endDate].filter(hasText).join(" — ")}
+            </p>
+          ) : null}
+
+          {hasText(item.description) ? (
+            <Paragraph text={item.description} className="mt-2" />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectsContent({ cv }) {
+  const items = getValidProjects(cv);
+
+  if (!items.length) {
+    return hasText(cv.projects) ? <Paragraph text={cv.projects} /> : null;
+  }
+
+  return (
+    <div className="space-y-5">
+      {items.map((item, index) => (
+        <div key={index}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              {hasText(item.title) ? (
+                <h3 className="text-[13px] font-black text-slate-950">
+                  {item.title}
+                </h3>
+              ) : null}
+
+              {[item.role, item.technologies].filter(hasText).length ? (
+                <p className="mt-1 text-[11.5px] font-semibold text-slate-500">
+                  {[item.role, item.technologies].filter(hasText).join(" · ")}
+                </p>
+              ) : null}
+            </div>
+
+            {hasText(item.date) ? (
+              <p className="whitespace-nowrap text-[11px] font-bold text-slate-400">
+                {item.date}
+              </p>
+            ) : null}
+          </div>
+
+          {hasText(item.description) ? (
+            <Paragraph text={item.description} className="mt-2" />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CertificationContent({ cv }) {
+  const items = getValidCertifications(cv);
+
+  if (!items.length) {
+    return hasList(cv.certifications) ? (
+      <BulletList items={cv.certifications} />
+    ) : null;
+  }
+
+  return (
+    <div className="space-y-4">
+      {items.map((item, index) => (
+        <div key={index}>
+          {hasText(item.name) ? (
+            <h3 className="text-[12px] font-black text-slate-950">
+              {item.name}
+            </h3>
+          ) : null}
+
+          {[item.issuer, item.date].filter(hasText).length ? (
+            <p className="text-[11px] leading-5 text-slate-500">
+              {[item.issuer, item.date].filter(hasText).join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdditionalSectionsContent({ cv, accent }) {
+  const items = Array.isArray(cv.additionalSections)
+    ? cv.additionalSections.filter(
+        (item) => hasText(item.title) || hasText(item.description)
+      )
+    : [];
+
+  return (
+    <>
+      {items.map((item, index) => (
+        <CVSection
+          key={`${item.title || "section"}-${index}`}
+          title={item.title || "Additional Information"}
+          accent={accent}
+        >
+          <Paragraph text={item.description} />
+        </CVSection>
+      ))}
+    </>
+  );
+}
+
+function ProfilePhoto({ cv, config, large = false, dark = false }) {
+  const accent = config.accent;
+
+  const shapeMap = {
+    eu: "rounded-md",
+    square: "rounded-xl",
+    "circle-ring": "rounded-full ring-4 ring-white",
+    blob: "rounded-[42%_58%_55%_45%/48%_42%_58%_52%]",
+    oval: "rounded-[45%]",
+  };
+
+  const shape = shapeMap[config.photoShape] || "rounded-full";
+  const size = large ? "h-32 w-32" : "h-24 w-24";
+
   return (
     <div
-      className={`flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden border ${
-        rounded ? "rounded-[1.8rem]" : "rounded-full"
-      } ${dark ? "border-white/25 bg-white/10" : "border-black/5 bg-black/5"}`}
-      style={{ boxShadow: `0 18px 45px ${accent}25` }}
+      className={`${size} ${shape} shrink-0 overflow-hidden border bg-slate-100 shadow`}
+      style={{ borderColor: dark ? "rgba(255,255,255,.35)" : accent }}
     >
       {hasText(cv.photo) ? (
         <img
           src={cv.photo}
           alt={cv.fullName || "Profile"}
           className="h-full w-full object-cover"
+          style={{
+            transform: `scale(${Number(cv.photoZoom) || 1})`,
+            transformOrigin: `${Number(cv.photoPositionX) || 50}% ${
+              Number(cv.photoPositionY) || 50
+            }%`,
+          }}
         />
       ) : (
         <DefaultAvatar name={cv.fullName} accent={accent} />
@@ -1595,214 +2500,182 @@ function ProfilePhoto({ cv, accent, dark = false, rounded = false }) {
   );
 }
 
-function DefaultAvatar({ name = "Candidate", accent = "#111827" }) {
+function DefaultAvatar({ name = "Candidate", accent = "#2563EB" }) {
   const initials = String(name || "Candidate")
     .split(" ")
-    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
     .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
+    .toUpperCase();
 
   return (
     <div
-      className="flex h-full w-full flex-col items-center justify-center text-white"
-      style={{ background: `linear-gradient(135deg, ${accent}, #111827)` }}
+      className="flex h-full w-full items-center justify-center text-3xl font-black"
+      style={{ color: accent, backgroundColor: `${accent}12` }}
     >
-      <div className="h-12 w-12 rounded-full bg-white/90" />
-      <div className="mt-2 h-10 w-20 rounded-t-full bg-white/90" />
-      <p className="mt-1 text-xs font-black opacity-50">{initials}</p>
+      {initials || "CV"}
     </div>
   );
 }
 
-// ---------- CV CONTENT ----------
-function ExperienceContent({ cv }) {
-  if (Array.isArray(cv.experiences) && cv.experiences.length) {
-    const valid = cv.experiences.filter(
-      (e) =>
-        hasText(e.jobTitle) ||
-        hasText(e.company) ||
-        hasText(e.location) ||
-        hasText(e.startDate) ||
-        hasText(e.endDate) ||
-        hasText(e.description)
-    );
+function Monogram({ name, accent }) {
+  const initials = String(name || "Candidate")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
-    if (valid.length) {
-      return (
-        <div className="space-y-6">
-          {valid.map((item, idx) => (
-            <div key={idx}>
-              <div className="flex flex-row items-start justify-between gap-1">
-                <div>
-                  {hasText(item.jobTitle) ? (
-                    <h3 className="text-lg font-black text-black">
-                      {item.jobTitle}
-                    </h3>
-                  ) : null}
-
-                  {[item.company, item.location].filter(Boolean).length > 0 ? (
-                    <p className="text-sm font-semibold text-black/55">
-                      {[item.company, item.location].filter(Boolean).join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-
-                {formatDateRange(item.startDate, item.endDate, item.current) ? (
-                  <p className="whitespace-nowrap text-sm font-bold text-black/45">
-                    {formatDateRange(item.startDate, item.endDate, item.current)}
-                  </p>
-                ) : null}
-              </div>
-
-              {hasText(item.description) ? (
-                <CvParagraph text={item.description} className="mt-3" />
-              ) : null}
-            </div>
-          ))}
-        </div>
-      );
-    }
-  }
-
-  return hasText(cv.experience) ? <CvParagraph text={cv.experience} /> : null;
+  return (
+    <div
+      className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl border-2 text-3xl font-black"
+      style={{ borderColor: `${accent}66`, color: accent }}
+    >
+      {initials || "CV"}
+    </div>
+  );
 }
 
-function EducationContent({ cv, compact = false }) {
-  if (Array.isArray(cv.educations) && cv.educations.length) {
-    const valid = cv.educations.filter(
-      (e) =>
-        hasText(e.degree) ||
-        hasText(e.institution) ||
-        hasText(e.location) ||
-        hasText(e.startDate) ||
-        hasText(e.endDate) ||
-        hasText(e.description)
-    );
-
-    if (valid.length) {
-      return (
-        <div className={compact ? "space-y-4" : "space-y-5"}>
-          {valid.map((item, idx) => (
-            <div key={idx}>
-              <div className="flex flex-row items-start justify-between gap-1">
-                <div>
-                  {hasText(item.degree) ? (
-                    <h3 className="text-base font-black text-black">
-                      {item.degree}
-                    </h3>
-                  ) : null}
-
-                  {[item.institution, item.location].filter(Boolean).length > 0 ? (
-                    <p className="text-sm font-semibold text-black/55">
-                      {[item.institution, item.location]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-
-                {[item.startDate, item.endDate].filter(Boolean).length > 0 ? (
-                  <p className="whitespace-nowrap text-sm font-bold text-black/45">
-                    {[item.startDate, item.endDate].filter(Boolean).join(" — ")}
-                  </p>
-                ) : null}
-              </div>
-
-              {hasText(item.description) ? (
-                <CvParagraph text={item.description} className="mt-2" />
-              ) : null}
-            </div>
-          ))}
-        </div>
-      );
-    }
-  }
-
-  return hasText(cv.education) ? <CvParagraph text={cv.education} /> : null;
+function Metric({ value, label }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4 text-center">
+      <p className="text-xl font-black text-slate-950">{value}</p>
+      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </p>
+    </div>
+  );
 }
 
-function ProjectsContent({ cv }) {
-  if (Array.isArray(cv.projectsList) && cv.projectsList.length) {
-    const valid = cv.projectsList.filter(
-      (p) =>
-        hasText(p.title) ||
-        hasText(p.role) ||
-        hasText(p.technologies) ||
-        hasText(p.date) ||
-        hasText(p.description)
-    );
+/* =========================
+   DATA HELPERS
+========================= */
 
-    if (valid.length) {
-      return (
-        <div className="space-y-5">
-          {valid.map((item, idx) => (
-            <div key={idx}>
-              <div className="flex flex-row items-start justify-between gap-1">
-                <div>
-                  {hasText(item.title) ? (
-                    <h3 className="text-base font-black text-black">
-                      {item.title}
-                    </h3>
-                  ) : null}
+function resolveTemplateId(template) {
+  const rawTemplate = template || "clean-ats";
 
-                  {[item.role, item.technologies].filter(Boolean).length > 0 ? (
-                    <p className="text-sm font-semibold text-black/55">
-                      {[item.role, item.technologies]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  ) : null}
-                </div>
+  if (templateConfig[rawTemplate]) return rawTemplate;
 
-                {hasText(item.date) ? (
-                  <p className="whitespace-nowrap text-sm font-bold text-black/45">
-                    {item.date}
-                  </p>
-                ) : null}
-              </div>
+  if (legacyTemplateMap[rawTemplate]) return legacyTemplateMap[rawTemplate];
 
-              {hasText(item.description) ? (
-                <CvParagraph text={item.description} className="mt-2" />
-              ) : null}
-            </div>
-          ))}
-        </div>
-      );
-    }
-  }
-
-  return hasText(cv.projects) ? <CvParagraph text={cv.projects} /> : null;
+  return "clean-ats";
 }
 
-function CertificationContent({ cv, compact = false }) {
-  if (Array.isArray(cv.certificationsList) && cv.certificationsList.length) {
-    const valid = cv.certificationsList.filter(
-      (c) => hasText(c.name) || hasText(c.issuer) || hasText(c.date)
-    );
+function getTemplateConfig(cv) {
+  const resolvedId = resolveTemplateId(cv?.template);
+  const template = templateConfig[resolvedId] || templateConfig["clean-ats"];
 
-    if (valid.length) {
-      return (
-        <div className={compact ? "space-y-3" : "space-y-4"}>
-          {valid.map((item, idx) => (
-            <div key={idx}>
-              {hasText(item.name) ? (
-                <h3 className="text-sm font-black text-black">{item.name}</h3>
-              ) : null}
+  return {
+    ...template,
+    id: resolvedId,
+    layout: resolvedId,
+    name: template.name || "Clean ATS",
+    photo: Boolean(template.photo),
+    photoShape: template.photoShape || "circle",
+    colors: template.colors || colorSets.blue,
+    accent:
+      cv?.selectedColor ||
+      cv?.color ||
+      template.accent ||
+      template.colors?.[0] ||
+      "#2563EB",
+  };
+}
 
-              {[item.issuer, item.date].filter(Boolean).length > 0 ? (
-                <p className="text-sm leading-7 text-black/60">
-                  {[item.issuer, item.date].filter(Boolean).join(" · ")}
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      );
-    }
+function exactDark(config) {
+  return config.colors?.[2] || config.colors?.[1] || "#0F172A";
+}
+
+function name(cv) {
+  return hasText(cv.fullName) ? cv.fullName : "Your Name";
+}
+
+function title(cv) {
+  return hasText(cv.jobTitle) ? cv.jobTitle : "Professional Title";
+}
+
+function normalizeList(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
   }
 
-  return hasList(cv.certifications) ? (
-    <BulletList items={cv.certifications} />
-  ) : null;
+  return String(value)
+    .split(/,|\n|;|·/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function hasText(value) {
+  return value !== undefined && value !== null && String(value).trim().length > 0;
+}
+
+function hasList(value) {
+  return normalizeList(value).length > 0;
+}
+
+function getValidExperience(cv) {
+  return Array.isArray(cv.experiences)
+    ? cv.experiences.filter(
+        (item) =>
+          hasText(item.jobTitle) ||
+          hasText(item.company) ||
+          hasText(item.location) ||
+          hasText(item.startDate) ||
+          hasText(item.endDate) ||
+          hasText(item.description)
+      )
+    : [];
+}
+
+function getValidEducation(cv) {
+  return Array.isArray(cv.educations)
+    ? cv.educations.filter(
+        (item) =>
+          hasText(item.degree) ||
+          hasText(item.institution) ||
+          hasText(item.location) ||
+          hasText(item.startDate) ||
+          hasText(item.endDate) ||
+          hasText(item.description)
+      )
+    : [];
+}
+
+function getValidProjects(cv) {
+  return Array.isArray(cv.projectsList)
+    ? cv.projectsList.filter(
+        (item) =>
+          hasText(item.title) ||
+          hasText(item.role) ||
+          hasText(item.technologies) ||
+          hasText(item.date) ||
+          hasText(item.description)
+      )
+    : [];
+}
+
+function getValidCertifications(cv) {
+  return Array.isArray(cv.certificationsList)
+    ? cv.certificationsList.filter(
+        (item) => hasText(item.name) || hasText(item.issuer) || hasText(item.date)
+      )
+    : [];
+}
+
+function hasValidExperience(cv) {
+  return getValidExperience(cv).length > 0 || hasText(cv.experience);
+}
+
+function hasValidEducation(cv) {
+  return getValidEducation(cv).length > 0 || hasText(cv.education);
+}
+
+function hasValidProjects(cv) {
+  return getValidProjects(cv).length > 0 || hasText(cv.projects);
+}
+
+function hasValidCertifications(cv) {
+  return getValidCertifications(cv).length > 0 || hasList(cv.certifications);
 }

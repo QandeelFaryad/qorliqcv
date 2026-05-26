@@ -21,137 +21,76 @@ const cleanArray = (value) => {
 
 const ExperienceSchema = new mongoose.Schema(
   {
-    jobTitle: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    company: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    location: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    startDate: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    endDate: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    current: {
-      type: Boolean,
-      default: false,
-    },
-    description: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
+    jobTitle: { type: String, default: "", set: cleanText },
+    company: { type: String, default: "", set: cleanText },
+    location: { type: String, default: "", set: cleanText },
+    startDate: { type: String, default: "", set: cleanText },
+    endDate: { type: String, default: "", set: cleanText },
+    current: { type: Boolean, default: false },
+    description: { type: String, default: "", set: cleanText },
   },
   { _id: false }
 );
 
 const EducationSchema = new mongoose.Schema(
   {
-    degree: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    institution: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    location: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    startDate: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    endDate: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    description: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
+    degree: { type: String, default: "", set: cleanText },
+    institution: { type: String, default: "", set: cleanText },
+    location: { type: String, default: "", set: cleanText },
+    startDate: { type: String, default: "", set: cleanText },
+    endDate: { type: String, default: "", set: cleanText },
+    description: { type: String, default: "", set: cleanText },
   },
   { _id: false }
 );
 
 const ProjectSchema = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    role: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    technologies: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    date: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    description: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
+    title: { type: String, default: "", set: cleanText },
+    role: { type: String, default: "", set: cleanText },
+    technologies: { type: String, default: "", set: cleanText },
+    date: { type: String, default: "", set: cleanText },
+    description: { type: String, default: "", set: cleanText },
   },
   { _id: false }
 );
 
 const CertificationSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    issuer: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-    date: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
+    name: { type: String, default: "", set: cleanText },
+    issuer: { type: String, default: "", set: cleanText },
+    date: { type: String, default: "", set: cleanText },
+  },
+  { _id: false }
+);
+
+const AdditionalSectionSchema = new mongoose.Schema(
+  {
+    title: { type: String, default: "", set: cleanText },
+    description: { type: String, default: "", set: cleanText },
   },
   { _id: false }
 );
 
 const CVSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+
     template: {
       type: String,
-      default: "ats-professional",
+      default: "clean-ats",
+      set: cleanText,
+      index: true,
+    },
+
+    selectedColor: {
+      type: String,
+      default: "",
       set: cleanText,
     },
 
@@ -215,6 +154,27 @@ const CVSchema = new mongoose.Schema(
       default: "",
     },
 
+    photoZoom: {
+      type: Number,
+      default: 1,
+      min: 1,
+      max: 3,
+    },
+
+    photoPositionX: {
+      type: Number,
+      default: 50,
+      min: 0,
+      max: 100,
+    },
+
+    photoPositionY: {
+      type: Number,
+      default: 50,
+      min: 0,
+      max: 100,
+    },
+
     summary: {
       type: String,
       default: "",
@@ -227,19 +187,31 @@ const CVSchema = new mongoose.Schema(
       set: cleanText,
     },
 
-    projects: {
-      type: String,
-      default: "",
-      set: cleanText,
-    },
-
     education: {
       type: String,
       default: "",
       set: cleanText,
     },
 
+    projects: {
+      type: String,
+      default: "",
+      set: cleanText,
+    },
+
+    certifications: {
+      type: [String],
+      default: [],
+      set: cleanArray,
+    },
+
     skills: {
+      type: [String],
+      default: [],
+      set: cleanArray,
+    },
+
+    skillLevels: {
       type: [String],
       default: [],
       set: cleanArray,
@@ -251,7 +223,7 @@ const CVSchema = new mongoose.Schema(
       set: cleanArray,
     },
 
-    certifications: {
+    languageLevels: {
       type: [String],
       default: [],
       set: cleanArray,
@@ -261,6 +233,24 @@ const CVSchema = new mongoose.Schema(
       type: [String],
       default: [],
       set: cleanArray,
+    },
+
+    achievements: {
+      type: [String],
+      default: [],
+      set: cleanArray,
+    },
+
+    hobbies: {
+      type: [String],
+      default: [],
+      set: cleanArray,
+    },
+
+    references: {
+      type: String,
+      default: "",
+      set: cleanText,
     },
 
     experiences: {
@@ -282,10 +272,53 @@ const CVSchema = new mongoose.Schema(
       type: [CertificationSchema],
       default: [],
     },
+
+    additionalSections: {
+      type: [AdditionalSectionSchema],
+      default: [],
+    },
+
+    atsScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+
+    status: {
+      type: String,
+      enum: ["draft", "completed", "archived"],
+      default: "draft",
+      index: true,
+    },
+
+    downloadCount: {
+      type: Number,
+      default: 0,
+    },
+
+    editCount: {
+      type: Number,
+      default: 0,
+    },
+
+    lastDownloadedAt: {
+      type: Date,
+      default: null,
+    },
+
+    lastEditedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+CVSchema.index({ user: 1, createdAt: -1 });
+CVSchema.index({ user: 1, status: 1 });
+CVSchema.index({ template: 1, createdAt: -1 });
 
 export default mongoose.models.CV || mongoose.model("CV", CVSchema);

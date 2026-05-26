@@ -392,8 +392,8 @@ function EUPhotoDocumentCV({ cv, config }) {
 
   return (
     <CVPage>
-      <div className="grid min-h-[1027px] grid-cols-[280px_1fr] -m-12">
-        <aside className="bg-slate-100 px-8 py-10">
+   <div className="-m-12 grid h-[calc(100%+96px)] grid-cols-[280px_1fr] items-stretch overflow-hidden">
+      <aside className="h-full self-stretch bg-slate-100 px-8 py-10">
           <ProfilePhoto cv={cv} config={config} large />
 
           <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
@@ -1221,12 +1221,11 @@ function BadgeHeaderCV({ cv, config, badge = "✓", label = "Professional Profil
     </CVPage>
   );
 }
-
 function CVPage({ children, ivory = false }) {
   return (
     <div
       id="cv-download"
-      className={`min-h-[1123px] w-[794px] overflow-visible px-12 py-12 text-black shadow-2xl print:min-h-0 print:w-full print:overflow-visible print:shadow-none ${
+      className={`h-[1123px] w-[794px] overflow-hidden px-12 py-12 text-black shadow-2xl print:h-auto print:min-h-0 print:w-full print:overflow-visible print:shadow-none ${
         ivory ? "bg-[#FBF7EF]" : "bg-white"
       }`}
     >

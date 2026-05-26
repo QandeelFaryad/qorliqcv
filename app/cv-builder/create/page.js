@@ -231,7 +231,7 @@ export default function CreateCVPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#101116] text-white">
+        <main className="flex  min-h-screen items-center justify-center bg-[#101116] text-white">
           <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
             Loading Builder...
           </p>
@@ -251,6 +251,7 @@ function CreateCVContent() {
   const [form, setForm] = useState(emptyForm);
   const [currentStep, setCurrentStep] = useState(0);
   const [mobileMode, setMobileMode] = useState("create");
+  const [isMobileSwitchFixed, setIsMobileSwitchFixed] = useState(false);
 
   const [skillInput, setSkillInput] = useState("");
   const [languageInput, setLanguageInput] = useState("");
@@ -347,7 +348,16 @@ function CreateCVContent() {
         : prev.educations,
     }));
   }, [searchParams]);
+useEffect(() => {
+  const handleScroll = () => {
+    setIsMobileSwitchFixed(window.scrollY > 180);
+  };
 
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  handleScroll();
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
   const livePreviewCV = useMemo(
     () => ({
       ...form,
@@ -823,7 +833,7 @@ function CreateCVContent() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#101116] px-4 pb-40 pt-6 text-white md:px-6 md:py-8 lg:pb-8">
+    <main className="min-h-screen  overflow-visible bg-[#101116] px-4 pb-40 pt-6 text-white md:px-6 md:py-8 lg:pb-8">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-[-160px] top-[-160px] h-[420px] w-[420px] rounded-full bg-qorliqGold/16 blur-[120px]" />
         <div className="absolute right-[-160px] top-[25%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[130px]" />
@@ -835,12 +845,16 @@ function CreateCVContent() {
 
         <BetterCVStepper currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
-        <MobileCreatePreviewSwitch
-          mode={mobileMode}
-          setMode={setMobileMode}
-          atsScore={livePreviewCV.atsScore}
-          templateName={config.name}
-        />
+   
+<div className={isMobileSwitchFixed ? "mb-[96px] lg:hidden" : "lg:hidden"}>
+  <MobileCreatePreviewSwitch
+    mode={mobileMode}
+    setMode={setMobileMode}
+    atsScore={livePreviewCV.atsScore}
+    templateName={config.name}
+    fixed={isMobileSwitchFixed}
+  />
+</div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
           <form
@@ -1034,28 +1048,16 @@ function CreateCVContent() {
       <div className="fixed inset-x-0 bottom-0 z-[80] border-t border-white/10 bg-[#17181D]/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden">
       
 
-        {currentStep < steps.length - 1 ? (
-          <button
-            type="button"
-            onClick={() => {
-              setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
-              setMobileMode("create");
-            }}
-            disabled={saving}
-            className="mt-3 w-full rounded-full bg-qorliqGold px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-black transition active:scale-[0.98] disabled:opacity-60"
-          >
-            Continue
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handlePreview}
-            disabled={saving}
-            className="mt-3 w-full rounded-full bg-white px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-black transition active:scale-[0.98] disabled:opacity-60"
-          >
-            {saving ? "Saving..." : isEditMode ? "Update & Preview" : "Save & Preview"}
-          </button>
-        )}
+      {currentStep === steps.length - 1 && (
+  <button
+    type="button"
+    onClick={handlePreview}
+    disabled={saving}
+    className="mt-3 w-full rounded-full bg-white px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-black transition active:scale-[0.98] disabled:opacity-60"
+  >
+    {saving ? "Saving..." : isEditMode ? "Update & Preview" : "Save & Preview"}
+  </button>
+)}
 
         <p className="mt-1 text-center text-[10px] font-semibold text-white/45">
           ATS Score: {livePreviewCV.atsScore}% · {config.name}
@@ -1064,39 +1066,55 @@ function CreateCVContent() {
     </main>
   );
 }
-
-function MobileCreatePreviewSwitch({ mode, setMode, atsScore, templateName }) {
+function MobileCreatePreviewSwitch({
+  mode,
+  setMode,
+  atsScore,
+  templateName,
+  fixed = false,
+}) {
   return (
-    <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.045] p-2 shadow-sm backdrop-blur lg:hidden">
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => setMode("create")}
-          className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
-            mode === "create" ? "bg-qorliqGold text-black" : "text-white/55"
-          }`}
-        >
-          Create
-        </button>
+    <div
+      className={`lg:hidden transition-all duration-300 ease-out ${
+        fixed
+          ? "fixed left-0 right-0 top-0 z-[9999] px-4 pt-3 translate-y-0 opacity-100"
+          : "relative mb-6 translate-y-0 opacity-100"
+      }`}
+    >
+      <div
+        className={`rounded-2xl border border-white/10 bg-[#17181D]/95 p-2 shadow-lg backdrop-blur-xl transition-all duration-300 ease-out ${
+          fixed ? "scale-[0.98]" : "scale-100"
+        }`}
+      >
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("create")}
+            className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
+              mode === "create" ? "bg-qorliqGold text-black" : "text-white/55"
+            }`}
+          >
+            Create
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setMode("preview")}
-          className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
-            mode === "preview" ? "bg-qorliqGold text-black" : "text-white/55"
-          }`}
-        >
-          Preview
-        </button>
+          <button
+            type="button"
+            onClick={() => setMode("preview")}
+            className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
+              mode === "preview" ? "bg-qorliqGold text-black" : "text-white/55"
+            }`}
+          >
+            Preview
+          </button>
+        </div>
+
+        <p className="mt-2 text-center text-[10px] font-semibold text-white/45">
+          ATS {atsScore}% · {templateName}
+        </p>
       </div>
-
-      <p className="mt-2 text-center text-[10px] font-semibold text-white/45">
-        ATS {atsScore}% · {templateName}
-      </p>
     </div>
   );
 }
-
 function ATSInlineCard({ score }) {
   const label = score >= 85 ? "Strong" : score >= 70 ? "Good" : "Needs more details";
 
@@ -1132,7 +1150,7 @@ function ATSInlineCard({ score }) {
 
 function BuilderHero({ isEditMode, atsScore }) {
   return (
-    <div className="mb-8 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+    <div className="mb-8 pt-8 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
       <div>
         <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
           <span className="h-2 w-2 rounded-full bg-qorliqGold" />

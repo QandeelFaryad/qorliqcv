@@ -392,8 +392,8 @@ function EUPhotoDocumentCV({ cv, config }) {
 
   return (
     <CVPage>
-   <div className="-m-12 grid h-[calc(100%+96px)] grid-cols-[280px_1fr] items-stretch overflow-hidden">
-      <aside className="h-full self-stretch bg-slate-100 px-8 py-10">
+      <div className="-m-12 grid min-h-[1219px] grid-cols-[280px_1fr] items-stretch overflow-visible">
+        <aside className="min-h-[1219px] self-stretch bg-slate-100 px-8 py-10">
           <ProfilePhoto cv={cv} config={config} large />
 
           <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
@@ -434,11 +434,11 @@ function EUPhotoDocumentCV({ cv, config }) {
               style={{ backgroundColor: accent }}
             />
 
-            {hasText(cv.summary) && (
+            {hasText(cv.summary) ? (
               <p className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">
                 {cv.summary}
               </p>
-            )}
+            ) : null}
           </section>
 
           <MainCVSections cv={cv} accent={accent} skipSummary />
@@ -753,20 +753,53 @@ function FormalUKCV({ cv, config }) {
           {name(cv)}
         </h1>
 
-        <p className="mt-2 text-base text-black/60">
-          {title(cv)}
-        </p>
+        <p className="mt-2 text-base text-black/60">{title(cv)}</p>
 
-        <ContactLine cv={cv} />
+        <ContactLine cv={cv} center />
       </header>
 
       <main className="mt-9 space-y-8">
         <MainCVSections cv={cv} accent={accent} />
+
+        {hasList(cv.skills) ? (
+          <CVSection title="Skills" accent={accent}>
+            <SkillPills items={cv.skills} levels={cv.skillLevels} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.languages) ? (
+          <CVSection title="Languages" accent={accent}>
+            <LanguageList items={cv.languages} levels={cv.languageLevels} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.strengths) ? (
+          <CVSection title="Strengths" accent={accent}>
+            <BulletList items={cv.strengths} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.hobbies) ? (
+          <CVSection title="Hobbies & Interests" accent={accent}>
+            <BulletList items={cv.hobbies} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.interests) ? (
+          <CVSection title="Interests" accent={accent}>
+            <BulletList items={cv.interests} />
+          </CVSection>
+        ) : null}
+
+        {hasText(cv.references) ? (
+          <CVSection title="References" accent={accent}>
+            <Paragraph text={cv.references} />
+          </CVSection>
+        ) : null}
       </main>
     </CVPage>
   );
 }
-
 function AcademicScholarCV({ cv, config }) {
   return <FormalCV cv={cv} config={config} label="Curriculum Vitae" serif />;
 }
@@ -1225,9 +1258,16 @@ function CVPage({ children, ivory = false }) {
   return (
     <div
       id="cv-download"
-      className={`h-[1123px] w-[794px] overflow-hidden px-12 py-12 text-black shadow-2xl print:h-auto print:min-h-0 print:w-full print:overflow-visible print:shadow-none ${
+      className={`w-[794px] min-h-[1123px] overflow-visible px-12 py-12 text-black shadow-2xl print:min-h-[1123px] print:w-full print:overflow-visible print:shadow-none ${
         ivory ? "bg-[#FBF7EF]" : "bg-white"
       }`}
+      style={{
+        width: "794px",
+        minHeight: "1123px",
+        height: "auto",
+        overflow: "visible",
+        backgroundColor: ivory ? "#FBF7EF" : "#ffffff",
+      }}
     >
       {children}
     </div>

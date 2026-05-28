@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toJpeg } from "html-to-image";
+import { toCanvas } from "html-to-image";
 import jsPDF from "jspdf";
 
 /* =========================
@@ -448,13 +448,17 @@ function createExportClone(element) {
   const clone = element.cloneNode(true);
 
   clone.id = "qorliq-cv-export-clone";
+
   clone.style.width = "794px";
   clone.style.minWidth = "794px";
   clone.style.maxWidth = "794px";
+  clone.style.height = "auto";
+  clone.style.minHeight = "1123px";
   clone.style.background = "#ffffff";
   clone.style.margin = "0";
   clone.style.padding = "0";
-  clone.style.position = "fixed";
+
+  clone.style.position = "absolute";
   clone.style.top = "0";
   clone.style.left = "0";
   clone.style.transform = "none";
@@ -465,17 +469,106 @@ function createExportClone(element) {
   clone.style.zIndex = "999999";
   clone.style.overflow = "visible";
   clone.style.boxShadow = "none";
+  clone.style.clipPath = "inset(0 0 0 0)";
+  clone.style.display = "block";
 
-  document.body.appendChild(clone);
+  const wrapper = document.createElement("div");
+  wrapper.id = "qorliq-cv-export-wrapper";
+
+  wrapper.style.position = "fixed";
+  wrapper.style.top = "0";
+  wrapper.style.left = "0";
+  wrapper.style.width = "794px";
+  wrapper.style.minWidth = "794px";
+  wrapper.style.height = "auto";
+  wrapper.style.minHeight = "1123px";
+  wrapper.style.background = "#ffffff";
+  wrapper.style.opacity = "0";
+  wrapper.style.pointerEvents = "none";
+  wrapper.style.zIndex = "999999";
+  wrapper.style.overflow = "visible";
+
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  const cvDownloadBlocks = clone.querySelectorAll("#cv-download");
+
+  cvDownloadBlocks.forEach((block) => {
+    block.style.width = "794px";
+    block.style.minWidth = "794px";
+    block.style.maxWidth = "794px";
+    block.style.height = "auto";
+    block.style.minHeight = "1123px";
+    block.style.background = "#ffffff";
+    block.style.overflow = "visible";
+    block.style.boxShadow = "none";
+  });
+
+  /*
+    Important:
+    createExportClone ke andar clone use hota hai,
+    exportElement nahi.
+  */
+  const exportSidebarsForPdf = clone.querySelectorAll("aside");
+
+  exportSidebarsForPdf.forEach((aside) => {
+    const isFullHeightSidebar =
+      aside.getAttribute("data-full-height-sidebar") === "true";
+
+    aside.style.alignSelf = "flex-start";
+    aside.style.height = "auto";
+    aside.style.maxHeight = "none";
+    aside.style.overflow = "visible";
+    aside.style.breakInside = "avoid";
+    aside.style.pageBreakInside = "avoid";
+
+    if (isFullHeightSidebar) {
+      aside.style.minHeight = "1123px";
+    } else {
+      aside.style.minHeight = "0";
+    }
+  });
+
+  const exportMainBlocksForPdf = clone.querySelectorAll("main");
+
+  exportMainBlocksForPdf.forEach((main) => {
+    main.style.alignItems = "flex-start";
+    main.style.overflow = "visible";
+  });
+
+  clone.querySelectorAll("*").forEach((node) => {
+    const style = window.getComputedStyle(node);
+
+    if (style.display === "none") {
+      return;
+    }
+
+    if (style.overflow === "hidden") {
+      node.style.overflow = "visible";
+    }
+
+    if (style.maxHeight && style.maxHeight !== "none") {
+      node.style.maxHeight = "none";
+    }
+
+    node.style.visibility = "visible";
+  });
 
   return clone;
 }
 
-  function removeExportClone(clone) {
-    if (clone && clone.parentNode) {
-      clone.parentNode.removeChild(clone);
-    }
+function removeExportClone(clone) {
+  const wrapper = document.getElementById("qorliq-cv-export-wrapper");
+
+  if (wrapper && wrapper.parentNode) {
+    wrapper.parentNode.removeChild(wrapper);
+    return;
   }
+
+  if (clone && clone.parentNode) {
+    clone.parentNode.removeChild(clone);
+  }
+}
 const downloadPDF = async () => {
   if (downloadingPDF) return;
 
@@ -509,15 +602,23 @@ const downloadPDF = async () => {
     await waitForImages(exportElement);
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
     const exportWidth = 794;
-    const a4Height = 1123;
+    const a4HeightPx = 1123;
 
-    const realHeight = Math.max(
-      a4Height,
-      exportElement.scrollHeight || exportElement.offsetHeight || a4Height
+    const realHeight = Math.ceil(
+      Math.max(
+        a4HeightPx,
+        exportElement.scrollHeight || 0,
+        exportElement.offsetHeight || 0,
+        exportElement.getBoundingClientRect().height || 0
+      )
     );
+
+    if (!realHeight || realHeight < 100) {
+      throw new Error("CV height not detected. Please try again.");
+    }
 
     exportElement.style.width = `${exportWidth}px`;
     exportElement.style.minWidth = `${exportWidth}px`;
@@ -530,12 +631,47 @@ const downloadPDF = async () => {
     exportElement.style.transform = "none";
     exportElement.style.boxShadow = "none";
     exportElement.style.overflow = "visible";
+    exportElement.style.opacity = "1";
+    exportElement.style.visibility = "visible";
 
-    const pixelRatio = 1.45;
+    /*
+      Only real full-height sidebars should be stretched.
+      Corporate Circle / small rounded aside will stay normal.
+    */
+    const hasFullHeightSidebar =
+      exportElement.querySelector('[data-full-height-sidebar="true"]') !== null;
 
-    const dataUrl = await toJpeg(exportElement, {
+    const exportSidebars = exportElement.querySelectorAll("aside");
+
+    exportSidebars.forEach((aside) => {
+      const isFullHeightSidebar =
+        aside.getAttribute("data-full-height-sidebar") === "true";
+
+      aside.style.height = "auto";
+      aside.style.alignSelf = "flex-start";
+      aside.style.overflow = "visible";
+      aside.style.maxHeight = "none";
+      aside.style.breakInside = "avoid";
+      aside.style.pageBreakInside = "avoid";
+
+      if (isFullHeightSidebar) {
+        aside.style.minHeight = `${a4HeightPx}px`;
+      } else {
+        aside.style.minHeight = "0";
+      }
+    });
+
+    const exportGridLayouts = exportElement.querySelectorAll(".grid");
+
+    exportGridLayouts.forEach((grid) => {
+      grid.style.alignItems = "flex-start";
+      grid.style.overflow = "visible";
+    });
+
+    const pixelRatio = 1.5;
+
+    const fullCanvas = await toCanvas(exportElement, {
       cacheBust: true,
-      quality: 0.72,
       pixelRatio,
       backgroundColor: "#ffffff",
       width: exportWidth,
@@ -554,11 +690,13 @@ const downloadPDF = async () => {
         transform: "none",
         boxShadow: "none",
         overflow: "visible",
+        opacity: "1",
+        visibility: "visible",
       },
     });
 
-    if (!dataUrl || dataUrl === "data:,") {
-      throw new Error("PDF capture failed. Please try again.");
+    if (!fullCanvas || !fullCanvas.width || !fullCanvas.height) {
+      throw new Error("PDF capture failed. Canvas is empty.");
     }
 
     const pdf = new jsPDF({
@@ -568,13 +706,163 @@ const downloadPDF = async () => {
       compress: true,
     });
 
+    const pdfWidthMm = 210;
+    const pdfHeightMm = 297;
+
+    const pageHeightCanvas = Math.floor(
+      fullCanvas.width * (pdfHeightMm / pdfWidthMm)
+    );
+
+    const findSafePageCut = (canvas, startY, pageHeight) => {
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        return Math.min(startY + pageHeight, canvas.height);
+      }
+
+      const idealCutY = Math.min(startY + pageHeight, canvas.height);
+
+      if (idealCutY >= canvas.height) {
+        return canvas.height;
+      }
+
+      const scanStartX = Math.floor(canvas.width * 0.42);
+      const scanWidth = Math.floor(canvas.width * 0.52);
+
+      const searchFromY = Math.max(idealCutY - 60, startY);
+      const searchToY = Math.max(
+        startY + Math.floor(pageHeight * 0.55),
+        startY + 140
+      );
+
+      for (let scanY = searchFromY; scanY >= searchToY; scanY -= 2) {
+        const row = ctx.getImageData(scanStartX, scanY, scanWidth, 1).data;
+
+        let contentPixels = 0;
+
+        for (let x = 0; x < scanWidth; x += 6) {
+          const i = x * 4;
+
+          const r = row[i];
+          const g = row[i + 1];
+          const b = row[i + 2];
+
+          const isContent = r < 245 || g < 245 || b < 245;
+
+          if (isContent) contentPixels++;
+        }
+
+        if (contentPixels < 6) {
+          return scanY;
+        }
+      }
+
+      return idealCutY;
+    };
+
     /*
-      One-page PDF:
-      Full captured CV image will be compressed into one A4 page.
-      No addPage.
-      No while loop.
+      Full-height sidebar templates:
+      - no top padding on page 2
+      - no bottom padding on page 1
+      - exact A4 cut
+
+      Other templates:
+      - safe cut
+      - 8mm bottom/top padding
     */
-    pdf.addImage(dataUrl, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+    const nextPageTopPaddingMm = hasFullHeightSidebar ? 0 : 8;
+    const pageBottomPaddingMm = hasFullHeightSidebar ? 0 : 8;
+
+    const nextPageTopPaddingCanvas = Math.floor(
+      (nextPageTopPaddingMm / pdfHeightMm) * pageHeightCanvas
+    );
+
+    const pageBottomPaddingCanvas = Math.floor(
+      (pageBottomPaddingMm / pdfHeightMm) * pageHeightCanvas
+    );
+
+    let y = 0;
+    let pageIndex = 0;
+
+    while (y < fullCanvas.height) {
+      const remainingHeight = fullCanvas.height - y;
+      const willNeedAnotherPage = remainingHeight > pageHeightCanvas;
+
+      const topPaddingCanvas = hasFullHeightSidebar
+        ? 0
+        : pageIndex === 0
+        ? 0
+        : nextPageTopPaddingCanvas;
+
+      const bottomPaddingCanvas = hasFullHeightSidebar
+        ? 0
+        : willNeedAnotherPage
+        ? pageBottomPaddingCanvas
+        : 0;
+
+      const availablePageHeight =
+        pageHeightCanvas - topPaddingCanvas - bottomPaddingCanvas;
+
+      const cutY = hasFullHeightSidebar
+        ? Math.min(y + pageHeightCanvas, fullCanvas.height)
+        : willNeedAnotherPage
+        ? findSafePageCut(fullCanvas, y, availablePageHeight)
+        : fullCanvas.height;
+
+      const sliceHeight = Math.max(
+        1,
+        Math.min(cutY - y, fullCanvas.height - y)
+      );
+
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = fullCanvas.width;
+      pageCanvas.height = pageHeightCanvas;
+
+      const ctx = pageCanvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("Unable to create PDF page canvas.");
+      }
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+      ctx.drawImage(
+        fullCanvas,
+        0,
+        y,
+        fullCanvas.width,
+        sliceHeight,
+        0,
+        topPaddingCanvas,
+        fullCanvas.width,
+        sliceHeight
+      );
+
+      const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.82);
+
+      if (!pageDataUrl || pageDataUrl === "data:,") {
+        throw new Error("PDF page capture failed.");
+      }
+
+      if (pageIndex > 0) {
+        pdf.addPage();
+      }
+
+      pdf.addImage(
+        pageDataUrl,
+        "JPEG",
+        0,
+        0,
+        pdfWidthMm,
+        pdfHeightMm,
+        undefined,
+        "FAST"
+      );
+
+      y += sliceHeight;
+      pageIndex += 1;
+    }
 
     const fileName = `${safeFileName(cv.fullName || "qorliq-cv")}.pdf`;
 
@@ -735,17 +1023,19 @@ const downloadPDF = async () => {
           </div>
         </div>
 
-        <div
-          ref={previewShellRef}
-          className="mx-auto w-full overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-2 sm:p-4"
-        >
-          <div
-            className="relative mx-auto"
-            style={{
-              height: `${previewHeight}px`,
-              maxWidth: "100%",
-            }}
-          >
+     <div
+  ref={previewShellRef}
+  className="mx-auto w-full overflow-x-auto overflow-y-visible rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-2 sm:p-4"
+>
+       <div
+  className="relative mx-auto"
+  style={{
+    height: `${previewHeight}px`,
+    minHeight: `${previewHeight}px`,
+    maxWidth: "100%",
+    overflow: "visible",
+  }}
+>
             <div
               ref={cvRef}
               id="qorliq-cv-pdf"
@@ -842,60 +1132,63 @@ function EUPhotoDocumentCV({ cv, config }) {
   const accent = config.accent;
 
   return (
-    <CVPage>
-     <div className="-m-12 grid h-[calc(100%+96px)] grid-cols-[280px_1fr] items-stretch overflow-hidden">
-      <aside className="h-full self-stretch bg-slate-100 px-8 py-10">
-          <ProfilePhoto cv={cv} config={config} large />
+   <CVPage>
+    <div className="-m-12 grid min-h-[1123px] grid-cols-[280px_1fr] items-start overflow-visible">
+<aside
+  data-full-height-sidebar="true"
+  className="min-h-[1123px] self-start bg-slate-100 px-8 py-10"
+>
+      <ProfilePhoto cv={cv} config={config} large />
 
-          <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
-            {name(cv)}
-          </h1>
+      <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
+        {name(cv)}
+      </h1>
 
-          <p
-            className="mt-2 text-sm font-bold uppercase tracking-[0.12em]"
-            style={{ color: accent }}
-          >
-            {title(cv)}
-          </p>
+      <p
+        className="mt-2 text-sm font-bold uppercase tracking-[0.12em]"
+        style={{ color: accent }}
+      >
+        {title(cv)}
+      </p>
 
-          <div className="mt-5">
-            <ContactLine cv={cv} />
-          </div>
-
-          <div className="mt-8">
-            <SideCVSections cv={cv} accent={accent} />
-          </div>
-        </aside>
-
-        <main className="space-y-8 px-10 py-10">
-          <section>
-            <p
-              className="text-xs font-black uppercase tracking-[0.3em]"
-              style={{ color: accent }}
-            >
-              European CV
-            </p>
-
-            <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
-              Professional Profile
-            </h2>
-
-            <div
-              className="mt-4 h-[3px] w-24 rounded-full"
-              style={{ backgroundColor: accent }}
-            />
-
-            {hasText(cv.summary) ? (
-              <p className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">
-                {cv.summary}
-              </p>
-            ) : null}
-          </section>
-
-          <MainCVSections cv={cv} accent={accent} skipSummary />
-        </main>
+      <div className="mt-5">
+        <ContactLine cv={cv} />
       </div>
-    </CVPage>
+
+      <div className="mt-8">
+        <SideCVSections cv={cv} accent={accent} />
+      </div>
+    </aside>
+
+       <main className="space-y-8 px-10 py-10">
+      <section>
+        <p
+          className="text-xs font-black uppercase tracking-[0.3em]"
+          style={{ color: accent }}
+        >
+          European CV
+        </p>
+
+        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
+          Professional Profile
+        </h2>
+
+        <div
+          className="mt-4 h-[3px] w-24 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+
+        {hasText(cv.summary) ? (
+          <p className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">
+            {cv.summary}
+          </p>
+        ) : null}
+      </section>
+
+      <MainCVSections cv={cv} accent={accent} skipSummary />
+    </main>
+  </div>
+</CVPage>
   );
 }
 
@@ -913,31 +1206,13 @@ function BerlinSidePhotoCV({ cv, config }) {
         gridTemplateColumns: "285px 509px",
       }}
     >
-      <aside
-        className="px-8 py-10 text-white"
-        style={{
-          background: `linear-gradient(180deg, ${dark} 0%, ${dark} 45%, ${accent} 100%)`,
-        }}
-      >
-        <ProfilePhoto cv={cv} config={config} large dark />
-
-        <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-white">
-          {name(cv)}
-        </h1>
-
-        <p className="mt-2 text-sm font-semibold text-white/75">
-          {title(cv)}
-        </p>
-
-        <div className="mt-8">
-          <SmallTitle title="Contact" dark />
-          <ContactStack cv={cv} dark />
-        </div>
-
-        <div className="mt-8 space-y-8 [&_*]:text-white [&_p]:text-white/75 [&_li]:text-white/75 [&_span]:text-white/75">
-          <SideCVSections cv={cv} accent="#ffffff" dark />
-        </div>
-      </aside>
+     <aside
+  data-full-height-sidebar="true"
+  className="min-h-[1123px] self-start px-8 py-10 text-white"
+  style={{
+    background: `linear-gradient(180deg, ${dark} 0%, ${dark} 45%, ${accent} 100%)`,
+  }}
+></aside>
 
       <main className="space-y-8 px-10 py-10">
         <section
@@ -985,12 +1260,12 @@ function CorporateCirclePhotoCV({ cv, config }) {
           <MainCVSections cv={cv} accent={accent} />
         </section>
 
-        <aside
-          className="rounded-[28px] p-6"
-          style={{ backgroundColor: `${accent}10` }}
-        >
-          <SideCVSections cv={cv} accent={accent} />
-        </aside>
+      <aside
+  className="rounded-[28px] p-6"
+  style={{ backgroundColor: `${accent}10` }}
+>
+  <SideCVSections cv={cv} accent={accent} />
+</aside>
       </main>
     </CVPage>
   );
@@ -1281,9 +1556,8 @@ function GraduateFreshCV({ cv, config }) {
     </CVPage>
   );
 }
-
 function FormalUKCV({ cv, config }) {
-  const accent = config.accent || "#111827";
+  const accent = config?.accent || "#111827";
 
   return (
     <CVPage>
@@ -1297,11 +1571,47 @@ function FormalUKCV({ cv, config }) {
 
         <p className="mt-2 text-base text-black/60">{title(cv)}</p>
 
-        <ContactLine cv={cv} />
+        <ContactLine cv={cv} center />
       </header>
 
       <main className="mt-9 space-y-8">
         <MainCVSections cv={cv} accent={accent} />
+
+        {hasList(cv.skills) ? (
+          <CVSection title="Skills" accent={accent}>
+            <SkillPills items={cv.skills} levels={cv.skillLevels} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.languages) ? (
+          <CVSection title="Languages" accent={accent}>
+            <LanguageList items={cv.languages} levels={cv.languageLevels} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.strengths) ? (
+          <CVSection title="Strengths" accent={accent}>
+            <BulletList items={cv.strengths} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.hobbies) ? (
+          <CVSection title="Hobbies & Interests" accent={accent}>
+            <BulletList items={cv.hobbies} />
+          </CVSection>
+        ) : null}
+
+        {hasList(cv.interests) && !hasList(cv.hobbies) ? (
+          <CVSection title="Interests" accent={accent}>
+            <BulletList items={cv.interests} />
+          </CVSection>
+        ) : null}
+
+        {hasText(cv.references) ? (
+          <CVSection title="References" accent={accent}>
+            <Paragraph text={cv.references} />
+          </CVSection>
+        ) : null}
       </main>
     </CVPage>
   );
@@ -1999,9 +2309,16 @@ function CVPage({ children, ivory = false }) {
   return (
     <div
       id="cv-download"
-      className={`h-[1123px] w-[794px] overflow-hidden px-12 py-12 text-black shadow-2xl print:h-auto print:min-h-0 print:w-full print:overflow-visible print:shadow-none ${
+      className={`w-[794px] min-h-[1123px] overflow-visible px-12 py-12 text-black shadow-2xl print:min-h-[1123px] print:w-full print:overflow-visible print:shadow-none ${
         ivory ? "bg-[#FBF7EF]" : "bg-white"
       }`}
+      style={{
+        width: "794px",
+        minHeight: "1123px",
+        height: "auto",
+        overflow: "visible",
+        backgroundColor: ivory ? "#FBF7EF" : "#ffffff",
+      }}
     >
       {children}
     </div>

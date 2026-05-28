@@ -1048,20 +1048,9 @@ useEffect(() => {
       <div className="fixed inset-x-0 bottom-0 z-[80] border-t border-white/10 bg-[#17181D]/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden">
       
 
-      {currentStep === steps.length - 1 && (
-  <button
-    type="button"
-    onClick={handlePreview}
-    disabled={saving}
-    className="mt-3 w-full rounded-full bg-white px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest text-black transition active:scale-[0.98] disabled:opacity-60"
-  >
-    {saving ? "Saving..." : isEditMode ? "Update & Preview" : "Save & Preview"}
-  </button>
-)}
 
-        <p className="mt-1 text-center text-[10px] font-semibold text-white/45">
-          ATS Score: {livePreviewCV.atsScore}% · {config.name}
-        </p>
+
+      
       </div>
     </main>
   );
@@ -1607,7 +1596,7 @@ function SkillsStep({
                 addSkill(skillInput);
               }
             }}
-            className="h-14 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+            className="py-4  flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
           />
 
           <button
@@ -1680,7 +1669,7 @@ function SkillsStep({
                 addLanguage(languageInput);
               }
             }}
-            className="h-14 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+            className="py-4 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
           />
 
           <button
@@ -2246,7 +2235,7 @@ function DynamicListInput({
               onAdd();
             }
           }}
-          className="h-14 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+          className="py-4 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
         />
 
         <button
@@ -2641,7 +2630,65 @@ function TechMinimalCV({ cv, config }) {
 
 
 function FormalUKCV({ cv, config }) {
-  return <CVPage><header className="border-4 p-7 text-center" style={{ borderColor: config.accent }}><h1 className="text-4xl font-bold uppercase tracking-[0.12em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-base text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+  return (
+    <CVPage>
+      <header
+        className="border-4 p-7 text-center"
+        style={{ borderColor: config.accent }}
+      >
+        <h1 className="text-4xl font-bold uppercase tracking-[0.12em]">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p className="mt-2 text-base text-black/60">
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} center />
+      </header>
+
+      <main className="mt-9 grid grid-cols-[0.34fr_0.66fr] gap-8">
+        <aside className="space-y-7">
+          {hasList(cv.skills) ? (
+            <CVSection title="Skills" accent={config.accent}>
+              <SkillPills items={cv.skills} levels={cv.skillLevels} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.languages) ? (
+            <CVSection title="Languages" accent={config.accent}>
+              <LanguageList
+                items={cv.languages}
+                levels={cv.languageLevels}
+              />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.strengths) ? (
+            <CVSection title="Strengths" accent={config.accent}>
+              <BulletList items={cv.strengths} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.hobbies) ? (
+            <CVSection title="Hobbies & Interests" accent={config.accent}>
+              <BulletList items={cv.hobbies} />
+            </CVSection>
+          ) : null}
+
+          {hasText(cv.references) ? (
+            <CVSection title="References" accent={config.accent}>
+              <Paragraph text={cv.references} />
+            </CVSection>
+          ) : null}
+        </aside>
+
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={config.accent} />
+        </section>
+      </main>
+    </CVPage>
+  );
 }
 
 function SeniorDirectorCV({ cv, config }) {

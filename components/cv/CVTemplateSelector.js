@@ -205,217 +205,783 @@ function MiniTitle({ children, accent }) {
     </p>
   );
 }
+function MiniExp({ data = shortCV, light = false }) {
+  const items = Array.isArray(data.experience) ? data.experience : [];
 
-function MiniExp({ light = false }) {
   return (
     <div className="space-y-1.5">
-      {shortCV.experience.map(([role, company, date, point]) => (
-        <div key={role}>
-          <div className="flex justify-between gap-2">
-            <p className={`text-[6.8px] font-black ${light ? "text-white" : "text-slate-900"}`}>{role}</p>
-            <p className={`text-[5.7px] font-bold ${light ? "text-white/60" : "text-slate-400"}`}>{date}</p>
+      {items.map((job, index) => {
+        const isArrayJob = Array.isArray(job);
+
+        const role = isArrayJob ? job[0] : job.role;
+        const company = isArrayJob ? job[1] : job.company;
+        const date = isArrayJob ? job[2] : job.date;
+        const points = isArrayJob ? [job[3]] : job.points || [];
+
+        return (
+          <div key={`${role}-${index}`}>
+            <div className="flex justify-between gap-2">
+              <p
+                className={`text-[6.8px] font-black ${
+                  light ? "text-white" : "text-slate-900"
+                }`}
+              >
+                {role}
+              </p>
+
+              <p
+                className={`text-[5.7px] font-bold ${
+                  light ? "text-white/60" : "text-slate-400"
+                }`}
+              >
+                {date}
+              </p>
+            </div>
+
+            <p
+              className={`text-[6.2px] ${
+                light ? "text-white/70" : "text-slate-500"
+              }`}
+            >
+              {company}
+            </p>
+
+            <div className="mt-1 space-y-0.5">
+              {points.map((point) => (
+                <p
+                  key={point}
+                  className={`text-[6.2px] leading-[1.3] ${
+                    light ? "text-white/65" : "text-slate-600"
+                  }`}
+                >
+                  • {point}
+                </p>
+              ))}
+            </div>
           </div>
-          <p className={`text-[6.2px] ${light ? "text-white/70" : "text-slate-500"}`}>{company}</p>
-          <p className={`text-[6.2px] leading-[1.3] ${light ? "text-white/65" : "text-slate-600"}`}>• {point}</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function MiniSkills({ light = false }) {
+function MiniSkills({ data = shortCV, light = false }) {
+  const items = data.skills || [];
+
   return (
     <div className="flex flex-wrap gap-1">
-      {shortCV.skills.map((skill) => (
-        <span key={skill} className={`rounded-full px-1.5 py-0.5 text-[5.5px] font-bold ${light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>
+      {items.map((skill) => (
+        <span
+          key={skill}
+          className={`rounded-full px-1.5 py-0.5 text-[5.5px] font-bold ${
+            light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"
+          }`}
+        >
           {skill}
         </span>
       ))}
     </div>
   );
 }
-
-function MiniPreview({ template, selectedColor }) {
-  const p = getProfile(template);
+function MiniPreview({ template, selectedColor, modalPreview = false }) {
+  const p = modalPreview ? getFullProfile(template) : getProfile(template);
   const accent = selectedColor || template.colors[0];
-  const dark = template.colors.find((color) => color !== accent) || template.colors[1] || template.colors[0];
+  const dark =
+    template.colors.find((color) => color !== accent) ||
+    template.colors[1] ||
+    template.colors[0];
+
   const layout = template.layout;
+
+  const shellClass = (extra = "") =>
+    `${
+      modalPreview
+        ? "min-h-[620px] overflow-visible"
+        : "h-[360px] overflow-hidden"
+    } rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200 ${extra}`;
+
+  const creamShellClass = (extra = "") =>
+    `${
+      modalPreview
+        ? "min-h-[620px] overflow-visible"
+        : "h-[360px] overflow-hidden"
+    } rounded-[1.35rem] bg-[#FBF7EF] shadow-sm ring-1 ring-slate-200 ${extra}`;
+
+  const previewSummary = p.summary;
 
   const profileBlock = (
     <>
       <MiniTitle accent={accent}>Profile</MiniTitle>
-      <p className="text-[6.5px] leading-[1.38] text-slate-600">{p.summary}</p>
+      <p className="text-[6.5px] leading-[1.38] text-slate-600">
+        {previewSummary}
+      </p>
     </>
   );
 
+  const contactBlock = (
+    <p className="text-[6px] text-slate-500">
+      {p.email} · {p.phone}
+      {modalPreview && p.linkedin ? (
+        <>
+          <br />
+          {p.location} · {p.linkedin}
+        </>
+      ) : null}
+    </p>
+  );
+
+  const extraPreviewSections = modalPreview ? (
+    <>
+      <div className="mt-3">
+        <MiniTitle accent={accent}>Achievements</MiniTitle>
+        <p className="text-[6px] leading-[1.35] text-slate-600">
+          {p.achievements?.slice(0, 2).join(" • ")}
+        </p>
+      </div>
+
+      <div className="mt-3">
+        <MiniTitle accent={accent}>Certifications</MiniTitle>
+        <p className="text-[6px] leading-[1.35] text-slate-600">
+          {p.certifications?.join(" · ")}
+        </p>
+      </div>
+
+      <div className="mt-3">
+        <MiniTitle accent={accent}>Languages</MiniTitle>
+        <p className="text-[6px] leading-[1.35] text-slate-600">
+          {p.languages?.join(" · ")}
+        </p>
+      </div>
+    </>
+  ) : null;
+
   const headerBasic = (
     <header className="border-b pb-3" style={{ borderColor: `${accent}55` }}>
-      <h3 className="text-[15px] font-black leading-tight text-slate-950">{p.name}</h3>
-      <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.16em]" style={{ color: accent }}>
+      <h3 className="text-[15px] font-black leading-tight text-slate-950">
+        {p.name}
+      </h3>
+
+      <p
+        className="mt-1 text-[7px] font-bold uppercase tracking-[0.16em]"
+        style={{ color: accent }}
+      >
         {p.title}
       </p>
-      <p className="mt-1 text-[6px] text-slate-400">
-        {p.email} · {p.phone}
-      </p>
+
+      <div className="mt-1">{contactBlock}</div>
     </header>
   );
 
   const layoutMap = {
     "eu-photo-document": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200">
-        <header className="flex gap-3 border-b pb-3" style={{ borderColor: `${accent}55` }}>
+      <div className={shellClass("p-4")}>
+        <header
+          className="flex gap-3 border-b pb-3"
+          style={{ borderColor: `${accent}55` }}
+        >
           <Photo template={template} accent={accent} />
+
           <div>
-            <p className="text-[6px] font-black uppercase tracking-[.22em]" style={{ color: accent }}>European CV</p>
+            <p
+              className="text-[6px] font-black uppercase tracking-[.22em]"
+              style={{ color: accent }}
+            >
+              European CV
+            </p>
+
             <h3 className="mt-1 text-[14px] font-black">{p.name}</h3>
-            <p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p>
+
+            <p className="text-[7px] font-bold" style={{ color: accent }}>
+              {p.title}
+            </p>
+
+            <div className="mt-1">{contactBlock}</div>
           </div>
         </header>
+
         <main className="mt-3 grid grid-cols-[35%_65%] gap-3">
           <aside>
             <MiniTitle accent={accent}>Details</MiniTitle>
-            <p className="text-[6px] text-slate-500">{p.location}<br />{p.phone}</p>
-            <div className="mt-3"><MiniTitle accent={accent}>Skills</MiniTitle><MiniSkills /></div>
+            <p className="text-[6px] text-slate-500">
+              {p.location}
+              <br />
+              {p.phone}
+              <br />
+              {p.email}
+            </p>
+
+            <div className="mt-3">
+              <MiniTitle accent={accent}>Skills</MiniTitle>
+              <MiniSkills data={p} />
+            </div>
+
+            {modalPreview && (
+              <>
+                <div className="mt-3">
+                  <MiniTitle accent={accent}>Languages</MiniTitle>
+                  <p className="text-[6px] leading-[1.35] text-slate-600">
+                    {p.languages?.join(" · ")}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <MiniTitle accent={accent}>Education</MiniTitle>
+                  <p className="text-[6px] leading-[1.35] text-slate-600">
+                    {p.education}
+                  </p>
+                </div>
+              </>
+            )}
           </aside>
-          <section>{profileBlock}<div className="mt-3"><MiniTitle accent={accent}>Experience</MiniTitle><MiniExp /></div></section>
+
+          <section>
+            {profileBlock}
+
+            <div className="mt-3">
+              <MiniTitle accent={accent}>Experience</MiniTitle>
+              <MiniExp data={p} />
+            </div>
+
+            {extraPreviewSections}
+          </section>
         </main>
       </div>
     ),
-    "berlin-side-photo": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200">
-        <div className="grid h-full grid-cols-[36%_64%]">
-          <aside className="p-4 text-white" style={{ background: dark }}>
-            <Photo template={template} accent={accent} />
-            <h3 className="mt-4 text-[13px] font-black">{p.name}</h3>
-            <p className="text-[7px] text-white/70">{p.title}</p>
-            <div className="mt-5"><MiniTitle accent="#fff">Contact</MiniTitle><p className="text-[6px] text-white/70">{p.email}<br />{p.phone}</p></div>
-            <div className="mt-4"><MiniSkills light /></div>
+
+ "berlin-side-photo": (
+  <div className={shellClass()}>
+    <div
+      className={
+        modalPreview
+          ? "grid min-h-[620px] grid-cols-[36%_64%] items-stretch"
+          : "grid min-h-full grid-cols-[36%_64%] items-stretch"
+      }
+    >
+      <aside
+        className="h-full min-h-full p-4 text-white"
+        style={{ background: dark }}
+      >
+        <Photo template={template} accent={accent} />
+
+        <h3 className="mt-4 text-[13px] font-black">{p.name}</h3>
+
+        <p className="text-[7px] text-white/70">{p.title}</p>
+
+        <div className="mt-5">
+          <MiniTitle accent="#fff">Contact</MiniTitle>
+          <p className="text-[6px] leading-[1.4] text-white/70">
+            {p.email}
+            <br />
+            {p.phone}
+            <br />
+            {p.location}
+            {modalPreview && p.linkedin ? (
+              <>
+                <br />
+                {p.linkedin}
+              </>
+            ) : null}
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <MiniTitle accent="#fff">Skills</MiniTitle>
+          <MiniSkills data={p} light />
+        </div>
+
+        {modalPreview && (
+          <div className="mt-4">
+            <MiniTitle accent="#fff">Languages</MiniTitle>
+            <p className="text-[6px] leading-[1.4] text-white/70">
+              {p.languages?.join(" · ")}
+            </p>
+          </div>
+        )}
+      </aside>
+
+      <main className="h-full min-h-full p-4">
+        <div
+          className="rounded-xl p-3"
+          style={{ backgroundColor: `${accent}12` }}
+        >
+          {profileBlock}
+        </div>
+
+        <div className="mt-4">
+          <MiniTitle accent={accent}>Work History</MiniTitle>
+          <MiniExp data={p} />
+        </div>
+
+        {extraPreviewSections}
+      </main>
+    </div>
+  </div>
+),
+
+    "corporate-circle-photo": (
+      <div className={shellClass("p-4")}>
+        <div className="flex items-center gap-3">
+          <Photo template={template} accent={accent} />
+
+          <div>
+            <h3 className="text-[15px] font-black">{p.name}</h3>
+            <p className="text-[7px] font-bold" style={{ color: accent }}>
+              {p.title}
+            </p>
+            <div className="mt-1">{contactBlock}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-[62%_38%] gap-3">
+          <main className="space-y-3">
+            <section>{profileBlock}</section>
+
+            <section>
+              <MiniTitle accent={accent}>Experience</MiniTitle>
+              <MiniExp data={p} />
+            </section>
+
+            {modalPreview && (
+              <section>
+                <MiniTitle accent={accent}>Achievements</MiniTitle>
+                <p className="text-[6px] leading-[1.35] text-slate-600">
+                  {p.achievements?.join(" • ")}
+                </p>
+              </section>
+            )}
+          </main>
+
+          <aside
+            className="rounded-2xl p-3"
+            style={{ backgroundColor: `${accent}10` }}
+          >
+            <MiniTitle accent={accent}>Core</MiniTitle>
+            <MiniSkills data={p} />
+
+            <div className="mt-3">
+              <MiniTitle accent={accent}>Education</MiniTitle>
+              <p className="text-[6px] text-slate-600">{p.education}</p>
+            </div>
+
+            {modalPreview && (
+              <>
+                <div className="mt-3">
+                  <MiniTitle accent={accent}>Certifications</MiniTitle>
+                  <p className="text-[6px] leading-[1.35] text-slate-600">
+                    {p.certifications?.join(" · ")}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <MiniTitle accent={accent}>Languages</MiniTitle>
+                  <p className="text-[6px] leading-[1.35] text-slate-600">
+                    {p.languages?.join(" · ")}
+                  </p>
+                </div>
+              </>
+            )}
           </aside>
-          <main className="p-4">
-            <div className="rounded-xl p-3" style={{ backgroundColor: `${accent}12` }}>{profileBlock}</div>
-            <div className="mt-4"><MiniTitle accent={accent}>Work History</MiniTitle><MiniExp /></div>
+        </div>
+      </div>
+    ),
+
+    "creative-blob-photo": (
+      <div className={shellClass("p-4")}>
+        <div
+          className="rounded-[1.4rem] p-4"
+          style={{ background: `linear-gradient(135deg, ${accent}22, #fff)` }}
+        >
+          <div className="flex items-center gap-3">
+            <Photo template={template} accent={accent} />
+
+            <div>
+              <p
+                className="text-[6px] font-black uppercase tracking-[.22em]"
+                style={{ color: accent }}
+              >
+                Creative
+              </p>
+
+              <h3 className="text-[15px] font-black">{p.name}</h3>
+
+              <p className="text-[7px] font-bold" style={{ color: accent }}>
+                {p.title}
+              </p>
+
+              <div className="mt-1">{contactBlock}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <section className="rounded-xl bg-slate-50 p-2">
+            <MiniTitle accent={accent}>Profile</MiniTitle>
+            <p className="text-[6px] leading-[1.3] text-slate-600">
+              {p.summary}
+            </p>
+          </section>
+
+          <section className="rounded-xl bg-slate-50 p-2">
+            <MiniTitle accent={accent}>Skills</MiniTitle>
+            <p className="text-[6px] leading-[1.3] text-slate-600">
+              {p.skills.join(" · ")}
+            </p>
+          </section>
+
+          <section className="rounded-xl bg-slate-50 p-2">
+            <MiniTitle accent={accent}>Experience</MiniTitle>
+            <MiniExp data={p} />
+          </section>
+
+          <section className="rounded-xl bg-slate-50 p-2">
+            <MiniTitle accent={accent}>Education</MiniTitle>
+            <p className="text-[6px] leading-[1.3] text-slate-600">
+              {p.education}
+            </p>
+
+            {modalPreview && (
+              <div className="mt-3">
+                <MiniTitle accent={accent}>Languages</MiniTitle>
+                <p className="text-[6px] leading-[1.3] text-slate-600">
+                  {p.languages?.join(" · ")}
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {modalPreview && extraPreviewSections}
+      </div>
+    ),
+
+    "luxury-oval-photo": (
+      <div className={creamShellClass("p-4")}>
+        <div className="text-center">
+          <div className="flex justify-center">
+            <Photo template={template} accent={accent} />
+          </div>
+
+          <p
+            className="mt-2 text-[6px] font-black uppercase tracking-[.28em]"
+            style={{ color: accent }}
+          >
+            Premium CV
+          </p>
+
+          <h3 className="mt-1 font-serif text-[16px] font-bold">{p.name}</h3>
+
+          <p className="text-[7px] text-slate-600">{p.title}</p>
+
+          <div
+            className="mx-auto mt-2 h-[2px] w-16"
+            style={{ backgroundColor: accent }}
+          />
+        </div>
+
+        <main className="mt-4 grid grid-cols-[40%_60%] gap-3">
+          <aside>
+            <MiniTitle accent={accent}>Skills</MiniTitle>
+            <MiniSkills data={p} />
+
+            {modalPreview && (
+              <>
+                <div className="mt-3">
+                  <MiniTitle accent={accent}>Education</MiniTitle>
+                  <p className="text-[6px] leading-[1.35] text-slate-600">
+                    {p.education}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <MiniTitle accent={accent}>Languages</MiniTitle>
+                  <p className="text-[6px] leading-[1.35] text-slate-600">
+                    {p.languages?.join(" · ")}
+                  </p>
+                </div>
+              </>
+            )}
+          </aside>
+
+          <section>
+            <MiniTitle accent={accent}>Profile</MiniTitle>
+            <p className="text-[6.5px] leading-[1.4] text-slate-600">
+              {p.summary}
+            </p>
+
+            <div className="mt-3">
+              <MiniTitle accent={accent}>Experience</MiniTitle>
+              <MiniExp data={p} />
+            </div>
+
+            {extraPreviewSections}
+          </section>
+        </main>
+      </div>
+    ),
+
+    "london-executive": (
+      <div className={shellClass()}>
+        <header
+          className="p-5 text-white"
+          style={{ background: `linear-gradient(135deg, ${dark}, #020617)` }}
+        >
+          <p
+            className="text-[6px] font-black uppercase tracking-[.28em]"
+            style={{ color: accent }}
+          >
+            Executive Profile
+          </p>
+
+          <h3 className="mt-1 text-[16px] font-black">{p.name}</h3>
+
+          <p className="text-[7px] text-white/70">{p.title}</p>
+        </header>
+
+        <div className="grid grid-cols-[35%_65%] gap-3 p-4">
+          <aside>
+            <MiniTitle accent={accent}>Leadership</MiniTitle>
+            <MiniSkills data={p} />
+
+            {modalPreview && (
+              <div className="mt-3">
+                <MiniTitle accent={accent}>Contact</MiniTitle>
+                <p className="text-[6px] leading-[1.35] text-slate-600">
+                  {p.email}
+                  <br />
+                  {p.phone}
+                  <br />
+                  {p.location}
+                </p>
+              </div>
+            )}
+          </aside>
+
+          <main>
+            <MiniTitle accent={accent}>Career Profile</MiniTitle>
+            <p className="text-[6.5px] text-slate-600">{p.summary}</p>
+
+            <div className="mt-3">
+              <MiniTitle accent={accent}>Experience</MiniTitle>
+              <MiniExp data={p} />
+            </div>
+
+            {extraPreviewSections}
           </main>
         </div>
       </div>
     ),
-    "corporate-circle-photo": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200">
-        <div className="flex items-center gap-3"><Photo template={template} accent={accent} /><div><h3 className="text-[15px] font-black">{p.name}</h3><p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p></div></div>
-        <div className="mt-4 grid grid-cols-[62%_38%] gap-3">
-          <main className="space-y-3"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Experience</MiniTitle><MiniExp /></section></main>
-          <aside className="rounded-2xl p-3" style={{ backgroundColor: `${accent}10` }}><MiniTitle accent={accent}>Core</MiniTitle><MiniSkills /><div className="mt-3"><MiniTitle accent={accent}>Education</MiniTitle><p className="text-[6px] text-slate-600">{p.education}</p></div></aside>
-        </div>
-      </div>
-    ),
-    "creative-blob-photo": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200">
-        <div className="rounded-[1.4rem] p-4" style={{ background: `linear-gradient(135deg, ${accent}22, #fff)` }}>
-          <div className="flex items-center gap-3"><Photo template={template} accent={accent} /><div><p className="text-[6px] font-black uppercase tracking-[.22em]" style={{ color: accent }}>Creative</p><h3 className="text-[15px] font-black">{p.name}</h3><p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p></div></div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {["Profile", "Experience", "Skills", "Education"].map((title, index) => (
-            <section key={title} className="rounded-xl bg-slate-50 p-2">
-              <MiniTitle accent={accent}>{title}</MiniTitle>
-              <p className="whitespace-pre-line text-[6px] leading-[1.3] text-slate-600">
-                {index === 0 ? p.summary : index === 1 ? "Designer — Studio Nova\n• Brand systems" : index === 2 ? p.skills.join(" · ") : p.education}
-              </p>
-            </section>
-          ))}
-        </div>
-      </div>
-    ),
-    "luxury-oval-photo": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-[#FBF7EF] p-4 shadow-sm ring-1 ring-slate-200">
-        <div className="text-center"><div className="flex justify-center"><Photo template={template} accent={accent} /></div><p className="mt-2 text-[6px] font-black uppercase tracking-[.28em]" style={{ color: accent }}>Premium CV</p><h3 className="mt-1 font-serif text-[16px] font-bold">{p.name}</h3><p className="text-[7px] text-slate-600">{p.title}</p><div className="mx-auto mt-2 h-[2px] w-16" style={{ backgroundColor: accent }} /></div>
-        <main className="mt-4 grid grid-cols-[40%_60%] gap-3"><aside><MiniTitle accent={accent}>Skills</MiniTitle><MiniSkills /></aside><section><MiniTitle accent={accent}>Profile</MiniTitle><p className="text-[6.5px] leading-[1.4] text-slate-600">{p.summary}</p><div className="mt-3"><MiniExp /></div></section></main>
-      </div>
-    ),
-    "london-executive": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200">
-        <header className="p-5 text-white" style={{ background: `linear-gradient(135deg, ${dark}, #020617)` }}><p className="text-[6px] font-black uppercase tracking-[.28em]" style={{ color: accent }}>Executive Profile</p><h3 className="mt-1 text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-white/70">{p.title}</p></header>
-        <div className="grid grid-cols-[35%_65%] gap-3 p-4"><aside><MiniTitle accent={accent}>Leadership</MiniTitle><MiniSkills /></aside><main><MiniTitle accent={accent}>Career Profile</MiniTitle><p className="text-[6.5px] text-slate-600">{p.summary}</p><div className="mt-3"><MiniExp /></div></main></div>
-      </div>
-    ),
+
     "clean-ats": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">{headerBasic}<main className="mt-4 space-y-3"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Professional Experience</MiniTitle><MiniExp /></section><section><MiniTitle accent={accent}>Skills</MiniTitle><p className="text-[6.5px] text-slate-600">{p.skills.join(" | ")}</p></section></main></div>
+      <div className={shellClass("p-5")}>
+        {headerBasic}
+
+        <main className="mt-4 space-y-3">
+          <section>{profileBlock}</section>
+
+          <section>
+            <MiniTitle accent={accent}>Professional Experience</MiniTitle>
+            <MiniExp data={p} />
+          </section>
+
+          <section>
+            <MiniTitle accent={accent}>Skills</MiniTitle>
+            <p className="text-[6.5px] text-slate-600">
+              {p.skills.join(" | ")}
+            </p>
+          </section>
+
+          {modalPreview && (
+            <>
+              <section>
+                <MiniTitle accent={accent}>Education</MiniTitle>
+                <p className="text-[6.5px] text-slate-600">{p.education}</p>
+              </section>
+
+              <section>
+                <MiniTitle accent={accent}>Certifications</MiniTitle>
+                <p className="text-[6.5px] text-slate-600">
+                  {p.certifications?.join(" | ")}
+                </p>
+              </section>
+
+              <section>
+                <MiniTitle accent={accent}>Languages</MiniTitle>
+                <p className="text-[6.5px] text-slate-600">
+                  {p.languages?.join(" | ")}
+                </p>
+              </section>
+            </>
+          )}
+        </main>
+      </div>
     ),
+
     "classic-pro": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200"><header className="text-center"><h3 className="text-[16px] font-serif font-bold">{p.name}</h3><p className="mt-1 text-[7px] uppercase tracking-[.18em]" style={{ color: accent }}>{p.title}</p><p className="mt-1 text-[6px] text-slate-400">{p.email} · {p.phone}</p></header><div className="my-3 h-px" style={{ backgroundColor: accent }} /><main className="space-y-3"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Employment</MiniTitle><MiniExp /></section></main></div>
+      <div className={shellClass("p-5")}>
+        <header className="text-center">
+          <h3 className="text-[16px] font-serif font-bold">{p.name}</h3>
+
+          <p
+            className="mt-1 text-[7px] uppercase tracking-[.18em]"
+            style={{ color: accent }}
+          >
+            {p.title}
+          </p>
+
+          <div className="mt-1">{contactBlock}</div>
+        </header>
+
+        <div className="my-3 h-px" style={{ backgroundColor: accent }} />
+
+        <main className="space-y-3">
+          <section>{profileBlock}</section>
+
+          <section>
+            <MiniTitle accent={accent}>Employment</MiniTitle>
+            <MiniExp data={p} />
+          </section>
+
+          {modalPreview && (
+            <>
+              <section>
+                <MiniTitle accent={accent}>Skills</MiniTitle>
+                <MiniSkills data={p} />
+              </section>
+
+              <section>
+                <MiniTitle accent={accent}>Education</MiniTitle>
+                <p className="text-[6px] text-slate-600">{p.education}</p>
+              </section>
+
+              {extraPreviewSections}
+            </>
+          )}
+        </main>
+      </div>
     ),
+
     "tech-minimal": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="rounded-2xl bg-slate-950 p-4 text-white"><p className="text-[6px] font-mono" style={{ color: accent }}>const candidate =</p><h3 className="font-mono text-[15px] font-black">{p.name}</h3><p className="text-[7px] text-white/60">{p.title}</p></header><main className="mt-4 grid grid-cols-[55%_45%] gap-3"><section>{profileBlock}<div className="mt-3"><MiniExp /></div></section><aside><MiniTitle accent={accent}>Stack</MiniTitle><MiniSkills /></aside></main></div>
+      <div className={shellClass("p-4")}>
+        <header className="rounded-2xl bg-slate-950 p-4 text-white">
+          <p className="text-[6px] font-mono" style={{ color: accent }}>
+            const candidate =
+          </p>
+
+          <h3 className="font-mono text-[15px] font-black">{p.name}</h3>
+
+          <p className="text-[7px] text-white/60">{p.title}</p>
+        </header>
+
+        <main className="mt-4 grid grid-cols-[55%_45%] gap-3">
+          <section>
+            {profileBlock}
+
+            <div className="mt-3">
+              <MiniTitle accent={accent}>Experience</MiniTitle>
+              <MiniExp data={p} />
+            </div>
+
+            {extraPreviewSections}
+          </section>
+
+          <aside>
+            <MiniTitle accent={accent}>Stack</MiniTitle>
+            <MiniSkills data={p} />
+
+            {modalPreview && (
+              <div className="mt-3">
+                <MiniTitle accent={accent}>Education</MiniTitle>
+                <p className="text-[6px] text-slate-600">{p.education}</p>
+              </div>
+            )}
+          </aside>
+        </main>
+      </div>
     ),
+
     "graduate-fresh": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="rounded-2xl p-4" style={{ backgroundColor: `${accent}14` }}><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p></header><main className="mt-3 grid grid-cols-2 gap-2"><section className="rounded-xl border p-2"><MiniTitle accent={accent}>Profile</MiniTitle><p className="text-[6px] text-slate-600">{p.summary}</p></section><section className="rounded-xl border p-2"><MiniTitle accent={accent}>Education</MiniTitle><p className="text-[6px] text-slate-600">{p.education}</p></section><section className="col-span-2 rounded-xl border p-2"><MiniTitle accent={accent}>Experience</MiniTitle><MiniExp /></section></main></div>
+      <div className={shellClass("p-4")}>
+        <header
+          className="rounded-2xl p-4"
+          style={{ backgroundColor: `${accent}14` }}
+        >
+          <h3 className="text-[16px] font-black">{p.name}</h3>
+
+          <p className="text-[7px] font-bold" style={{ color: accent }}>
+            {p.title}
+          </p>
+
+          <div className="mt-1">{contactBlock}</div>
+        </header>
+
+        <main className="mt-3 grid grid-cols-2 gap-2">
+          <section className="rounded-xl border p-2">
+            <MiniTitle accent={accent}>Profile</MiniTitle>
+            <p className="text-[6px] text-slate-600">{p.summary}</p>
+          </section>
+
+          <section className="rounded-xl border p-2">
+            <MiniTitle accent={accent}>Education</MiniTitle>
+            <p className="text-[6px] text-slate-600">{p.education}</p>
+          </section>
+
+          <section className="col-span-2 rounded-xl border p-2">
+            <MiniTitle accent={accent}>Experience</MiniTitle>
+            <MiniExp data={p} />
+          </section>
+
+          {modalPreview && (
+            <>
+              <section className="rounded-xl border p-2">
+                <MiniTitle accent={accent}>Skills</MiniTitle>
+                <MiniSkills data={p} />
+              </section>
+
+              <section className="rounded-xl border p-2">
+                <MiniTitle accent={accent}>Certifications</MiniTitle>
+                <p className="text-[6px] leading-[1.35] text-slate-600">
+                  {p.certifications?.join(" · ")}
+                </p>
+              </section>
+            </>
+          )}
+        </main>
+      </div>
     ),
-    "formal-uk": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200"><header className="border-2 p-3 text-center" style={{ borderColor: accent }}><h3 className="text-[15px] font-bold uppercase tracking-[.12em]">{p.name}</h3><p className="text-[7px] text-slate-500">{p.title}</p></header><main className="mt-4 space-y-3"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Career History</MiniTitle><MiniExp /></section><section><MiniTitle accent={accent}>Education & Skills</MiniTitle><MiniSkills /></section></main></div>
-    ),
-    "senior-director": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200"><div className="h-3" style={{ backgroundColor: accent }} /><div className="p-5"><h3 className="text-[18px] font-black tracking-tight">{p.name}</h3><p className="text-[7px] font-bold uppercase" style={{ color: accent }}>{p.title}</p><div className="mt-4 grid grid-cols-[42%_58%] gap-4"><aside><MiniTitle accent={accent}>Board Skills</MiniTitle><MiniSkills /></aside><main>{profileBlock}<div className="mt-3"><MiniExp /></div></main></div></div></div>
-    ),
-    "admin-professional": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="flex items-stretch"><div className="w-2 rounded-full" style={{ backgroundColor: accent }} /><div className="pl-3"><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-slate-500">{p.title}</p></div></header><main className="mt-4 space-y-3"><section className="border-l-4 pl-3" style={{ borderColor: accent }}>{profileBlock}</section><section><MiniTitle accent={accent}>Admin Experience</MiniTitle><MiniExp /></section><section><MiniSkills /></section></main></div>
-    ),
-    "healthcare-clinical": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="flex items-center justify-between"><div><h3 className="text-[15px] font-black">{p.name}</h3><p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p></div><div className="flex h-10 w-10 items-center justify-center rounded-full text-white" style={{ backgroundColor: accent }}>+</div></header><main className="mt-4 grid grid-cols-[60%_40%] gap-3"><section>{profileBlock}<div className="mt-3"><MiniExp /></div></section><aside className="rounded-xl p-3" style={{ backgroundColor: `${accent}12` }}><MiniTitle accent={accent}>Clinical Skills</MiniTitle><MiniSkills /></aside></main></div>
-    ),
-    "sales-leader": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="rounded-2xl p-4 text-white" style={{ background: `linear-gradient(135deg, ${accent}, ${dark})` }}><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-white/75">{p.title}</p></header><main className="mt-3"><div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-lg bg-slate-50 p-2"><b className="text-[10px]">128%</b><p className="text-[5px]">Target</p></div><div className="rounded-lg bg-slate-50 p-2"><b className="text-[10px]">42</b><p className="text-[5px]">Clients</p></div><div className="rounded-lg bg-slate-50 p-2"><b className="text-[10px]">£2M</b><p className="text-[5px]">Pipeline</p></div></div><div className="mt-3"><MiniTitle accent={accent}>Experience</MiniTitle><MiniExp /></div></main></div>
-    ),
-    "finance-analyst": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p></header><div className="mt-4 grid h-16 grid-cols-5 items-end gap-1">{[35,55,45,70,60].map((height, index) => <div key={index} className="rounded-t" style={{ height: `${height}%`, backgroundColor: accent }} />)}</div><main className="mt-4 grid grid-cols-[55%_45%] gap-3"><section>{profileBlock}<MiniExp /></section><aside><MiniTitle accent={accent}>Analysis</MiniTitle><MiniSkills /></aside></main></div>
-    ),
-    "stockholm-clean": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200"><header className="flex justify-between"><div><h3 className="text-[16px] font-light tracking-tight">{p.name}</h3><p className="text-[7px] font-bold" style={{ color: accent }}>{p.title}</p></div><div className="h-12 w-12 rounded-full" style={{ backgroundColor: `${accent}18` }} /></header><main className="mt-5 space-y-4"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Selected Experience</MiniTitle><MiniExp /></section></main></div>
-    ),
-    "dubai-corporate": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200"><header className="p-5 text-right text-white" style={{ backgroundColor: dark }}><p className="text-[6px] uppercase tracking-[.3em]" style={{ color: accent }}>Corporate Profile</p><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-white/70">{p.title}</p></header><main className="grid grid-cols-[34%_66%] gap-3 p-4"><aside><MiniSkills /></aside><section>{profileBlock}<div className="mt-3"><MiniExp /></div></section></main></div>
-    ),
-    "canada-simple": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200"><header className="border-l-8 pl-3" style={{ borderColor: accent }}><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-slate-500">{p.title}</p></header><main className="mt-4 space-y-3"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Relevant Experience</MiniTitle><MiniExp /></section><section><MiniTitle accent={accent}>Skills</MiniTitle><p className="text-[6px] text-slate-600">{p.skills.join(", ")}</p></section></main></div>
-    ),
-    "academic-scholar": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200"><header><p className="text-[6px] uppercase tracking-[.3em]" style={{ color: accent }}>Curriculum Vitae</p><h3 className="mt-1 font-serif text-[17px] font-bold">{p.name}</h3><p className="text-[7px] text-slate-500">{p.title}</p></header><main className="mt-4 space-y-3"><section><MiniTitle accent={accent}>Research Profile</MiniTitle><p className="text-[6.5px] text-slate-600">{p.summary}</p></section><section><MiniTitle accent={accent}>Appointments</MiniTitle><MiniExp /></section><section><MiniTitle accent={accent}>Publications</MiniTitle><p className="text-[6px] text-slate-600">3 peer-reviewed papers · 2 conference talks</p></section></main></div>
-    ),
-    "legal-advisor": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-5 shadow-sm ring-1 ring-slate-200"><header className="text-center"><div className="mx-auto mb-2 h-10 w-10 rounded-full border-2" style={{ borderColor: accent }} /><h3 className="text-[16px] font-serif font-bold">{p.name}</h3><p className="text-[7px] uppercase tracking-[.18em]" style={{ color: accent }}>{p.title}</p></header><main className="mt-4 space-y-3"><section>{profileBlock}</section><section><MiniTitle accent={accent}>Legal Experience</MiniTitle><MiniExp /></section></main></div>
-    ),
-    "hospitality-premium": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-[#FFF7F3] p-4 shadow-sm ring-1 ring-slate-200"><header className="rounded-t-[2rem] p-4 text-white" style={{ backgroundColor: accent }}><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-white/80">{p.title}</p></header><main className="mt-4 grid grid-cols-[58%_42%] gap-3"><section>{profileBlock}<MiniExp /></section><aside><MiniTitle accent={accent}>Guest Care</MiniTitle><MiniSkills /></aside></main></div>
-    ),
-    "engineer-grid": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="grid grid-cols-[70%_30%] gap-2"><div><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px]" style={{ color: accent }}>{p.title}</p></div><div className="grid grid-cols-2 gap-1">{Array.from({ length: 4 }).map((_, index) => <span key={index} className="rounded" style={{ backgroundColor: `${accent}${index % 2 ? "22" : "55"}` }} />)}</div></header><main className="mt-4 grid grid-cols-2 gap-2"><section className="rounded-xl border p-2">{profileBlock}</section><section className="rounded-xl border p-2"><MiniTitle accent={accent}>Technical</MiniTitle><MiniSkills /></section><section className="col-span-2 rounded-xl border p-2"><MiniTitle accent={accent}>Projects</MiniTitle><MiniExp /></section></main></div>
-    ),
-    "teacher-friendly": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="rounded-2xl p-4" style={{ backgroundColor: `${accent}16` }}><p className="text-[6px] font-bold uppercase" style={{ color: accent }}>Education CV</p><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px] text-slate-600">{p.title}</p></header><main className="mt-4"><section>{profileBlock}</section><div className="mt-3 rounded-xl border-l-4 p-3" style={{ borderColor: accent }}><MiniExp /></div></main></div>
-    ),
-    "project-manager": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px]" style={{ color: accent }}>{p.title}</p></header><main className="mt-4 grid grid-cols-[30%_70%] gap-3"><aside>{["Plan", "Build", "Lead"].map((item) => <div key={item} className="mb-2 rounded-lg p-2 text-[6px] font-black text-white" style={{ backgroundColor: accent }}>{item}</div>)}</aside><section><MiniTitle accent={accent}>Timeline</MiniTitle><MiniExp /><div className="mt-3"><MiniSkills /></div></section></main></div>
-    ),
-    "customer-service": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl text-white" style={{ backgroundColor: accent }}>★</div><div><h3 className="text-[15px] font-black">{p.name}</h3><p className="text-[7px] text-slate-500">{p.title}</p></div></header><main className="mt-4"><div className="rounded-2xl bg-slate-50 p-3">{profileBlock}</div><div className="mt-3"><MiniTitle accent={accent}>Service Record</MiniTitle><MiniExp /></div></main></div>
-    ),
-    "marketing-bold": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200"><header className="p-5" style={{ background: `linear-gradient(135deg, ${accent}, #fff)` }}><p className="text-[6px] font-black uppercase tracking-[.3em] text-white">Marketing</p><h3 className="text-[18px] font-black text-white">{p.name}</h3><p className="text-[7px] text-white/80">{p.title}</p></header><main className="p-4"><section>{profileBlock}</section><div className="mt-3 grid grid-cols-2 gap-2"><MiniSkills /><MiniExp /></div></main></div>
-    ),
-    "hr-professional": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header className="rounded-xl border p-3" style={{ borderColor: accent }}><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px]" style={{ color: accent }}>{p.title}</p></header><main className="mt-4 grid grid-cols-[45%_55%] gap-3"><aside><MiniTitle accent={accent}>People Skills</MiniTitle><MiniSkills /></aside><section>{profileBlock}<div className="mt-3"><MiniExp /></div></section></main></div>
-    ),
-    "data-analyst": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200"><header><h3 className="text-[16px] font-black">{p.name}</h3><p className="text-[7px]" style={{ color: accent }}>{p.title}</p></header><div className="mt-3 grid grid-cols-4 gap-2">{["SQL", "BI", "KPI", "ETL"].map((item) => <div key={item} className="rounded-lg p-2 text-center text-[7px] font-black" style={{ backgroundColor: `${accent}18`, color: accent }}>{item}</div>)}</div><main className="mt-4"><section>{profileBlock}</section><div className="mt-3"><MiniTitle accent={accent}>Analytics Experience</MiniTitle><MiniExp /></div></main></div>
-    ),
-    "premium-monogram": (
-      <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-[#FBF7EF] p-5 shadow-sm ring-1 ring-slate-200"><header className="text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border font-serif text-[18px] font-bold" style={{ borderColor: accent, color: accent }}>IM</div><h3 className="mt-3 font-serif text-[18px] font-bold">{p.name}</h3><p className="text-[7px] text-slate-600">{p.title}</p></header><main className="mt-5 grid grid-cols-[36%_64%] gap-3"><aside><MiniTitle accent={accent}>Expertise</MiniTitle><MiniSkills /></aside><section>{profileBlock}<div className="mt-3"><MiniExp /></div></section></main></div>
+
+    default: (
+      <div className={shellClass("p-5")}>
+        {headerBasic}
+
+        <main className="mt-4 space-y-3">
+          <section>{profileBlock}</section>
+
+          <section>
+            <MiniTitle accent={accent}>Experience</MiniTitle>
+            <MiniExp data={p} />
+          </section>
+
+          <section>
+            <MiniTitle accent={accent}>Skills</MiniTitle>
+            <MiniSkills data={p} />
+          </section>
+
+          {modalPreview && (
+            <>
+              <section>
+                <MiniTitle accent={accent}>Education</MiniTitle>
+                <p className="text-[6px] text-slate-600">{p.education}</p>
+              </section>
+
+              {extraPreviewSections}
+            </>
+          )}
+        </main>
+      </div>
     ),
   };
 
-  return layoutMap[layout] || (
-    <div className="h-[360px] overflow-hidden rounded-[1.35rem] bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      {headerBasic}
-      <main className="mt-3">{profileBlock}<MiniExp /></main>
-    </div>
-  );
+  return layoutMap[layout] || layoutMap.default;
 }
 
 function FullTitle({ children, accent, light = false }) {
@@ -496,33 +1062,84 @@ function FullReadyCVPage({ template, selectedColor }) {
     "data-analyst",
   ];
 
-  if (twoColumnLayouts.includes(template.layout)) {
-    return (
-      <div className="grid h-full w-full grid-cols-[32%_68%] bg-white text-slate-950">
-        <aside className="h-full p-8 text-white" style={{ background: `linear-gradient(180deg, ${dark}, ${accent})` }}>
-          {template.photo && <div className="mb-5"><Photo template={template} accent={accent} large /></div>}
-          <h2 className="text-[25px] font-black leading-tight">{p.name}</h2>
-          <p className="mt-2 text-[12px] font-semibold text-white/75">{p.title}</p>
-          <div className="mt-7 space-y-2 text-[10px] leading-5 text-white/75">
-            <p>{p.email}</p>
-            <p>{p.phone}</p>
-            <p>{p.location}</p>
-            <p>{p.linkedin}</p>
+if (twoColumnLayouts.includes(template.layout)) {
+  return (
+    <div className="grid min-h-[1123px] w-full grid-cols-[32%_68%] bg-white text-slate-950">
+      <aside
+        className="min-h-[1123px] p-8 text-white"
+        style={{ background: `linear-gradient(180deg, ${dark}, ${accent})` }}
+      >
+        {template.photo && (
+          <div className="mb-5">
+            <Photo template={template} accent={accent} large />
           </div>
-          <div className="mt-8"><FullTitle accent={accent} light>Skills</FullTitle><FullSkills data={p} light /></div>
-          <div className="mt-8"><FullTitle accent={accent} light>Languages</FullTitle><List items={p.languages} light /></div>
-          <div className="mt-8"><FullTitle accent={accent} light>Certifications</FullTitle><List items={p.certifications} light /></div>
-        </aside>
-        <main className="h-full p-9">
-          <section><FullTitle accent={accent}>Profile</FullTitle><p className="text-[11px] leading-[1.65] text-slate-600">{p.summary}</p></section>
-          <section className="mt-6"><FullTitle accent={accent}>Employment History</FullTitle><FullExperience data={p} /></section>
-          <section className="mt-6"><FullTitle accent={accent}>Key Achievements</FullTitle><List items={p.achievements} /></section>
-          <section className="mt-6"><FullTitle accent={accent}>Education</FullTitle><p className="text-[11px] text-slate-600">{p.education}</p></section>
-        </main>
-      </div>
-    );
-  }
+        )}
 
+        <h2 className="text-[25px] font-black leading-tight">
+          {p.name}
+        </h2>
+
+        <p className="mt-2 text-[12px] font-semibold text-white/75">
+          {p.title}
+        </p>
+
+        <div className="mt-7 space-y-2 text-[10px] leading-5 text-white/75">
+          <p>{p.email}</p>
+          <p>{p.phone}</p>
+          <p>{p.location}</p>
+          <p>{p.linkedin}</p>
+        </div>
+
+        <div className="mt-8">
+          <FullTitle accent={accent} light>
+            Skills
+          </FullTitle>
+          <FullSkills data={p} light />
+        </div>
+
+        <div className="mt-8">
+          <FullTitle accent={accent} light>
+            Languages
+          </FullTitle>
+          <List items={p.languages} light />
+        </div>
+
+        <div className="mt-8">
+          <FullTitle accent={accent} light>
+            Certifications
+          </FullTitle>
+          <List items={p.certifications} light />
+        </div>
+      </aside>
+
+      <main className="min-h-[1123px] p-9">
+        <section>
+          <FullTitle accent={accent}>Profile</FullTitle>
+          <p className="text-[11px] leading-[1.65] text-slate-600">
+            {p.summary}
+          </p>
+        </section>
+
+        <section className="mt-6">
+          <FullTitle accent={accent}>Employment History</FullTitle>
+          <FullExperience data={p} />
+        </section>
+
+        <section className="mt-6">
+          <FullTitle accent={accent}>Key Achievements</FullTitle>
+          <List items={p.achievements} />
+        </section>
+
+        <section className="mt-6">
+          <FullTitle accent={accent}>Education</FullTitle>
+          <p className="text-[11px] text-slate-600">
+            {p.education}
+          </p>
+        </section>
+      </main>
+    </div>
+  );
+}
   if (creativeLayouts.includes(template.layout)) {
     return (
       <div className="h-full w-full bg-white p-9 text-slate-950">
@@ -586,8 +1203,13 @@ function FullReadyCVPage({ template, selectedColor }) {
 }
 
 function CVPreview({ template, selectedColor, large = false }) {
-  if (large) return <FullReadyCVPage template={template} selectedColor={selectedColor} />;
-  return <MiniPreview template={template} selectedColor={selectedColor} />;
+  return (
+    <MiniPreview
+      template={template}
+      selectedColor={selectedColor}
+      modalPreview={large}
+    />
+  );
 }
 
 function Stepper() {
@@ -626,30 +1248,116 @@ function ColorPicker({ template, selectedColor, onChange }) {
   );
 }
 
-function TemplateCard({ template, selected, selectedColor, onColorChange, onSelect, onPreview }) {
+function TemplateCard({
+  template,
+  selected,
+  selectedColor,
+  onColorChange,
+  onSelect,
+  onPreview,
+  onUse,
+}) {
   return (
-    <div className={`group rounded-[1.7rem] border bg-white p-3 transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${selected ? "border-slate-950 shadow-[0_20px_60px_rgba(15,23,42,0.16)]" : "border-slate-200 shadow-sm"}`}>
+    <div
+      onClick={onSelect}
+      className={`group cursor-pointer rounded-[1.7rem] border bg-white p-3 transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${
+        selected
+          ? "border-slate-950 shadow-[0_20px_60px_rgba(15,23,42,0.16)]"
+          : "border-slate-200 shadow-sm"
+      }`}
+    >
       <div className="relative overflow-hidden rounded-[1.35rem] bg-slate-100">
         <CVPreview template={template} selectedColor={selectedColor} />
-        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[10px] font-black text-slate-700 shadow-sm">{template.tag}</span>
-        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/45 group-hover:opacity-100">
-          <button type="button" onClick={onPreview} className="rounded-full bg-white px-4 py-2 text-[11px] font-black text-slate-950 shadow-lg">Preview</button>
-          <button type="button" onClick={onSelect} className="rounded-full bg-slate-950 px-4 py-2 text-[11px] font-black text-white shadow-lg">Use</button>
+
+        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[10px] font-black text-slate-700 shadow-sm">
+          {template.tag}
+        </span>
+
+        {selected && (
+          <span className="absolute right-3 top-3 rounded-full bg-slate-950 px-3 py-1 text-[10px] font-black text-white shadow-sm">
+            Selected
+          </span>
+        )}
+
+        {/* Desktop hover buttons */}
+        <div className="absolute inset-0 hidden items-center justify-center gap-2 bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/45 group-hover:opacity-100 md:flex">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onPreview();
+            }}
+            className="rounded-full bg-white px-4 py-2 text-[11px] font-black text-slate-950 shadow-lg"
+          >
+            Preview
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onUse();
+            }}
+            className="rounded-full bg-slate-950 px-4 py-2 text-[11px] font-black text-white shadow-lg"
+          >
+            Use
+          </button>
         </div>
-        {selected && <span className="absolute right-3 top-3 rounded-full bg-slate-950 px-3 py-1 text-[10px] font-black text-white shadow-sm">Selected</span>}
+
+        {/* Mobile always visible buttons */}
+        <div className="absolute inset-x-3 bottom-3 flex gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onPreview();
+            }}
+            className="flex-1 rounded-full bg-white px-3 py-2 text-[10px] font-black text-slate-950 shadow-lg"
+          >
+            Preview
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onUse();
+            }}
+            className="flex-1 rounded-full bg-slate-950 px-3 py-2 text-[10px] font-black text-white shadow-lg"
+          >
+            Use
+          </button>
+        </div>
       </div>
+
       <div className="mt-4 flex items-start justify-between gap-3 px-1 pb-1">
         <div>
-          <h3 className="text-sm font-black text-slate-950">{template.name}</h3>
-          <p className="mt-1 text-xs font-semibold text-slate-500">{template.category} CV template</p>
-          <ColorPicker template={template} selectedColor={selectedColor} onChange={onColorChange} />
+          <h3 className="text-sm font-black text-slate-950">
+            {template.name}
+          </h3>
+
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            {template.category} CV template
+          </p>
+
+          <ColorPicker
+            template={template}
+            selectedColor={selectedColor}
+            onChange={onColorChange}
+          />
         </div>
-        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">{template.ats}% ATS</span>
+
+        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">
+          {template.ats}% ATS
+        </span>
       </div>
     </div>
   );
 }
-
 function PreviewModal({
   template,
   selectedColor,
@@ -660,23 +1368,23 @@ function PreviewModal({
   if (!template) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] overflow-y-auto bg-slate-950/75 px-4 py-6 backdrop-blur-sm">
-      <div className="mx-auto max-w-6xl rounded-[2rem] bg-white p-4 shadow-2xl sm:p-6">
-        <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-950/85 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+      <div className="relative z-[100000] mx-auto w-full max-w-6xl rounded-[1.5rem] bg-white p-4 shadow-2xl sm:rounded-[2rem] sm:p-6">
+        <div className="mb-4 flex flex-col justify-between gap-4 sm:mb-5 sm:flex-row sm:items-center">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-xs">
               Preview Template
             </p>
 
-            <h2 className="mt-1 text-2xl font-black text-slate-950">
+            <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
               {template.name}
             </h2>
 
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
-              Same design preview as shown on the template card.
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+              Same template card design with more complete CV content.
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-3 sm:mt-4">
               <ColorPicker
                 template={template}
                 selectedColor={selectedColor}
@@ -685,11 +1393,11 @@ function PreviewModal({
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-slate-200 px-5 py-3 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+              className="rounded-full border border-slate-200 px-4 py-3 text-xs font-black text-slate-600 transition hover:bg-slate-50"
             >
               Close
             </button>
@@ -697,35 +1405,57 @@ function PreviewModal({
             <button
               type="button"
               onClick={onUse}
-              className="rounded-full bg-slate-950 px-6 py-3 text-xs font-black text-white transition hover:bg-slate-700"
+              className="rounded-full bg-slate-950 px-4 py-3 text-xs font-black text-white transition hover:bg-slate-700 sm:px-6"
             >
               Use This Template
             </button>
           </div>
         </div>
 
-        <div className="mx-auto max-w-[980px] rounded-[1.8rem] bg-gradient-to-b from-slate-100 to-slate-200 p-4 sm:p-8">
-          <div className="mx-auto flex min-h-[720px] w-full max-w-[720px] items-start justify-center overflow-hidden rounded-[1.4rem] bg-slate-100 p-5 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200">
-            <div
-              className="origin-top"
-              style={{
-                width: "320px",
-                transform: "scale(1.9)",
-                transformOrigin: "top center",
-              }}
-            >
-              <CVPreview
-                template={template}
-                selectedColor={selectedColor}
-              />
+        <div className="mx-auto h-[78vh] min-h-[620px] w-full max-w-[820px] overflow-y-auto overflow-x-hidden rounded-[1.4rem] bg-slate-100 p-4 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:min-h-[720px] sm:p-6">
+          <div className="flex w-full justify-center">
+            <div className="preview-scale-holder">
+              <div className="preview-scale-inner">
+                <CVPreview
+                  template={template}
+                  selectedColor={selectedColor}
+                  large
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .preview-scale-holder {
+          width: 320px;
+          min-height: calc(1123px * 1.05);
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+        }
+
+        .preview-scale-inner {
+          width: 320px;
+          min-height: 1123px;
+          transform: scale(1.05);
+          transform-origin: top center;
+        }
+
+        @media (min-width: 640px) {
+          .preview-scale-holder {
+            min-height: calc(1123px * 1.65);
+          }
+
+          .preview-scale-inner {
+            transform: scale(1.65);
+          }
+        }
+      `}</style>
     </div>
   );
 }
-
 function OldCVPopup({ template, selectedColor, onClose }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -784,40 +1514,82 @@ function OldCVPopup({ template, selectedColor, onClose }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-3xl bg-white p-5 text-slate-950 shadow-2xl sm:p-7">
-        <div className="flex items-start justify-between gap-5">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-400">Selected Template</p>
-            <h2 className="mt-2 text-2xl font-black sm:text-3xl">{template.name}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Upload your old CV to prepare the new CV faster, or start with the selected professional template.</p>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-500 hover:bg-slate-50">×</button>
+ return (
+  <div className="fixed inset-0 z-[99999] flex items-center justify-center overflow-y-auto bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+    <div className="w-full max-w-[92vw] rounded-[1.4rem] bg-white p-4 text-slate-950 shadow-2xl sm:max-w-2xl sm:rounded-3xl sm:p-7">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-xs">
+            Selected Template
+          </p>
+
+          <h2 className="mt-1 text-xl font-black sm:mt-2 sm:text-3xl">
+            {template.name}
+          </h2>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+            Upload your old CV to prepare the new CV faster, or start with the selected professional template.
+          </p>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h3 className="text-xl font-black">Yes, I have old CV</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Upload PDF, DOC, DOCX or TXT. Your details will be extracted and prepared inside the selected template.</p>
-            <label className="mt-5 block cursor-pointer rounded-full bg-slate-900 px-5 py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-slate-700">
-              {uploading ? "Reading CV..." : "Upload Old CV"}
-              <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleOldCVUpload} className="hidden" />
-            </label>
-            {uploadedFileName && <p className="mt-3 text-xs font-semibold text-slate-500">Uploaded: {uploadedFileName}</p>}
-          </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-500 hover:bg-slate-50 sm:px-4 sm:py-2"
+        >
+          ×
+        </button>
+      </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h3 className="text-xl font-black">No, start empty</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Open the selected CV template with an empty form and fill your details manually.</p>
-            <button type="button" onClick={goEmptyCreate} className="mt-5 w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-950 transition hover:bg-slate-50">
-              Open Template
-            </button>
-          </div>
+      <div className="mt-5 grid gap-3 sm:mt-8 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <h3 className="text-lg font-black sm:text-xl">
+            Yes, I have old CV
+          </h3>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+            Upload PDF, DOC, DOCX or TXT. Your details will be extracted and prepared inside the selected template.
+          </p>
+
+          <label className="mt-4 block cursor-pointer rounded-full bg-slate-900 px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-slate-700 sm:mt-5 sm:px-5 sm:text-xs">
+            {uploading ? "Reading CV..." : "Upload Old CV"}
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.txt"
+              onChange={handleOldCVUpload}
+              className="hidden"
+            />
+          </label>
+
+          {uploadedFileName && (
+            <p className="mt-3 break-all text-xs font-semibold text-slate-500">
+              Uploaded: {uploadedFileName}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <h3 className="text-lg font-black sm:text-xl">
+            No, start empty
+          </h3>
+
+          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+            Open the selected CV template with an empty form and fill your details manually.
+          </p>
+
+          <button
+            type="button"
+            onClick={goEmptyCreate}
+            className="mt-4 w-full rounded-full border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-950 transition hover:bg-slate-50 sm:mt-5 sm:px-5 sm:text-xs"
+          >
+            Open Template
+          </button>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default function CVBuilderPage() {
@@ -882,29 +1654,41 @@ export default function CVBuilderPage() {
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredTemplates.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              selected={selectedTemplateId === template.id}
-              selectedColor={selectedColors[template.id] || template.colors[0]}
-              onColorChange={(color) => setTemplateColor(template.id, color)}
-              onSelect={() => setSelectedTemplateId(template.id)}
-              onPreview={() => setPreviewTemplate(template)}
-            />
+           <TemplateCard
+  key={template.id}
+  template={template}
+  selected={selectedTemplateId === template.id}
+  selectedColor={selectedColors[template.id] || template.colors[0]}
+  onColorChange={(color) => setTemplateColor(template.id, color)}
+  onSelect={() => setSelectedTemplateId(template.id)}
+  onPreview={() => {
+    setSelectedTemplateId(template.id);
+    setPreviewTemplate(template);
+  }}
+  onUse={() => {
+    setSelectedTemplateId(template.id);
+    setShowOldCVPopup(true);
+  }}
+/>
           ))}
         </div>
       </section>
+<div className="fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur md:hidden">
+  <button
+    type="button"
+    onClick={() => {
+      setSelectedTemplateId(activeTemplate.id);
+      setShowOldCVPopup(true);
+    }}
+    className="w-full rounded-full bg-slate-900 px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-white transition active:scale-[0.98]"
+  >
+    Use This Template
+  </button>
 
-      <div className="fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur md:hidden">
-        <button
-          type="button"
-          onClick={() => setShowOldCVPopup(true)}
-          className="w-full rounded-full bg-slate-900 px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-white transition active:scale-[0.98]"
-        >
-          Use This Template
-        </button>
-        <p className="mt-1 text-center text-[10px] font-semibold text-slate-500">Selected: {activeTemplate.name}</p>
-      </div>
+  <p className="mt-1 text-center text-[10px] font-semibold text-slate-500">
+    Selected: {activeTemplate.name}
+  </p>
+</div>
 
       <div className="hidden border-t border-slate-200 bg-white px-6 py-5 md:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">

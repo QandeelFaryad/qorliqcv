@@ -781,88 +781,152 @@ const downloadPDF = async () => {
       (pageBottomPaddingMm / pdfHeightMm) * pageHeightCanvas
     );
 
-    let y = 0;
-    let pageIndex = 0;
+ let y = 0;
+let pageIndex = 0;
 
-    while (y < fullCanvas.height) {
-      const remainingHeight = fullCanvas.height - y;
-      const willNeedAnotherPage = remainingHeight > pageHeightCanvas;
+/*
+  IMPORTANT:
+  Sometimes html-to-image creates canvas 1-20px taller than A4.
+  Without tolerance, it creates a blank second PDF page.
+*/
+const blankPageToleranceCanvas = Math.floor(pixelRatio * 30);
 
-      const topPaddingCanvas = hasFullHeightSidebar
-        ? 0
-        : pageIndex === 0
-        ? 0
-        : nextPageTopPaddingCanvas;
+// If CV fits in one A4 page, export only one page.
+if (fullCanvas.height <= pageHeightCanvas + blankPageToleranceCanvas) {
+  const pageCanvas = document.createElement("canvas");
+  pageCanvas.width = fullCanvas.width;
+  pageCanvas.height = pageHeightCanvas;
 
-      const bottomPaddingCanvas = hasFullHeightSidebar
-        ? 0
-        : willNeedAnotherPage
-        ? pageBottomPaddingCanvas
-        : 0;
+  const ctx = pageCanvas.getContext("2d");
 
-      const availablePageHeight =
-        pageHeightCanvas - topPaddingCanvas - bottomPaddingCanvas;
+  if (!ctx) {
+    throw new Error("Unable to create PDF page canvas.");
+  }
 
-      const cutY = hasFullHeightSidebar
-        ? Math.min(y + pageHeightCanvas, fullCanvas.height)
-        : willNeedAnotherPage
-        ? findSafePageCut(fullCanvas, y, availablePageHeight)
-        : fullCanvas.height;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
 
-      const sliceHeight = Math.max(
-        1,
-        Math.min(cutY - y, fullCanvas.height - y)
-      );
+  ctx.drawImage(
+    fullCanvas,
+    0,
+    0,
+    fullCanvas.width,
+    Math.min(fullCanvas.height, pageHeightCanvas),
+    0,
+    0,
+    fullCanvas.width,
+    Math.min(fullCanvas.height, pageHeightCanvas)
+  );
 
-      const pageCanvas = document.createElement("canvas");
-      pageCanvas.width = fullCanvas.width;
-      pageCanvas.height = pageHeightCanvas;
+  const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.82);
 
-      const ctx = pageCanvas.getContext("2d");
+  if (!pageDataUrl || pageDataUrl === "data:,") {
+    throw new Error("PDF page capture failed.");
+  }
 
-      if (!ctx) {
-        throw new Error("Unable to create PDF page canvas.");
-      }
+  pdf.addImage(
+    pageDataUrl,
+    "JPEG",
+    0,
+    0,
+    pdfWidthMm,
+    pdfHeightMm,
+    undefined,
+    "FAST"
+  );
+} else {
+  while (y < fullCanvas.height) {
+    const remainingHeight = fullCanvas.height - y;
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-      ctx.drawImage(
-        fullCanvas,
-        0,
-        y,
-        fullCanvas.width,
-        sliceHeight,
-        0,
-        topPaddingCanvas,
-        fullCanvas.width,
-        sliceHeight
-      );
-
-      const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.82);
-
-      if (!pageDataUrl || pageDataUrl === "data:,") {
-        throw new Error("PDF page capture failed.");
-      }
-
-      if (pageIndex > 0) {
-        pdf.addPage();
-      }
-
-      pdf.addImage(
-        pageDataUrl,
-        "JPEG",
-        0,
-        0,
-        pdfWidthMm,
-        pdfHeightMm,
-        undefined,
-        "FAST"
-      );
-
-      y += sliceHeight;
-      pageIndex += 1;
+    // Stop if only tiny blank/tolerance area is left.
+    if (remainingHeight <= blankPageToleranceCanvas) {
+      break;
     }
+
+    const willNeedAnotherPage =
+      remainingHeight > pageHeightCanvas + blankPageToleranceCanvas;
+
+    const topPaddingCanvas = hasFullHeightSidebar
+      ? 0
+      : pageIndex === 0
+      ? 0
+      : nextPageTopPaddingCanvas;
+
+    const bottomPaddingCanvas = hasFullHeightSidebar
+      ? 0
+      : willNeedAnotherPage
+      ? pageBottomPaddingCanvas
+      : 0;
+
+    const availablePageHeight =
+      pageHeightCanvas - topPaddingCanvas - bottomPaddingCanvas;
+
+    const cutY = hasFullHeightSidebar
+      ? Math.min(y + pageHeightCanvas, fullCanvas.height)
+      : willNeedAnotherPage
+      ? findSafePageCut(fullCanvas, y, availablePageHeight)
+      : fullCanvas.height;
+
+    let sliceHeight = Math.max(
+      1,
+      Math.min(cutY - y, fullCanvas.height - y)
+    );
+
+    // If last slice is tiny, do not create another blank page.
+    if (sliceHeight <= blankPageToleranceCanvas && pageIndex > 0) {
+      break;
+    }
+
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = fullCanvas.width;
+    pageCanvas.height = pageHeightCanvas;
+
+    const ctx = pageCanvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("Unable to create PDF page canvas.");
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+    ctx.drawImage(
+      fullCanvas,
+      0,
+      y,
+      fullCanvas.width,
+      sliceHeight,
+      0,
+      topPaddingCanvas,
+      fullCanvas.width,
+      sliceHeight
+    );
+
+    const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.82);
+
+    if (!pageDataUrl || pageDataUrl === "data:,") {
+      throw new Error("PDF page capture failed.");
+    }
+
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
+
+    pdf.addImage(
+      pageDataUrl,
+      "JPEG",
+      0,
+      0,
+      pdfWidthMm,
+      pdfHeightMm,
+      undefined,
+      "FAST"
+    );
+
+    y += sliceHeight;
+    pageIndex += 1;
+  }
+}
 
     const fileName = `${safeFileName(cv.fullName || "qorliq-cv")}.pdf`;
 
@@ -1206,13 +1270,32 @@ function BerlinSidePhotoCV({ cv, config }) {
         gridTemplateColumns: "285px 509px",
       }}
     >
-     <aside
-  data-full-height-sidebar="true"
-  className="min-h-[1123px] self-start px-8 py-10 text-white"
-  style={{
-    background: `linear-gradient(180deg, ${dark} 0%, ${dark} 45%, ${accent} 100%)`,
-  }}
-></aside>
+      <aside
+        data-full-height-sidebar="true"
+        className="min-h-[1123px] self-start px-8 py-10 text-white"
+        style={{
+          background: `linear-gradient(180deg, ${dark} 0%, ${dark} 45%, ${accent} 100%)`,
+        }}
+      >
+        <ProfilePhoto cv={cv} config={config} large dark />
+
+        <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-white">
+          {name(cv)}
+        </h1>
+
+        <p className="mt-2 text-sm font-semibold text-white/75">
+          {title(cv)}
+        </p>
+
+        <div className="mt-8">
+          <SmallTitle title="Contact" dark />
+          <ContactStack cv={cv} dark />
+        </div>
+
+        <div className="mt-8 space-y-8 [&_*]:text-white [&_p]:text-white/75 [&_li]:text-white/75 [&_span]:text-white/75">
+          <SideCVSections cv={cv} accent="#ffffff" dark />
+        </div>
+      </aside>
 
       <main className="space-y-8 px-10 py-10">
         <section

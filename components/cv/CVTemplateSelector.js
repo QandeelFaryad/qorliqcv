@@ -1427,32 +1427,56 @@ function PreviewModal({
         </div>
       </div>
 
-      <style jsx>{`
-        .preview-scale-holder {
-          width: 320px;
-          min-height: calc(1123px * 1.05);
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-        }
+    <style jsx>{`
+  .preview-scale-holder {
+    width: 360px;
+    min-height: calc(1123px * 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: visible;
+  }
 
-        .preview-scale-inner {
-          width: 320px;
-          min-height: 1123px;
-          transform: scale(1.05);
-          transform-origin: top center;
-        }
+  .preview-scale-inner {
+    width: 320px;
+    min-width: 320px;
+    min-height: 1123px;
+    transform: scale(1);
+    transform-origin: top center;
+  }
 
-        @media (min-width: 640px) {
-          .preview-scale-holder {
-            min-height: calc(1123px * 1.65);
-          }
+  @media (max-width: 380px) {
+    .preview-scale-holder {
+      width: 340px;
+    }
 
-          .preview-scale-inner {
-            transform: scale(1.65);
-          }
-        }
-      `}</style>
+    .preview-scale-inner {
+      transform: scale(0.95);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .preview-scale-holder {
+      width: 560px;
+      min-height: calc(1123px * 1.55);
+    }
+
+    .preview-scale-inner {
+      transform: scale(1.55);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .preview-scale-holder {
+      width: 620px;
+      min-height: calc(1123px * 1.65);
+    }
+
+    .preview-scale-inner {
+      transform: scale(1.65);
+    }
+  }
+`}</style>
     </div>
   );
 }

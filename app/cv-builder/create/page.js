@@ -2431,82 +2431,80 @@ function CleanATSExactCV({ cv, config }) {
 }
 
 function EUPhotoDocumentCV({ cv, config }) {
-  const accent = config.accent || "#2563EB"; // Jo bhi dynamic color sets select ho
+  const accent = config.accent || "#2563EB";
 
   return (
-    <div 
-      id="cv-download" 
-      className="p-8 bg-white text-black shadow-2xl font-sans" 
+    <div
+      id="cv-download"
+      className="p-8 bg-white text-black shadow-2xl font-sans"
       style={{ width: "794px", minHeight: "1123px" }}
     >
-      {/* 1. Header Layout Matching the Template */}
-      <header className="flex gap-4 border-b pb-4 mb-5" style={{ borderColor: `${accent}55` }}>
+      <header
+        className="flex gap-4 border-b pb-4 mb-5"
+        style={{ borderColor: `${accent}55` }}
+      >
         <div className="shrink-0">
           <ExactPhoto cv={cv} config={config} large />
         </div>
+
         <div>
-          <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: accent }}>
+          <p
+            className="text-[10px] font-black tracking-widest uppercase mb-1"
+            style={{ color: accent }}
+          >
             European CV
           </p>
+
           <h1 className="text-3xl font-black text-slate-900 leading-tight">
             {cv.fullName || "Your Name"}
           </h1>
+
           <p className="text-sm font-bold mt-1" style={{ color: accent }}>
             {cv.jobTitle || "Professional Title"}
           </p>
         </div>
       </header>
 
-      {/* 2. Main Columns Layout Matching the Template */}
       <main className="grid grid-cols-[30%_70%] gap-8 items-start">
-        
-        {/* Aside Sidebar: Details & Skills */}
         <aside className="space-y-6">
-          {/* Contact Details */}
-          <div>
-            <ExactTitle title="Details" accent={accent} />
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-700">
-              {cv.location && <>{cv.location}<br /></>}
-              {cv.phone && <>{cv.phone}<br /></>}
-              {cv.email && <>{cv.email}</>}
-            </p>
-          </div>
+          <div
+            className="text-[11px] eu-side-selected-color"
+            style={{ "--selected-accent": accent }}
+          >
+            <style jsx>{`
+              .eu-side-selected-color :global(h2),
+              .eu-side-selected-color :global(h3),
+              .eu-side-selected-color :global(h4),
+              .eu-side-selected-color :global(.font-black),
+              .eu-side-selected-color :global(.font-bold.uppercase),
+              .eu-side-selected-color :global([class*="uppercase"]) {
+                color: var(--selected-accent) !important;
+              }
+            `}</style>
 
-          {/* Skills / Toolkit Section */}
-          <div>
-            <ExactTitle title="Skills" accent={accent} />
-            <div className="mt-2 text-[11px]">
-              <ExactSideBlock cv={cv} config={config} />
-            </div>
+            <ExactSideBlock cv={cv} config={config} accent={accent} />
           </div>
         </aside>
 
-        {/* Main Content Area: Profile & Experience */}
         <section className="space-y-6">
-          {/* Profile Summary */}
           {hasText(cv.summary) && (
             <div>
               <ExactTitle title="Profile" accent={accent} />
+
               <div className="mt-2 text-[11px] leading-relaxed text-slate-700">
                 <Paragraph text={cv.summary} />
               </div>
             </div>
           )}
 
-          {/* Experience & Education via Main CV Blocks */}
-          <div>
-            <ExactTitle title="Experience" accent={accent} />
-            <div className="mt-2 text-[11px] leading-relaxed text-slate-700">
-              <MainCVSections cv={cv} accent={accent} skipSummary />
-            </div>
+          <div className="text-[11px] leading-relaxed text-slate-700">
+            <MainCVSections cv={cv} accent={accent} skipSummary />
           </div>
         </section>
-
       </main>
     </div>
   );
 }
-
 function BerlinSidePhotoCV({ cv, config }) {
   const dark = exactDark(config);
   return (

@@ -1197,64 +1197,76 @@ function EUPhotoDocumentCV({ cv, config }) {
 
   return (
     <CVPage>
-      {/* Container matching standard print width layout with absolute white base */}
-      <div className="-m-12 p-12 bg-white min-h-[1123px] text-black overflow-visible font-sans">
-        
-        {/* 1. Top Header Row (Matching Template precisely) */}
-        <header className="flex gap-4 border-b pb-4 mb-6" style={{ borderColor: `${accent}55` }}>
+      <div className="-m-12 min-h-[1219px] overflow-visible bg-white p-12 font-sans text-black">
+        <header
+          className="mb-6 flex gap-4 border-b pb-4"
+          style={{ borderColor: `${accent}55` }}
+        >
           <div className="shrink-0">
             <ProfilePhoto cv={cv} config={config} large />
           </div>
+
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[.22em] mb-1" style={{ color: accent }}>
+            <p
+              className="mb-1 text-[10px] font-black uppercase tracking-[.22em]"
+              style={{ color: accent }}
+            >
               European CV
             </p>
-            <h1 className="text-3xl font-black tracking-[-0.035em] text-slate-950 leading-tight">
+
+            <h1 className="text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
               {name(cv)}
             </h1>
-            <p className="text-sm font-bold mt-1 uppercase tracking-wider" style={{ color: accent }}>
+
+            <p
+              className="mt-1 text-sm font-bold uppercase tracking-wider"
+              style={{ color: accent }}
+            >
               {title(cv)}
             </p>
           </div>
         </header>
 
-        {/* 2. Bottom Content Grid (Matching large ? "grid-cols-[30%_70%]") */}
-        <div className="grid grid-cols-[30%_70%] gap-8 items-start">
-          
-          {/* Left Side Column (Template's aside block) */}
+        <div className="grid grid-cols-[30%_70%] items-start gap-8">
           <aside className="space-y-6">
-            {/* Details Section */}
             <div>
-              <p className="text-xs font-black uppercase tracking-wider mb-2 text-slate-900">Details</p>
+              <p
+                className="mb-2 text-xs font-black uppercase tracking-wider"
+                style={{ color: accent }}
+              >
+                Contact
+              </p>
+
               <div className="text-[12px] leading-relaxed text-slate-600">
                 <ContactLine cv={cv} />
               </div>
             </div>
 
-            {/* Side Sections (Skills, Languages etc.) */}
-            <div>
+            <div className="text-[12px] leading-relaxed text-slate-700">
               <SideCVSections cv={cv} accent={accent} />
             </div>
           </aside>
 
-          {/* Right Side Column (Template's main section block) */}
           <main className="space-y-6">
-            {/* Profile Section */}
             {hasText(cv.summary) && (
               <div>
-                <p className="text-xs font-black uppercase tracking-wider mb-2 text-slate-900">Profile</p>
+                <p
+                  className="mb-2 text-xs font-black uppercase tracking-wider"
+                  style={{ color: accent }}
+                >
+                  Profile
+                </p>
+
                 <p className="whitespace-pre-line text-[12px] leading-relaxed text-slate-700">
                   {cv.summary}
                 </p>
               </div>
             )}
 
-            {/* Experience, Education etc. */}
-            <div>
+            <div className="text-[12px] leading-relaxed text-slate-700">
               <MainCVSections cv={cv} accent={accent} skipSummary />
             </div>
           </main>
-
         </div>
       </div>
     </CVPage>
@@ -2742,7 +2754,7 @@ function SideCVSections({ cv, accent = "#111827", dark = false }) {
     <>
       {hasList(cv.skills) ? (
         <div className="mt-8 first:mt-0">
-          <SmallTitle title="Skills" dark={dark} />
+          <SmallTitle title="Skills" dark={dark} accent={accent} />
           <SkillPills
             items={cv.skills}
             levels={cv.skillLevels}
@@ -2754,7 +2766,7 @@ function SideCVSections({ cv, accent = "#111827", dark = false }) {
 
       {hasList(cv.languages) ? (
         <div className="mt-8">
-          <SmallTitle title="Languages" dark={dark} />
+          <SmallTitle title="Languages" dark={dark} accent={accent} />
           <LanguageList
             items={cv.languages}
             levels={cv.languageLevels}
@@ -2765,21 +2777,21 @@ function SideCVSections({ cv, accent = "#111827", dark = false }) {
 
       {hasList(cv.strengths) ? (
         <div className="mt-8">
-          <SmallTitle title="Strengths" dark={dark} />
+          <SmallTitle title="Strengths" dark={dark} accent={accent} />
           <BulletList items={cv.strengths} dark={dark} />
         </div>
       ) : null}
 
       {hasList(cv.hobbies) ? (
         <div className="mt-8">
-          <SmallTitle title="Interests" dark={dark} />
+          <SmallTitle title="Interests" dark={dark} accent={accent} />
           <BulletList items={cv.hobbies} dark={dark} />
         </div>
       ) : null}
 
       {hasText(cv.references) ? (
         <div className="mt-8">
-          <SmallTitle title="References" dark={dark} />
+          <SmallTitle title="References" dark={dark} accent={accent} />
           <Paragraph text={cv.references} dark={dark} />
         </div>
       ) : null}
@@ -2807,15 +2819,14 @@ function CVSection({ title, children, accent }) {
   );
 }
 
-function SmallTitle({ title, dark = false }) {
+function SmallTitle({ title, dark = false, accent = "#111827" }) {
   return (
-    <h3
-      className={`mb-3 text-xs font-black uppercase tracking-[0.2em] ${
-        dark ? "text-white" : "text-slate-950"
-      }`}
+    <p
+      className="mb-2 text-xs font-black uppercase tracking-wider"
+      style={{ color: dark ? "rgba(255,255,255,0.9)" : accent }}
     >
       {title}
-    </h3>
+    </p>
   );
 }
 
@@ -3018,31 +3029,43 @@ function EducationContent({ cv }) {
 
   return (
     <div className="space-y-5">
-      {items.map((item, index) => (
-        <div key={index}>
-          {hasText(item.degree) ? (
-            <h3 className="text-[13px] font-black text-slate-950">
-              {item.degree}
-            </h3>
-          ) : null}
+      {items.map((item, index) => {
+        const dateText = [item.startDate, item.endDate]
+          .filter(hasText)
+          .join(" — ");
 
-          {[item.institution, item.location].filter(hasText).length ? (
-            <p className="mt-1 text-[11.5px] font-semibold text-slate-500">
-              {[item.institution, item.location].filter(hasText).join(" · ")}
-            </p>
-          ) : null}
+        return (
+          <div key={index}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                {hasText(item.degree) ? (
+                  <h3 className="text-[13px] font-black leading-tight text-slate-950">
+                    {item.degree}
+                  </h3>
+                ) : null}
 
-          {[item.startDate, item.endDate].filter(hasText).length ? (
-            <p className="mt-1 text-[11px] font-bold text-slate-400">
-              {[item.startDate, item.endDate].filter(hasText).join(" — ")}
-            </p>
-          ) : null}
+                {[item.institution, item.location].filter(hasText).length ? (
+                  <p className="mt-1 text-[11.5px] font-semibold leading-tight text-slate-500">
+                    {[item.institution, item.location]
+                      .filter(hasText)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
 
-          {hasText(item.description) ? (
-            <Paragraph text={item.description} className="mt-2" />
-          ) : null}
-        </div>
-      ))}
+              {hasText(dateText) ? (
+                <p className="shrink-0 whitespace-nowrap text-right text-[11px] font-bold leading-tight text-slate-400">
+                  {dateText}
+                </p>
+              ) : null}
+            </div>
+
+            {hasText(item.description) ? (
+              <Paragraph text={item.description} className="mt-2" />
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

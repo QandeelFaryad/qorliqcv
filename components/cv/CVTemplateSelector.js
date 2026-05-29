@@ -84,22 +84,39 @@ const names = {
   "data-analyst": ["Ben Walker", "Data Analyst"],
   "premium-monogram": ["Isabella Moore", "Executive Consultant"],
 };
-
 const completeCVData = {
   email: "candidate@email.com",
   phone: "+44 7700 123456",
   location: "London, UK",
   linkedin: "linkedin.com/in/candidate",
   summary:
-    "Results-driven professional with 7+ years of experience supporting corporate operations, strategic executive reporting, stakeholder communication, documentation control, and service improvement. Proven ability to optimize processes and increase reporting quality across fast-paced business environments.",
-  skills: ["Operations Management", "Business Administration", "Executive Support", "Process Improvement", "Strategic Planning", "Data Reporting & Analysis", "Stakeholder Relations", "Team Leadership"],
-  education: "BA Business Management — University of Manchester (2012 — 2015)",
-  certifications: ["PRINCE2® Project Management", "Advanced Microsoft Excel Specialist", "Certified Business Administrator"],
-  languages: ["English (Native)", "Arabic (Professional)", "Urdu (Conversational)"],
+    "Results-driven professional with 7+ years of experience supporting corporate operations, strategic executive reporting, stakeholder communication, documentation control, and service improvement. Proven ability to optimize processes, increase reporting quality, and build strong cross-functional relationships across fast-paced, high-growth business environments. Adept at managing complex priorities while maintaining exceptional attention to detail.",
+  skills: [
+    "Operations Management",
+    "Business Administration",
+    "Executive Support",
+    "Process Improvement",
+    "Strategic Planning",
+    "Data Reporting & Analysis",
+    "Stakeholder Relations",
+    "Team Leadership",
+  ],
+  education:
+    "BA Business Management — University of Manchester (2012 — 2015)\nFirst Class Honours · Dissertation: Organisational Efficiency in SMEs",
+  certifications: [
+    "PRINCE2® Project Management",
+    "Advanced Microsoft Excel Specialist",
+    "Certified Business Administrator",
+  ],
+  languages: [
+    "English (Native)",
+    "Arabic (Professional)",
+    "Urdu (Conversational)",
+  ],
   achievements: [
     "Improved reporting accuracy by 38% through structural pipeline controls.",
     "Successfully managed high-volume client document systems with zero data leaks.",
-    "Reduced workflow processing duration by 22% over 12 calendar months."
+    "Reduced workflow processing duration by 22% over 12 calendar months.",
   ],
   experience: [
     {
@@ -107,33 +124,35 @@ const completeCVData = {
       company: "Brightline Services",
       date: "2021 — Present",
       points: [
-        "Improved reporting accuracy by 38% through redesigned workflows and strict quality assurance checks.",
-        "Managed daily administrative operations, cross-department supplier coordination, and core document logs.",
-        "Reduced service request turnaround time by 22% through implementation of structured workflow tools."
-      ]
+        "Improved reporting accuracy by 38% through redesigned workflows and strict quality assurance checks across all operational departments.",
+        "Managed daily administrative operations, cross-department supplier coordination, and core document logs for a team of 25+ staff members.",
+        "Reduced service request turnaround time by 22% through implementation of structured workflow tools and digital tracking systems.",
+        "Led quarterly performance reviews, developed KPI dashboards, and presented board-level operational summaries to senior leadership.",
+      ],
     },
     {
       role: "Senior Coordinator",
       company: "Apex Group",
       date: "2018 — 2021",
       points: [
-        "Coordinated internal records, executive meeting schedules, and multi-department department operations.",
-        "Supported monthly management report generation, asset forecasting, and financial overview trackers.",
-        "Maintained corporate compliance standards across archiving systems and regional office databases."
-      ]
+        "Coordinated internal records, executive meeting schedules, and multi-department operations across three regional offices.",
+        "Supported monthly management report generation, asset forecasting, and financial overview trackers with 100% on-time delivery.",
+        "Maintained corporate compliance standards across archiving systems and regional office databases serving 500+ clients.",
+        "Trained and mentored a team of 6 junior coordinators, improving department output efficiency by 18% within first year.",
+      ],
     },
     {
       role: "Administrative Officer",
       company: "Northfield Business Support",
       date: "2015 — 2018",
       points: [
-        "Handled incoming client inquiries, team agendas, document formatting, and comprehensive executive assistance.",
-        "Built internal trackers and process spreadsheets that lowered team operational delays by 15%."
-      ]
-    }
-  ]
+        "Handled incoming client inquiries, team agendas, document formatting, and comprehensive executive assistance for C-suite leaders.",
+        "Built internal trackers and process spreadsheets that lowered team operational delays by 15% and improved deadline adherence.",
+        "Coordinated travel logistics, event scheduling, and vendor management for company-wide quarterly summits.",
+      ],
+    },
+  ],
 };
-
 function getProfile(templateId) {
   const [name, title] = names[templateId] || ["Emma Williams", "Operations Manager"];
   return { ...completeCVData, name, title };
@@ -175,17 +194,17 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
   const dark = template.colors.find((color) => color !== accent) || template.colors[1] || template.colors[0];
   const layout = template.layout;
 
-  const fTitle = large ? "text-xs font-black uppercase tracking-[0.16em] mb-2 border-b pb-1" : "text-[6.5px] font-black uppercase tracking-[0.15em] mb-1 border-b pb-1";
+  const fTitle = large ? "text-xs font-black uppercase tracking-[0.16em] mb-2 border-b pb-1" : "text-[7px] font-black uppercase tracking-[0.15em] mb-1.5 border-b pb-1";
   const fName = large ? "text-3xl font-black leading-tight" : "text-[15px] font-black leading-tight";
-  const fSub = large ? "text-sm font-bold uppercase tracking-[0.16em]" : "text-[7px] font-bold uppercase tracking-[0.16em]";
-  const fMeta = large ? "text-xs text-slate-500 mt-2" : "text-[6px] text-slate-400 mt-1";
-  const fBody = large ? "text-[11px] leading-[1.6] text-slate-600" : "text-[6.5px] leading-[1.35] text-slate-600";
-  const fBold = large ? "text-[12px] font-black text-slate-950" : "text-[6.8px] font-black text-slate-900";
-  const fDate = large ? "text-[10.5px] font-bold text-slate-400" : "text-[5.7px] font-bold text-slate-400";
-  
-  const blockSpace = large ? "space-y-4" : "space-y-1.5";
-  const componentMargin = large ? "mt-5" : "mt-3";
-  const paddingClass = large ? "p-8 md:p-10 h-full overflow-y-auto" : "p-4 h-[360px] overflow-hidden";
+  const fSub = large ? "text-sm font-bold uppercase tracking-[0.16em]" : "text-[7.5px] font-bold uppercase tracking-[0.14em]";
+  const fMeta = large ? "text-xs text-slate-500 mt-2" : "text-[6.5px] text-slate-400 mt-1";
+  const fBody = large ? "text-[11px] leading-[1.6] text-slate-600" : "text-[7px] leading-[1.4] text-slate-600";
+  const fBold = large ? "text-[12px] font-black text-slate-950" : "text-[7.5px] font-black text-slate-900";
+  const fDate = large ? "text-[10.5px] font-bold text-slate-400" : "text-[6.5px] font-bold text-slate-400";
+
+  const blockSpace = large ? "space-y-4" : "space-y-2";
+  const componentMargin = large ? "mt-5" : "mt-2.5";
+  const paddingClass = large ? "p-8 md:p-10 h-full overflow-y-auto" : "p-4 h-[410px] overflow-hidden";
 
   const renderTitle = (text, customAccent = accent) => (
     <p className={fTitle} style={{ color: customAccent, borderColor: `${customAccent}55` }}>{text}</p>
@@ -201,7 +220,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           </div>
           <p className={`${fBody} font-medium ${light ? "text-white/70" : "text-slate-500"}`}>{job.company}</p>
           <ul className={large ? "mt-1.5 space-y-1 pl-1" : "space-y-0.5"}>
-            {job.points.slice(0, large ? 3 : 1).map((point, i) => (
+            {job.points.slice(0, large ? 4 : 2).map((point, i) => (
               <li key={i} className={`${fBody} ${light ? "text-white/65" : "text-slate-600"}`}>• {point}</li>
             ))}
           </ul>
@@ -212,8 +231,8 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
 
   const renderSkills = (light = false) => (
     <div className="flex flex-wrap gap-1">
-      {p.skills.slice(0, large ? undefined : 6).map((skill) => (
-        <span key={skill} className={`rounded-full px-1.5 py-0.5 font-bold ${large ? "text-[10px] px-2.5 py-1" : "text-[5.5px]"} ${light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>
+      {p.skills.slice(0, large ? undefined : 8).map((skill) => (
+        <span key={skill} className={`rounded-full px-1.5 py-0.5 font-bold ${large ? "text-[10px] px-2.5 py-1" : "text-[6px]"} ${light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>
           {skill}
         </span>
       ))}
@@ -222,7 +241,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
 
   const renderBulletList = (items, light = false) => (
     <ul className={large ? "space-y-1" : "space-y-0.5"}>
-      {items.slice(0, large ? undefined : 2).map((item, i) => (
+      {items.slice(0, large ? undefined : 3).map((item, i) => (
         <li key={i} className={`${fBody} ${light ? "text-white/70" : "text-slate-600"}`}>• {item}</li>
       ))}
     </ul>
@@ -261,71 +280,54 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
         </main>
       </div>
     ),
- "berlin-side-photo": (
-  <div
-    className="cv-a4-template overflow-hidden bg-white ring-1 ring-slate-200"
-    style={{
-      width: large ? "794px" : "100%",
-      minHeight: large ? "1123px" : "360px",
-      height: large ? "1123px" : "360px",
-    }}
-  >
-    <div className="grid h-full min-h-full grid-cols-[35%_65%] items-stretch">
-      <aside
-        data-full-height-sidebar="true"
-        className={`${large ? "p-8" : "p-4"} h-full min-h-full self-stretch text-white`}
-        style={{ background: dark }}
+    "berlin-side-photo": (
+      <div
+        className="cv-a4-template overflow-hidden bg-white ring-1 ring-slate-200"
+        style={{
+          width: large ? "794px" : "100%",
+          minHeight: large ? "1123px" : "410px",
+          height: large ? "1123px" : "410px",
+        }}
       >
-        <Photo template={template} accent={accent} large={large} />
-
-        <h3 className={`${fName} ${componentMargin}`}>{p.name}</h3>
-
-        <p className={`${fBody} text-white/70`}>{p.title}</p>
-
-        <div className={componentMargin}>
-          {renderTitle("Contact", "#fff")}
-          <p className={`${fBody} text-white/70`}>
-            {p.email}
-            <br />
-            {p.phone}
-            <br />
-            {p.location}
-          </p>
+        <div className="grid h-full min-h-full grid-cols-[35%_65%] items-stretch">
+          <aside
+            data-full-height-sidebar="true"
+            className={`${large ? "p-8" : "p-4"} h-full min-h-full self-stretch text-white`}
+            style={{ background: dark }}
+          >
+            <Photo template={template} accent={accent} large={large} />
+            <h3 className={`${fName} ${componentMargin}`}>{p.name}</h3>
+            <p className={`${fBody} text-white/70`}>{p.title}</p>
+            <div className={componentMargin}>
+              {renderTitle("Contact", "#fff")}
+              <p className={`${fBody} text-white/70`}>{p.email}<br />{p.phone}<br />{p.location}</p>
+            </div>
+            <div className={componentMargin}>
+              {renderTitle("Skills", "#fff")}
+              {renderSkills(true)}
+            </div>
+            <div className={componentMargin}>
+              {renderTitle("Certifications", "#fff")}
+              {renderBulletList(p.certifications, true)}
+            </div>
+          </aside>
+          <main className={`${large ? "p-8 md:p-10" : "p-4"} h-full`}>
+            <div className={large ? "rounded-2xl p-5" : "rounded-xl p-2.5"} style={{ backgroundColor: `${accent}12` }}>
+              {renderTitle("Profile")}
+              <p className={fBody}>{p.summary}</p>
+            </div>
+            <div className={componentMargin}>
+              {renderTitle("Work History")}
+              {renderExperienceList()}
+            </div>
+            <div className={componentMargin}>
+              {renderTitle("Education")}
+              <p className={fBody}>{p.education}</p>
+            </div>
+          </main>
         </div>
-
-        <div className={componentMargin}>
-          {renderTitle("Skills", "#fff")}
-          {renderSkills(true)}
-        </div>
-
-        <div className={componentMargin}>
-          {renderTitle("Certifications", "#fff")}
-          {renderBulletList(p.certifications, true)}
-        </div>
-      </aside>
-
-      <main className={`${large ? "p-8 md:p-10" : "p-4"} h-full`}>
-        <div
-          className={large ? "rounded-2xl p-5" : "rounded-xl p-2.5"}
-          style={{ backgroundColor: `${accent}12` }}
-        >
-          {renderTitle("Profile")}
-          <p className={fBody}>{p.summary}</p>
-        </div>
-
-        <div className={componentMargin}>
-          {renderTitle("Work History")}
-          {renderExperienceList()}
-        </div>
-
-        <div className={componentMargin}>
-          {renderTitle("Education")}
-          <p className={fBody}>{p.education}</p>
-        </div>
-      </main>
-    </div>
-  </div>
-),
+      </div>
+    ),
     "corporate-circle-photo": (
       <div className={`${paddingClass} bg-white ring-1 ring-slate-200`}>
         <div className="flex items-center gap-4">
@@ -392,7 +394,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
       </div>
     ),
     "london-executive": (
-      <div className={`${large ? "h-full min-h-[842px]" : "h-[360px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
+      <div className={`${large ? "h-full min-h-[842px]" : "h-[410px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
         <header className={large ? "p-8 text-white" : "p-4 text-white"} style={{ background: `linear-gradient(135deg, ${dark}, #020617)` }}>
           <h3 className={fName}>{p.name}</h3>
           <p className={`${fSub} text-white/70`}>{p.title}</p>
@@ -413,7 +415,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     "clean-ats": (
       <div className={paddingClass}>
         {headerBasic}
-        <main className={large ? "space-y-6 mt-6" : "space-y-3 mt-4"}>
+        <main className={large ? "space-y-6 mt-6" : "space-y-2 mt-3"}>
           <section>{renderTitle("Professional Summary")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Professional Experience")}{renderExperienceList()}</section>
           <section>{renderTitle("Technical Expertise")}{renderSkills()}</section>
@@ -428,7 +430,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <p className={fMeta}>{p.email} · {p.phone} · {p.location}</p>
         </header>
         <div className="my-2 h-px" style={{ backgroundColor: accent }} />
-        <main className={large ? "space-y-5 mt-4" : "space-y-2.5 mt-2"}>
+        <main className={large ? "space-y-5 mt-4" : "space-y-2 mt-2"}>
           <section>{renderTitle("Executive Profile")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Employment")}{renderExperienceList()}</section>
           <section>{renderTitle("Key Credentials")}{renderSkills()}</section>
@@ -442,7 +444,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <h3 className={`font-mono ${large ? "text-2xl pl-2" : "text-[14px]"}`}>{p.name}</h3>
           <p className="text-slate-400 text-[10px] pl-2">{p.title}</p>
         </header>
-        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <section className={blockSpace}>
             <div>{renderTitle("Summary")}<p className={fBody}>{p.summary}</p></div>
             <div>{renderTitle("Logs")}{renderExperienceList()}</div>
@@ -469,19 +471,23 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     ),
     "formal-uk": (
       <div className={paddingClass}>
-        <header className="border-2 p-3 text-center" style={{ borderColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></header>
-        <main className={large ? "space-y-6 mt-6" : "space-y-3 mt-4"}>
+        <header className="border-2 p-3 text-center" style={{ borderColor: accent }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta}>{p.title}</p>
+        </header>
+        <main className={large ? "space-y-6 mt-6" : "space-y-2 mt-3"}>
           <section>{renderTitle("Career History")}{renderExperienceList()}</section>
           <section>{renderTitle("Education & Skills")}{renderSkills()}</section>
         </main>
       </div>
     ),
     "senior-director": (
-      <div className={`${large ? "h-full min-h-[842px]" : "h-[360px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
+      <div className={`${large ? "h-full min-h-[842px]" : "h-[410px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
         <div className="h-3" style={{ backgroundColor: accent }} />
         <div className={large ? "p-8" : "p-4"}>
-          <h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p>
-          <div className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fSub} style={{ color: accent }}>{p.title}</p>
+          <div className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
             <aside className={blockSpace}>
               <div>{renderTitle("Board Skills")}{renderSkills()}</div>
               <div>{renderTitle("Contact")}<p className={fMeta}>{p.email}<br />{p.phone}</p></div>
@@ -500,7 +506,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <div className="w-2 rounded-full" style={{ backgroundColor: accent }} />
           <div className="pl-3"><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></div>
         </header>
-        <main className={large ? "space-y-6 mt-6" : "space-y-3 mt-4"}>
+        <main className={large ? "space-y-6 mt-6" : "space-y-2 mt-3"}>
           <section className="border-l-4 pl-3" style={{ borderColor: accent }}>{renderTitle("Profile")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Admin Experience")}{renderExperienceList()}</section>
           <section>{renderSkills()}</section>
@@ -513,7 +519,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <div><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></div>
           <div className={`${large ? "h-14 w-14 text-xl" : "h-8 w-8 text-xs"} flex items-center justify-center rounded-full text-white`} style={{ backgroundColor: accent }}>+</div>
         </header>
-        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <section className={blockSpace}>
             <div>{renderTitle("Bio Summary")}<p className={fBody}>{p.summary}</p></div>
             <div>{renderTitle("Clinical Framework")}{renderExperienceList()}</div>
@@ -527,7 +533,8 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     "sales-leader": (
       <div className={paddingClass}>
         <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"} text-white`} style={{ background: `linear-gradient(135deg, ${accent}, ${dark})` }}>
-          <h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
         </header>
         <main className={componentMargin}>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -542,7 +549,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     "finance-analyst": (
       <div className={paddingClass}>
         <header><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></header>
-        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <section className={blockSpace}>
             <div>{renderTitle("Analysis Summary")}<p className={fBody}>{p.summary}</p></div>
             <div>{renderExperienceList()}</div>
@@ -560,16 +567,17 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <div><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></div>
           <div className={`${large ? "h-16 w-16" : "h-10 w-10"} rounded-full`} style={{ backgroundColor: `${accent}18` }} />
         </header>
-        <main className={large ? "space-y-6 mt-8" : "space-y-3 mt-4"}>
+        <main className={large ? "space-y-6 mt-8" : "space-y-2 mt-3"}>
           <section>{renderTitle("Profile Core")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Selected Experience")}{renderExperienceList()}</section>
         </main>
       </div>
     ),
     "dubai-corporate": (
-      <div className={`${large ? "h-full min-h-[842px]" : "h-[360px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
+      <div className={`${large ? "h-full min-h-[842px]" : "h-[410px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
         <header className={`${large ? "p-8" : "p-4"} text-right text-white`} style={{ backgroundColor: dark }}>
-          <h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
         </header>
         <main className={`grid grid-cols-[30%_70%] ${large ? "p-8 gap-6" : "p-4 gap-3"}`}>
           <aside>{renderTitle("Expertise")}{renderSkills()}</aside>
@@ -582,8 +590,11 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     ),
     "canada-simple": (
       <div className={paddingClass}>
-        <header className="border-l-8 pl-3" style={{ borderColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></header>
-        <main className={large ? "space-y-5 mt-6" : "space-y-3 mt-4"}>
+        <header className="border-l-8 pl-3" style={{ borderColor: accent }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta}>{p.title}</p>
+        </header>
+        <main className={large ? "space-y-5 mt-6" : "space-y-2 mt-3"}>
           <section>{renderTitle("Summary of Qualifications")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Relevant Experience")}{renderExperienceList()}</section>
           <section>{renderTitle("Core Competencies")}{renderSkills()}</section>
@@ -596,7 +607,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <p className={fSub} style={{ color: accent }}>Curriculum Vitae</p>
           <h3 className={`font-serif font-bold ${large ? "text-3xl" : "text-[17px]"}`}>{p.name}</h3>
         </header>
-        <main className={large ? "space-y-5 mt-6" : "space-y-3 mt-4"}>
+        <main className={large ? "space-y-5 mt-6" : "space-y-2 mt-3"}>
           <section>{renderTitle("Research Profile")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Appointments")}{renderExperienceList()}</section>
           <section>{renderTitle("Publications & Credentials")}{renderBulletList(p.certifications)}</section>
@@ -609,7 +620,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
           <h3 className={`font-serif font-bold ${large ? "text-3xl" : "text-[16px]"}`}>{p.name}</h3>
           <p className={fSub} style={{ color: accent }}>{p.title}</p>
         </header>
-        <main className={large ? "space-y-5 mt-6" : "space-y-3 mt-4"}>
+        <main className={large ? "space-y-5 mt-6" : "space-y-2 mt-3"}>
           <section>{renderTitle("Legal Summary")}<p className={fBody}>{p.summary}</p></section>
           <section>{renderTitle("Practice History")}{renderExperienceList()}</section>
         </main>
@@ -617,8 +628,11 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     ),
     "hospitality-premium": (
       <div className={`${paddingClass} bg-[#FFF7F3]`}>
-        <header className={`${large ? "p-6 rounded-t-3xl" : "p-3 rounded-t-xl"} text-white`} style={{ backgroundColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: "#fff" }}>{p.title}</p></header>
-        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <header className={`${large ? "p-6 rounded-t-3xl" : "p-3 rounded-t-xl"} text-white`} style={{ backgroundColor: accent }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
+        </header>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <section className={blockSpace}>
             <div>{renderTitle("Bio Portfolio")}<p className={fBody}>{p.summary}</p></div>
             <div>{renderTitle("Guest Experience Log")}{renderExperienceList()}</div>
@@ -632,7 +646,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
         <header className="grid grid-cols-[70%_30%] gap-2">
           <div><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: accent }}>{p.title}</p></div>
         </header>
-        <main className={`grid grid-cols-2 ${large ? "gap-4 mt-6" : "gap-2 mt-4"}`}>
+        <main className={`grid grid-cols-2 ${large ? "gap-4 mt-6" : "gap-2 mt-3"}`}>
           <section className="rounded-xl border p-2">{renderTitle("Profile Strategy")}<p className={fBody}>{p.summary}</p></section>
           <section className="rounded-xl border p-2">{renderTitle("Technical Stack")}{renderSkills()}</section>
           <section className="col-span-2 rounded-xl border p-2">{renderTitle("Projects Ecosystem")}{renderExperienceList()}</section>
@@ -641,7 +655,10 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     ),
     "teacher-friendly": (
       <div className={paddingClass}>
-        <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"}`} style={{ backgroundColor: `${accent}16` }}><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></header>
+        <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"}`} style={{ backgroundColor: `${accent}16` }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta}>{p.title}</p>
+        </header>
         <main className={componentMargin}>
           <section>{renderTitle("Pedagogy Core")}<p className={fBody}>{p.summary}</p></section>
           <div className={`rounded-xl border-l-4 ${large ? "p-4 mt-4" : "p-2 mt-2"}`} style={{ borderColor: accent }}>{renderExperienceList()}</div>
@@ -651,7 +668,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     "project-manager": (
       <div className={paddingClass}>
         <header><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></header>
-        <main className={`grid grid-cols-[25%_75%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <main className={`grid grid-cols-[25%_75%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <aside className="space-y-2">
             {["Plan", "Build", "Lead"].map((item) => (
               <div key={item} className="rounded-lg p-2 text-center font-black text-white text-[8px] md:text-[12px]" style={{ backgroundColor: accent }}>{item}</div>
@@ -677,7 +694,7 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
       </div>
     ),
     "marketing-bold": (
-      <div className={`${large ? "h-full min-h-[842px] p-8 md:p-10" : "p-4 h-[360px]"} overflow-y-auto bg-white ring-1 ring-slate-200`}>
+      <div className={`${large ? "h-full min-h-[842px] p-8 md:p-10" : "p-4 h-[410px]"} overflow-y-auto bg-white ring-1 ring-slate-200`}>
         <header className={`${large ? "p-8 rounded-3xl" : "p-3.5 rounded-xl"} mb-4`} style={{ background: `linear-gradient(135deg, ${accent}22, #fff, ${accent}08)` }}>
           <h3 className={`${fName} text-slate-900 font-extrabold`}>{p.name}</h3>
           <p className={`${fSub} mt-1`} style={{ color: accent }}>{p.title}</p>
@@ -709,8 +726,11 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     ),
     "hr-professional": (
       <div className={paddingClass}>
-        <header className="rounded-xl border p-3" style={{ borderColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: accent }}>{p.title}</p></header>
-        <main className={`grid grid-cols-[40%_60%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <header className="rounded-xl border p-3" style={{ borderColor: accent }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta} style={{ color: accent }}>{p.title}</p>
+        </header>
+        <main className={`grid grid-cols-[40%_60%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <aside>{renderTitle("People Framework")}{renderSkills()}</aside>
           <section className={blockSpace}>
             <div>{renderTitle("Bio Profile")}<p className={fBody}>{p.summary}</p></div>
@@ -737,9 +757,10 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
       <div className={`${paddingClass} bg-[#FBF7EF]`}>
         <header className="text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border font-serif font-bold text-sm md:text-xl" style={{ borderColor: accent, color: accent }}>IM</div>
-          <h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fMeta}>{p.title}</p>
         </header>
-        <main className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+        <main className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-3"}`}>
           <aside>{renderTitle("Expertise Identity")}{renderSkills()}</aside>
           <section className={blockSpace}>
             <div>{renderTitle("Profile Architecture")}<p className={fBody}>{p.summary}</p></div>
@@ -902,15 +923,12 @@ function PreviewModal({
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-xs">
               Preview Template
             </p>
-
             <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
               {template.name}
             </h2>
-
             <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
               Same template card design with more complete CV content.
             </p>
-
             <div className="mt-3 flex flex-wrap items-center gap-3 sm:mt-4">
               <ColorPicker
                 template={template}
@@ -928,7 +946,6 @@ function PreviewModal({
             >
               Close
             </button>
-
             <button
               type="button"
               onClick={onUse}
@@ -939,128 +956,127 @@ function PreviewModal({
           </div>
         </div>
 
-    <div className="preview-modal-scroll mx-auto h-[78vh] min-h-[620px] w-full max-w-[850px] overflow-hidden rounded-[1.4rem] bg-slate-100 p-3 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:min-h-[720px] sm:p-6">
-       <div className="preview-scroll-area">
-  <div className="preview-scale-holder">
-    <div className="preview-scale-inner">
-      <CVPreview
-        template={template}
-        selectedColor={selectedColor}
-        large
-      />
-    </div>
-  </div>
-</div>
+        {/* ✅ FIX: overflow-hidden hata diya, overflow-y-auto rakha sirf scroll ke liye */}
+        <div className="preview-modal-scroll mx-auto w-full max-w-[850px] rounded-[1.4rem] bg-slate-100 p-2 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:p-4">
+          <div className="preview-scroll-area">
+            <div className="preview-scale-holder">
+              <div className="preview-scale-inner">
+                <CVPreview
+                  template={template}
+                  selectedColor={selectedColor}
+                  large
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-<style jsx>{`
-  .preview-modal-scroll {
-    -webkit-overflow-scrolling: touch;
-  }
+      <style jsx>{`
+        .preview-modal-scroll {
+          -webkit-overflow-scrolling: touch;
+        }
 
-  .preview-scroll-area {
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
+        /* ✅ FIX: overflow-x: hidden hata diya — yahi left/right cut kar raha tha */
+        .preview-scroll-area {
+          width: 100%;
+          overflow-y: auto;
+          overflow-x: auto; /* ✅ auto — clip nahi hoga */
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 8px 4px; /* ✅ symmetrical padding */
+          max-height: 75vh;
+          min-height: 480px;
+        }
 
-  .preview-scale-holder {
-    --preview-scale: 0.40;
+        .preview-scale-holder {
+          --preview-scale: 0.40;
 
-    width: calc((794px * var(--preview-scale)) + 18px);
-    min-width: calc((794px * var(--preview-scale)) + 18px);
-    height: calc(1123px * var(--preview-scale));
-    min-height: calc(1123px * var(--preview-scale));
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    overflow: visible;
-    margin: 0 auto 24px auto;
-  }
+          /* ✅ FIX: min-width zero — warna flex overflow ho jaata hai */
+          width: calc(794px * var(--preview-scale));
+          min-width: calc(794px * var(--preview-scale));
+          height: calc(1123px * var(--preview-scale));
+          min-height: calc(1123px * var(--preview-scale));
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          overflow: visible;
+          /* ✅ FIX: margin auto + flex-shrink: 0 */
+          margin: 0 auto 16px auto;
+          flex-shrink: 0;
+        }
 
-  .preview-scale-inner {
-    width: 794px;
-    min-width: 794px;
-    height: 1123px;
-    min-height: 1123px;
-    transform: scale(var(--preview-scale));
-    transform-origin: top center;
-    overflow: visible;
-    border-radius: 22px;
-  }
+        .preview-scale-inner {
+          width: 794px;
+          min-width: 794px;
+          height: 1123px;
+          min-height: 1123px;
+          transform: scale(var(--preview-scale));
+          transform-origin: top center;
+          overflow: visible;
+          border-radius: 22px;
+        }
 
-  .preview-scale-inner :global(.cv-a4-template),
-  .preview-scale-inner :global(#cv-download) {
-    width: 794px !important;
-    min-height: 1123px !important;
-    height: 1123px !important;
-    overflow: hidden !important;
-    border-radius: 22px !important;
-    box-shadow: 0 18px 55px rgba(15, 23, 42, 0.16) !important;
-  }
+        .preview-scale-inner :global(.cv-a4-template),
+        .preview-scale-inner :global(#cv-download) {
+          width: 794px !important;
+          min-height: 1123px !important;
+          height: 1123px !important;
+          overflow: hidden !important;
+          border-radius: 22px !important;
+          box-shadow: 0 18px 55px rgba(15, 23, 42, 0.16) !important;
+        }
 
-  .preview-scale-inner :global(.cv-a4-template > div),
-  .preview-scale-inner :global(#cv-download > div) {
-    height: 100% !important;
-    min-height: 1123px !important;
-    align-items: stretch !important;
-  }
+        .preview-scale-inner :global(.cv-a4-template > div),
+        .preview-scale-inner :global(#cv-download > div) {
+          height: 100% !important;
+          min-height: 1123px !important;
+          align-items: stretch !important;
+        }
 
-  .preview-scale-inner :global(aside[data-full-height-sidebar="true"]) {
-    height: 100% !important;
-    min-height: 1123px !important;
-    align-self: stretch !important;
-  }
+        .preview-scale-inner :global(aside[data-full-height-sidebar="true"]) {
+          height: 100% !important;
+          min-height: 1123px !important;
+          align-self: stretch !important;
+        }
 
-  @media (max-width: 360px) {
-    .preview-scale-holder {
-      --preview-scale: 0.38;
-    }
-  }
+        /* ✅ Mobile scales — thoda badhaye for better visibility */
+        @media (max-width: 360px) {
+          .preview-scale-holder { --preview-scale: 0.36; }
+          .preview-scroll-area { min-height: 420px; }
+        }
 
-  @media (min-width: 390px) {
-    .preview-scale-holder {
-      --preview-scale: 0.41;
-    }
-  }
+        @media (min-width: 361px) and (max-width: 389px) {
+          .preview-scale-holder { --preview-scale: 0.38; }
+        }
 
-  @media (min-width: 430px) {
-    .preview-scale-holder {
-      --preview-scale: 0.44;
-    }
-  }
+        @media (min-width: 390px) {
+          .preview-scale-holder { --preview-scale: 0.42; }
+        }
 
-  @media (min-width: 480px) {
-    .preview-scale-holder {
-      --preview-scale: 0.50;
-    }
-  }
+        @media (min-width: 430px) {
+          .preview-scale-holder { --preview-scale: 0.46; }
+        }
 
-  @media (min-width: 640px) {
-    .preview-scale-holder {
-      --preview-scale: 0.72;
-    }
-  }
+        @media (min-width: 480px) {
+          .preview-scale-holder { --preview-scale: 0.52; }
+        }
 
-  @media (min-width: 768px) {
-    .preview-scale-holder {
-      --preview-scale: 0.86;
-    }
-  }
+        @media (min-width: 640px) {
+          .preview-scale-holder { --preview-scale: 0.72; }
+          .preview-scroll-area { min-height: 600px; }
+        }
 
-  @media (min-width: 1024px) {
-    .preview-scale-holder {
-      --preview-scale: 1;
-    }
-  }
-`}</style>
+        @media (min-width: 768px) {
+          .preview-scale-holder { --preview-scale: 0.86; }
+        }
+
+        @media (min-width: 1024px) {
+          .preview-scale-holder { --preview-scale: 1; }
+          .preview-scroll-area { max-height: 80vh; min-height: 720px; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -2627,49 +2627,343 @@ function LuxuryOvalPhotoCV({ cv, config }) {
   );
 }
 function GraduateFreshCV({ cv, config }) {
+  const accent = config?.accent || "#111827";
+
+  const educationItems = Array.isArray(cv.education) ? cv.education : [];
+  const experienceItems = Array.isArray(cv.experience) ? cv.experience : [];
+
+  const hasEducationArray = educationItems.length > 0;
+  const hasEducationText =
+    typeof cv.education === "string" && cv.education.trim().length > 0;
+
+  const hasExperienceArray = experienceItems.length > 0;
+  const hasExperienceText =
+    typeof cv.experience === "string" && cv.experience.trim().length > 0;
+
+  const achievements =
+    cv.achievements || cv.achievement || cv.awards || cv.accomplishments;
+
+  const certificates =
+    cv.certifications ||
+    cv.certificates ||
+    cv.certificate ||
+    cv.courses ||
+    cv.training;
+
+  const additionalSections =
+    cv.additionalSections ||
+    cv.customSections ||
+    cv.extraSections ||
+    cv.additional ||
+    cv.extras;
+
   return (
     <CVPage>
+      {/* 1. Header Section */}
       <header
         className="rounded-[32px] p-8"
-        style={{ backgroundColor: `${config.accent}14` }}
+        style={{ backgroundColor: `${accent}14` }}
       >
-        <p
-          className="text-xs font-black uppercase tracking-[0.3em]"
-          style={{ color: config.accent }}
-        >
-          Graduate CV
-        </p>
-
-        <h1 className="mt-2 text-5xl font-black tracking-[-0.055em]">
+        <h1 className="text-4xl sm:text-5xl font-black tracking-[-0.055em] text-black">
           {cv.fullName || "Your Name"}
         </h1>
 
-        <p
-          className="mt-2 text-lg font-bold"
-          style={{ color: config.accent }}
-        >
+        <p className="mt-2 text-lg font-bold" style={{ color: accent }}>
           {cv.jobTitle || "Graduate / Entry Level"}
         </p>
 
-        <ContactLine cv={cv} />
+        <div className="mt-4">
+          <ContactLine cv={cv} />
+        </div>
       </header>
 
-      <main className="mt-8 grid grid-cols-[1fr_260px] gap-8">
-        <section className="space-y-8 rounded-3xl border border-slate-200 p-6">
-          <MainCVSections cv={cv} accent={config.accent} />
+      {/* 2. Main Content Grid (4 Controlled Boxes Structure - Exact Length & Design) */}
+      <main className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        
+        {/* ==================== BOX 1: PROFILE, SKILLS & LANGUAGES ==================== */}
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+          <CVSection title="Profile" accent={accent}>
+            {(hasText(cv.summary) || hasText(cv.profile)) && (
+              <Paragraph text={cv.summary || cv.profile} />
+            )}
+
+            {hasList(cv.skills) && (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                  Skills
+                </p>
+                <SkillPills items={cv.skills} levels={cv.skillLevels} />
+              </div>
+            )}
+
+            {hasList(cv.languages) && (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                  Languages
+                </p>
+                <LanguageList
+                  items={cv.languages}
+                  levels={cv.languageLevels}
+                />
+              </div>
+            )}
+
+            {hasList(cv.strengths) && (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                  Strengths
+                </p>
+                <BulletList items={cv.strengths} />
+              </div>
+            )}
+          </CVSection>
         </section>
 
-        <aside
-          className="rounded-3xl p-6"
-          style={{ backgroundColor: `${config.accent}10` }}
-        >
-          <SideCVSections cv={cv} accent={config.accent} />
-        </aside>
+        {/* ==================== BOX 2: EDUCATION & CERTIFICATIONS ==================== */}
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+          <CVSection title="Education" accent={accent}>
+            {(hasEducationArray || hasEducationText) && (
+              <>
+                {hasEducationArray ? (
+                  <div className="relative border-l border-slate-200 ml-2 pl-4 space-y-5 pt-1">
+                    {educationItems.map((item, index) => {
+                      const eduTitle = item.degree || item.title || item.course || item.qualification || "";
+                      const eduPlace = item.school || item.institution || item.university || item.college || "";
+                      const eduDate = item.year || item.date || item.period || "";
+
+                      return (
+                        <div key={index} className="relative group">
+                          {/* Timeline Dot with Accent Color */}
+                          <span 
+                            className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white transition-transform group-hover:scale-125"
+                            style={{ backgroundColor: accent }}
+                          />
+
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                            <div className="space-y-0.5">
+                              {eduTitle && (
+                                <h4 className="text-sm font-black text-slate-950 tracking-tight leading-snug uppercase">
+                                  {eduTitle}
+                                </h4>
+                              )}
+                              {eduPlace && (
+                                <p className="text-xs font-bold text-slate-600">
+                                  {eduPlace}
+                                </p>
+                              )}
+                            </div>
+
+                            {eduDate && (
+                              <div className="shrink-0">
+                                <span className="inline-block text-[11px] font-black tracking-wide text-slate-800 bg-slate-100/90 border border-slate-200 px-3 py-1 rounded-md shadow-sm">
+                                  {eduDate}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {item.description && (
+                            <p className="mt-2 text-xs leading-relaxed text-slate-500 whitespace-pre-line font-medium">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Paragraph text={cv.education} />
+                )}
+              </>
+            )}
+
+            {hasList(certificates) && (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                  Certifications
+                </p>
+                <BulletList items={certificates} />
+              </div>
+            )}
+
+            {hasText(certificates) && !hasList(certificates) && (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                  Certifications
+                </p>
+                <Paragraph text={certificates} />
+              </div>
+            )}
+          </CVSection>
+        </section>
+
+        {/* ==================== BOX 3: WORK EXPERIENCE ==================== */}
+        <section className="col-span-1 sm:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+          <CVSection title="Work Experience" accent={accent}>
+            {(hasExperienceArray || hasExperienceText) && (
+              <>
+                {hasExperienceArray ? (
+                  <div className="relative border-l border-slate-200 ml-2 pl-4 space-y-6 pt-1">
+                    {experienceItems.map((item, index) => {
+                      const expTitle = item.role || item.position || item.title || item.jobTitle || "";
+                      const expCompany = item.company || item.employer || item.organization || "";
+                      const expDate = item.period || item.date || item.year || "";
+
+                      return (
+                        <div key={index} className="relative group">
+                          {/* Timeline Dot with Accent Color */}
+                          <span 
+                            className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white transition-transform group-hover:scale-125"
+                            style={{ backgroundColor: accent }}
+                          />
+
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 w-full">
+                            <div className="space-y-0.5">
+                              {expTitle && (
+                                <h4 className="text-sm font-black text-slate-950 tracking-tight leading-snug uppercase">
+                                  {expTitle}
+                                </h4>
+                              )}
+                              {expCompany && (
+                                <p className="text-xs font-bold text-slate-600">
+                                  {expCompany}
+                                </p>
+                              )}
+                            </div>
+
+                            {expDate && (
+                              <div className="shrink-0 sm:text-right">
+                                <span className="inline-block text-[11px] font-black tracking-wide text-slate-800 bg-slate-100/90 border border-slate-200 px-3 py-1 rounded-md shadow-sm">
+                                  {expDate}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {item.description && (
+                            <p className="mt-2 text-xs leading-relaxed text-slate-500 whitespace-pre-line font-medium pl-0.5">
+                              {item.description}
+                            </p>
+                          )}
+
+                          {Array.isArray(item.bullets) && item.bullets.length > 0 ? (
+                            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-relaxed text-slate-600 font-medium">
+                              {item.bullets.map((bullet, bulletIndex) => (
+                                <li key={bulletIndex}>{bullet}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Paragraph text={cv.experience} />
+                )}
+              </>
+            )}
+          </CVSection>
+        </section>
+
+        {/* ==================== BOX 4: ACHIEVEMENTS, HOBBIES & REFERENCES ==================== */}
+        <section className="col-span-1 sm:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            
+            {/* Left Column: Achievements & Hobbies */}
+            <div className="space-y-5">
+              {hasList(achievements) && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    Achievements
+                  </p>
+                  <BulletList items={achievements} />
+                </div>
+              )}
+
+              {hasText(achievements) && !hasList(achievements) && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    Achievements
+                  </p>
+                  <Paragraph text={achievements} />
+                </div>
+              )}
+
+              {hasList(cv.hobbies) && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    Hobbies & Interests
+                  </p>
+                  <BulletList items={cv.hobbies} />
+                </div>
+              )}
+
+              {hasList(cv.interests) && !hasList(cv.hobbies) && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    Interests
+                  </p>
+                  <BulletList items={cv.interests} />
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: References & Additional Sections */}
+            <div className="space-y-5">
+              {hasText(cv.references) && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    References
+                  </p>
+                  <Paragraph text={cv.references} />
+                </div>
+              )}
+
+              {Array.isArray(additionalSections) && additionalSections.length > 0 && 
+                additionalSections.map((section, index) => {
+                  const sectionTitle = section?.title || section?.heading || "Additional Information";
+                  const sectionContent = section?.content || section?.description || section?.text || section?.items || "";
+
+                  return (
+                    <div key={index}>
+                      <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                        {sectionTitle}
+                      </p>
+                      {Array.isArray(sectionContent) ? (
+                        <BulletList items={sectionContent} />
+                      ) : (
+                        <Paragraph text={String(sectionContent || "")} />
+                      )}
+                    </div>
+                  );
+              })}
+
+              {!Array.isArray(additionalSections) && additionalSections && typeof additionalSections === "object" && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    {additionalSections.title || additionalSections.heading || "Additional Information"}
+                  </p>
+                  <Paragraph text={String(additionalSections.content || additionalSections.description || additionalSections.text || "")} />
+                </div>
+              )}
+
+              {typeof additionalSections === "string" && additionalSections.trim().length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+                    Additional Information
+                  </p>
+                  <Paragraph text={additionalSections} />
+                </div>
+              )}
+            </div>
+
+          </div>
+        </section>
+
       </main>
     </CVPage>
   );
 }
-
 function LondonExecutiveCV({ cv, config }) {
   return (
     <div className="overflow-hidden bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px" }}>

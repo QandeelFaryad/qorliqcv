@@ -1661,44 +1661,51 @@ function FormalUKCV({ cv, config }) {
         <ContactLine cv={cv} center />
       </header>
 
-      <main className="mt-9 space-y-8">
-        <MainCVSections cv={cv} accent={accent} />
+      <main className="mt-9 grid grid-cols-[0.34fr_0.66fr] gap-8">
+        <aside className="space-y-7">
+          {hasList(cv.skills) ? (
+            <CVSection title="Skills" accent={accent}>
+              <SkillPills items={cv.skills} levels={cv.skillLevels} />
+            </CVSection>
+          ) : null}
 
-        {hasList(cv.skills) ? (
-          <CVSection title="Skills" accent={accent}>
-            <SkillPills items={cv.skills} levels={cv.skillLevels} />
-          </CVSection>
-        ) : null}
+          {hasList(cv.languages) ? (
+            <CVSection title="Languages" accent={accent}>
+              <LanguageList
+                items={cv.languages}
+                levels={cv.languageLevels}
+              />
+            </CVSection>
+          ) : null}
 
-        {hasList(cv.languages) ? (
-          <CVSection title="Languages" accent={accent}>
-            <LanguageList items={cv.languages} levels={cv.languageLevels} />
-          </CVSection>
-        ) : null}
+          {hasList(cv.strengths) ? (
+            <CVSection title="Strengths" accent={accent}>
+              <BulletList items={cv.strengths} />
+            </CVSection>
+          ) : null}
 
-        {hasList(cv.strengths) ? (
-          <CVSection title="Strengths" accent={accent}>
-            <BulletList items={cv.strengths} />
-          </CVSection>
-        ) : null}
+          {hasList(cv.hobbies) ? (
+            <CVSection title="Hobbies & Interests" accent={accent}>
+              <BulletList items={cv.hobbies} />
+            </CVSection>
+          ) : null}
 
-        {hasList(cv.hobbies) ? (
-          <CVSection title="Hobbies & Interests" accent={accent}>
-            <BulletList items={cv.hobbies} />
-          </CVSection>
-        ) : null}
+          {hasList(cv.interests) && !hasList(cv.hobbies) ? (
+            <CVSection title="Interests" accent={accent}>
+              <BulletList items={cv.interests} />
+            </CVSection>
+          ) : null}
 
-        {hasList(cv.interests) && !hasList(cv.hobbies) ? (
-          <CVSection title="Interests" accent={accent}>
-            <BulletList items={cv.interests} />
-          </CVSection>
-        ) : null}
+          {hasText(cv.references) ? (
+            <CVSection title="References" accent={accent}>
+              <Paragraph text={cv.references} />
+            </CVSection>
+          ) : null}
+        </aside>
 
-        {hasText(cv.references) ? (
-          <CVSection title="References" accent={accent}>
-            <Paragraph text={cv.references} />
-          </CVSection>
-        ) : null}
+        <section className="space-y-8">
+          <MainCVSections cv={cv} accent={accent} />
+        </section>
       </main>
     </CVPage>
   );

@@ -1193,69 +1193,73 @@ function HeaderBackground({ children, accent, dark = false, className = "" }) {
 }
 
 function EUPhotoDocumentCV({ cv, config }) {
-  const accent = config.accent;
+  const accent = config.accent || "#2563EB";
 
   return (
-   <CVPage>
-    <div className="-m-12 grid min-h-[1123px] grid-cols-[280px_1fr] items-start overflow-visible">
-<aside
-  data-full-height-sidebar="true"
-  className="min-h-[1123px] self-start bg-slate-100 px-8 py-10"
->
-      <ProfilePhoto cv={cv} config={config} large />
+    <CVPage>
+      {/* Container matching standard print width layout with absolute white base */}
+      <div className="-m-12 p-12 bg-white min-h-[1123px] text-black overflow-visible font-sans">
+        
+        {/* 1. Top Header Row (Matching Template precisely) */}
+        <header className="flex gap-4 border-b pb-4 mb-6" style={{ borderColor: `${accent}55` }}>
+          <div className="shrink-0">
+            <ProfilePhoto cv={cv} config={config} large />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[.22em] mb-1" style={{ color: accent }}>
+              European CV
+            </p>
+            <h1 className="text-3xl font-black tracking-[-0.035em] text-slate-950 leading-tight">
+              {name(cv)}
+            </h1>
+            <p className="text-sm font-bold mt-1 uppercase tracking-wider" style={{ color: accent }}>
+              {title(cv)}
+            </p>
+          </div>
+        </header>
 
-      <h1 className="mt-6 text-3xl font-black leading-tight tracking-[-0.035em] text-slate-950">
-        {name(cv)}
-      </h1>
+        {/* 2. Bottom Content Grid (Matching large ? "grid-cols-[30%_70%]") */}
+        <div className="grid grid-cols-[30%_70%] gap-8 items-start">
+          
+          {/* Left Side Column (Template's aside block) */}
+          <aside className="space-y-6">
+            {/* Details Section */}
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider mb-2 text-slate-900">Details</p>
+              <div className="text-[12px] leading-relaxed text-slate-600">
+                <ContactLine cv={cv} />
+              </div>
+            </div>
 
-      <p
-        className="mt-2 text-sm font-bold uppercase tracking-[0.12em]"
-        style={{ color: accent }}
-      >
-        {title(cv)}
-      </p>
+            {/* Side Sections (Skills, Languages etc.) */}
+            <div>
+              <SideCVSections cv={cv} accent={accent} />
+            </div>
+          </aside>
 
-      <div className="mt-5">
-        <ContactLine cv={cv} />
+          {/* Right Side Column (Template's main section block) */}
+          <main className="space-y-6">
+            {/* Profile Section */}
+            {hasText(cv.summary) && (
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider mb-2 text-slate-900">Profile</p>
+                <p className="whitespace-pre-line text-[12px] leading-relaxed text-slate-700">
+                  {cv.summary}
+                </p>
+              </div>
+            )}
+
+            {/* Experience, Education etc. */}
+            <div>
+              <MainCVSections cv={cv} accent={accent} skipSummary />
+            </div>
+          </main>
+
+        </div>
       </div>
-
-      <div className="mt-8">
-        <SideCVSections cv={cv} accent={accent} />
-      </div>
-    </aside>
-
-       <main className="space-y-8 px-10 py-10">
-      <section>
-        <p
-          className="text-xs font-black uppercase tracking-[0.3em]"
-          style={{ color: accent }}
-        >
-          European CV
-        </p>
-
-        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
-          Professional Profile
-        </h2>
-
-        <div
-          className="mt-4 h-[3px] w-24 rounded-full"
-          style={{ backgroundColor: accent }}
-        />
-
-        {hasText(cv.summary) ? (
-          <p className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">
-            {cv.summary}
-          </p>
-        ) : null}
-      </section>
-
-      <MainCVSections cv={cv} accent={accent} skipSummary />
-    </main>
-  </div>
-</CVPage>
+    </CVPage>
   );
 }
-
 function BerlinSidePhotoCV({ cv, config }) {
   const accent = config.accent;
   const dark = exactDark(config) || "#0F172A";

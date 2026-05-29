@@ -85,87 +85,58 @@ const names = {
   "premium-monogram": ["Isabella Moore", "Executive Consultant"],
 };
 
-const shortCV = {
-  email: "candidate@email.com",
-  phone: "+44 7700 123456",
-  location: "London, UK",
-  summary: "Results-driven professional with experience improving operations, reporting and team performance.",
-  skills: ["Operations", "Excel", "Reporting", "Planning", "Communication", "Leadership"],
-  education: "BA Business Management — University of Manchester",
-  experience: [
-    ["Operations Manager", "Brightline Services", "2021 — Present", "Improved reporting accuracy and workflow controls."],
-    ["Senior Coordinator", "Apex Group", "2018 — 2021", "Managed records, reporting and department communication."],
-  ],
-};
-
-const fullPreviewCV = {
+const completeCVData = {
   email: "candidate@email.com",
   phone: "+44 7700 123456",
   location: "London, UK",
   linkedin: "linkedin.com/in/candidate",
   summary:
-    "Results-driven professional with 7+ years of experience supporting operations, executive reporting, stakeholder communication, documentation control and service improvement in fast-paced business environments.",
+    "Results-driven professional with 7+ years of experience supporting corporate operations, strategic executive reporting, stakeholder communication, documentation control, and service improvement. Proven ability to optimize processes and increase reporting quality across fast-paced business environments.",
+  skills: ["Operations Management", "Business Administration", "Executive Support", "Process Improvement", "Strategic Planning", "Data Reporting & Analysis", "Stakeholder Relations", "Team Leadership"],
+  education: "BA Business Management — University of Manchester (2012 — 2015)",
+  certifications: ["PRINCE2® Project Management", "Advanced Microsoft Excel Specialist", "Certified Business Administrator"],
+  languages: ["English (Native)", "Arabic (Professional)", "Urdu (Conversational)"],
+  achievements: [
+    "Improved reporting accuracy by 38% through structural pipeline controls.",
+    "Successfully managed high-volume client document systems with zero data leaks.",
+    "Reduced workflow processing duration by 22% over 12 calendar months."
+  ],
   experience: [
     {
       role: "Operations Manager",
       company: "Brightline Services",
       date: "2021 — Present",
       points: [
-        "Improved reporting accuracy by 38% through redesigned workflows and quality controls.",
-        "Managed daily operations, supplier coordination, internal documentation and reporting packs.",
-        "Reduced service request turnaround time by 22% through structured process improvements.",
-      ],
+        "Improved reporting accuracy by 38% through redesigned workflows and strict quality assurance checks.",
+        "Managed daily administrative operations, cross-department supplier coordination, and core document logs.",
+        "Reduced service request turnaround time by 22% through implementation of structured workflow tools."
+      ]
     },
     {
       role: "Senior Coordinator",
       company: "Apex Group",
       date: "2018 — 2021",
       points: [
-        "Coordinated internal records, communication, scheduling and department administration.",
-        "Supported monthly management reports, budget summaries and meeting documentation.",
-        "Maintained structured filing systems and compliance with company procedures.",
-      ],
+        "Coordinated internal records, executive meeting schedules, and multi-department department operations.",
+        "Supported monthly management report generation, asset forecasting, and financial overview trackers.",
+        "Maintained corporate compliance standards across archiving systems and regional office databases."
+      ]
     },
     {
       role: "Administrative Officer",
       company: "Northfield Business Support",
       date: "2015 — 2018",
       points: [
-        "Handled client queries, scheduling, document preparation and office support activities.",
-        "Prepared spreadsheets, workflow trackers and internal reporting documents.",
-      ],
-    },
-  ],
-  skills: [
-    "Operations Management",
-    "Business Administration",
-    "Executive Support",
-    "Reporting",
-    "Microsoft Excel",
-    "Process Improvement",
-    "Stakeholder Communication",
-    "Team Coordination",
-    "Data Management",
-    "Customer Service",
-  ],
-  education: "BA Business Management — University of Manchester",
-  certifications: ["PRINCE2 Foundation", "Advanced Microsoft Excel", "Business Administration Certificate"],
-  languages: ["English — Native", "Arabic — Professional", "Urdu — Conversational"],
-  achievements: [
-    "Recognised for improving reporting efficiency and reducing internal process delays.",
-    "Supported executive team in delivering monthly operational reports across multiple departments.",
-    "Maintained documentation accuracy in high-volume environments.",
-  ],
+        "Handled incoming client inquiries, team agendas, document formatting, and comprehensive executive assistance.",
+        "Built internal trackers and process spreadsheets that lowered team operational delays by 15%."
+      ]
+    }
+  ]
 };
 
-function getProfile(template) {
-  const [name, title] = names[template.id] || ["Emma Williams", "Operations Manager"];
-  return { ...shortCV, name, title };
-}
-
-function getFullProfile(template) {
-  const [name, title] = names[template.id] || ["Emma Williams", "Operations Manager"];
-  return { ...fullPreviewCV, name, title };
+function getProfile(templateId) {
+  const [name, title] = names[templateId] || ["Emma Williams", "Operations Manager"];
+  return { ...completeCVData, name, title };
 }
 
 function Photo({ template, accent, large = false }) {
@@ -190,7 +161,7 @@ function Photo({ template, accent, large = false }) {
 
   return (
     <div
-      className={`${large ? "h-28 w-28" : "h-14 w-14"} ${shape} shrink-0 overflow-hidden bg-slate-100 shadow`}
+      className={`${large ? "h-24 w-24 md:h-28 md:w-28" : "h-14 w-14"} ${shape} shrink-0 overflow-hidden bg-slate-100 shadow`}
       style={{ border: `2px solid ${accent}` }}
     >
       <img src={photos[template.photoType]} alt="Dummy CV profile" className="h-full w-full object-cover" />
@@ -198,1018 +169,597 @@ function Photo({ template, accent, large = false }) {
   );
 }
 
-function MiniTitle({ children, accent }) {
-  return (
-    <p className="mb-1 border-b pb-1 text-[6.5px] font-black uppercase tracking-[0.15em]" style={{ color: accent, borderColor: `${accent}55` }}>
-      {children}
-    </p>
-  );
-}
-function MiniExp({ data = shortCV, light = false }) {
-  const items = Array.isArray(data.experience) ? data.experience : [];
-
-  return (
-    <div className="space-y-1.5">
-      {items.map((job, index) => {
-        const isArrayJob = Array.isArray(job);
-
-        const role = isArrayJob ? job[0] : job.role;
-        const company = isArrayJob ? job[1] : job.company;
-        const date = isArrayJob ? job[2] : job.date;
-        const points = isArrayJob ? [job[3]] : job.points || [];
-
-        return (
-          <div key={`${role}-${index}`}>
-            <div className="flex justify-between gap-2">
-              <p
-                className={`text-[6.8px] font-black ${
-                  light ? "text-white" : "text-slate-900"
-                }`}
-              >
-                {role}
-              </p>
-
-              <p
-                className={`text-[5.7px] font-bold ${
-                  light ? "text-white/60" : "text-slate-400"
-                }`}
-              >
-                {date}
-              </p>
-            </div>
-
-            <p
-              className={`text-[6.2px] ${
-                light ? "text-white/70" : "text-slate-500"
-              }`}
-            >
-              {company}
-            </p>
-
-            <div className="mt-1 space-y-0.5">
-              {points.map((point) => (
-                <p
-                  key={point}
-                  className={`text-[6.2px] leading-[1.3] ${
-                    light ? "text-white/65" : "text-slate-600"
-                  }`}
-                >
-                  • {point}
-                </p>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function MiniSkills({ data = shortCV, light = false }) {
-  const items = data.skills || [];
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {items.map((skill) => (
-        <span
-          key={skill}
-          className={`rounded-full px-1.5 py-0.5 text-[5.5px] font-bold ${
-            light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          {skill}
-        </span>
-      ))}
-    </div>
-  );
-}
-function MiniPreview({ template, selectedColor, modalPreview = false }) {
-  const p = modalPreview ? getFullProfile(template) : getProfile(template);
+function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
+  const p = getProfile(template.id);
   const accent = selectedColor || template.colors[0];
-  const dark =
-    template.colors.find((color) => color !== accent) ||
-    template.colors[1] ||
-    template.colors[0];
-
+  const dark = template.colors.find((color) => color !== accent) || template.colors[1] || template.colors[0];
   const layout = template.layout;
 
-  const shellClass = (extra = "") =>
-    `${
-      modalPreview
-        ? "min-h-[620px] overflow-visible"
-        : "h-[360px] overflow-hidden"
-    } rounded-[1.35rem] bg-white shadow-sm ring-1 ring-slate-200 ${extra}`;
+  const fTitle = large ? "text-xs font-black uppercase tracking-[0.16em] mb-2 border-b pb-1" : "text-[6.5px] font-black uppercase tracking-[0.15em] mb-1 border-b pb-1";
+  const fName = large ? "text-3xl font-black leading-tight" : "text-[15px] font-black leading-tight";
+  const fSub = large ? "text-sm font-bold uppercase tracking-[0.16em]" : "text-[7px] font-bold uppercase tracking-[0.16em]";
+  const fMeta = large ? "text-xs text-slate-500 mt-2" : "text-[6px] text-slate-400 mt-1";
+  const fBody = large ? "text-[11px] leading-[1.6] text-slate-600" : "text-[6.5px] leading-[1.35] text-slate-600";
+  const fBold = large ? "text-[12px] font-black text-slate-950" : "text-[6.8px] font-black text-slate-900";
+  const fDate = large ? "text-[10.5px] font-bold text-slate-400" : "text-[5.7px] font-bold text-slate-400";
+  
+  const blockSpace = large ? "space-y-4" : "space-y-1.5";
+  const componentMargin = large ? "mt-5" : "mt-3";
+  const paddingClass = large ? "p-8 md:p-10 h-full overflow-y-auto" : "p-4 h-[360px] overflow-hidden";
 
-  const creamShellClass = (extra = "") =>
-    `${
-      modalPreview
-        ? "min-h-[620px] overflow-visible"
-        : "h-[360px] overflow-hidden"
-    } rounded-[1.35rem] bg-[#FBF7EF] shadow-sm ring-1 ring-slate-200 ${extra}`;
-
-  const previewSummary = p.summary;
-
-  const profileBlock = (
-    <>
-      <MiniTitle accent={accent}>Profile</MiniTitle>
-      <p className="text-[6.5px] leading-[1.38] text-slate-600">
-        {previewSummary}
-      </p>
-    </>
+  const renderTitle = (text, customAccent = accent) => (
+    <p className={fTitle} style={{ color: customAccent, borderColor: `${customAccent}55` }}>{text}</p>
   );
 
-  const contactBlock = (
-    <p className="text-[6px] text-slate-500">
-      {p.email} · {p.phone}
-      {modalPreview && p.linkedin ? (
-        <>
-          <br />
-          {p.location} · {p.linkedin}
-        </>
-      ) : null}
-    </p>
-  );
-
-  const extraPreviewSections = modalPreview ? (
-    <>
-      <div className="mt-3">
-        <MiniTitle accent={accent}>Achievements</MiniTitle>
-        <p className="text-[6px] leading-[1.35] text-slate-600">
-          {p.achievements?.slice(0, 2).join(" • ")}
-        </p>
-      </div>
-
-      <div className="mt-3">
-        <MiniTitle accent={accent}>Certifications</MiniTitle>
-        <p className="text-[6px] leading-[1.35] text-slate-600">
-          {p.certifications?.join(" · ")}
-        </p>
-      </div>
-
-      <div className="mt-3">
-        <MiniTitle accent={accent}>Languages</MiniTitle>
-        <p className="text-[6px] leading-[1.35] text-slate-600">
-          {p.languages?.join(" · ")}
-        </p>
-      </div>
-    </>
-  ) : null;
-
-  const headerBasic = (
-    <header className="border-b pb-3" style={{ borderColor: `${accent}55` }}>
-      <h3 className="text-[15px] font-black leading-tight text-slate-950">
-        {p.name}
-      </h3>
-
-      <p
-        className="mt-1 text-[7px] font-bold uppercase tracking-[0.16em]"
-        style={{ color: accent }}
-      >
-        {p.title}
-      </p>
-
-      <div className="mt-1">{contactBlock}</div>
-    </header>
-  );
-
-  const layoutMap = {
-    "eu-photo-document": (
-      <div className={shellClass("p-4")}>
-        <header
-          className="flex gap-3 border-b pb-3"
-          style={{ borderColor: `${accent}55` }}
-        >
-          <Photo template={template} accent={accent} />
-
-          <div>
-            <p
-              className="text-[6px] font-black uppercase tracking-[.22em]"
-              style={{ color: accent }}
-            >
-              European CV
-            </p>
-
-            <h3 className="mt-1 text-[14px] font-black">{p.name}</h3>
-
-            <p className="text-[7px] font-bold" style={{ color: accent }}>
-              {p.title}
-            </p>
-
-            <div className="mt-1">{contactBlock}</div>
-          </div>
-        </header>
-
-        <main className="mt-3 grid grid-cols-[35%_65%] gap-3">
-          <aside>
-            <MiniTitle accent={accent}>Details</MiniTitle>
-            <p className="text-[6px] text-slate-500">
-              {p.location}
-              <br />
-              {p.phone}
-              <br />
-              {p.email}
-            </p>
-
-            <div className="mt-3">
-              <MiniTitle accent={accent}>Skills</MiniTitle>
-              <MiniSkills data={p} />
-            </div>
-
-            {modalPreview && (
-              <>
-                <div className="mt-3">
-                  <MiniTitle accent={accent}>Languages</MiniTitle>
-                  <p className="text-[6px] leading-[1.35] text-slate-600">
-                    {p.languages?.join(" · ")}
-                  </p>
-                </div>
-
-                <div className="mt-3">
-                  <MiniTitle accent={accent}>Education</MiniTitle>
-                  <p className="text-[6px] leading-[1.35] text-slate-600">
-                    {p.education}
-                  </p>
-                </div>
-              </>
-            )}
-          </aside>
-
-          <section>
-            {profileBlock}
-
-            <div className="mt-3">
-              <MiniTitle accent={accent}>Experience</MiniTitle>
-              <MiniExp data={p} />
-            </div>
-
-            {extraPreviewSections}
-          </section>
-        </main>
-      </div>
-    ),
-
- "berlin-side-photo": (
-  <div className={shellClass()}>
-    <div
-      className={
-        modalPreview
-          ? "grid min-h-[620px] grid-cols-[36%_64%] items-stretch"
-          : "grid min-h-full grid-cols-[36%_64%] items-stretch"
-      }
-    >
-      <aside
-        className="h-full min-h-full p-4 text-white"
-        style={{ background: dark }}
-      >
-        <Photo template={template} accent={accent} />
-
-        <h3 className="mt-4 text-[13px] font-black">{p.name}</h3>
-
-        <p className="text-[7px] text-white/70">{p.title}</p>
-
-        <div className="mt-5">
-          <MiniTitle accent="#fff">Contact</MiniTitle>
-          <p className="text-[6px] leading-[1.4] text-white/70">
-            {p.email}
-            <br />
-            {p.phone}
-            <br />
-            {p.location}
-            {modalPreview && p.linkedin ? (
-              <>
-                <br />
-                {p.linkedin}
-              </>
-            ) : null}
-          </p>
-        </div>
-
-        <div className="mt-4">
-          <MiniTitle accent="#fff">Skills</MiniTitle>
-          <MiniSkills data={p} light />
-        </div>
-
-        {modalPreview && (
-          <div className="mt-4">
-            <MiniTitle accent="#fff">Languages</MiniTitle>
-            <p className="text-[6px] leading-[1.4] text-white/70">
-              {p.languages?.join(" · ")}
-            </p>
-          </div>
-        )}
-      </aside>
-
-      <main className="h-full min-h-full p-4">
-        <div
-          className="rounded-xl p-3"
-          style={{ backgroundColor: `${accent}12` }}
-        >
-          {profileBlock}
-        </div>
-
-        <div className="mt-4">
-          <MiniTitle accent={accent}>Work History</MiniTitle>
-          <MiniExp data={p} />
-        </div>
-
-        {extraPreviewSections}
-      </main>
-    </div>
-  </div>
-),
-
-    "corporate-circle-photo": (
-      <div className={shellClass("p-4")}>
-        <div className="flex items-center gap-3">
-          <Photo template={template} accent={accent} />
-
-          <div>
-            <h3 className="text-[15px] font-black">{p.name}</h3>
-            <p className="text-[7px] font-bold" style={{ color: accent }}>
-              {p.title}
-            </p>
-            <div className="mt-1">{contactBlock}</div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-[62%_38%] gap-3">
-          <main className="space-y-3">
-            <section>{profileBlock}</section>
-
-            <section>
-              <MiniTitle accent={accent}>Experience</MiniTitle>
-              <MiniExp data={p} />
-            </section>
-
-            {modalPreview && (
-              <section>
-                <MiniTitle accent={accent}>Achievements</MiniTitle>
-                <p className="text-[6px] leading-[1.35] text-slate-600">
-                  {p.achievements?.join(" • ")}
-                </p>
-              </section>
-            )}
-          </main>
-
-          <aside
-            className="rounded-2xl p-3"
-            style={{ backgroundColor: `${accent}10` }}
-          >
-            <MiniTitle accent={accent}>Core</MiniTitle>
-            <MiniSkills data={p} />
-
-            <div className="mt-3">
-              <MiniTitle accent={accent}>Education</MiniTitle>
-              <p className="text-[6px] text-slate-600">{p.education}</p>
-            </div>
-
-            {modalPreview && (
-              <>
-                <div className="mt-3">
-                  <MiniTitle accent={accent}>Certifications</MiniTitle>
-                  <p className="text-[6px] leading-[1.35] text-slate-600">
-                    {p.certifications?.join(" · ")}
-                  </p>
-                </div>
-
-                <div className="mt-3">
-                  <MiniTitle accent={accent}>Languages</MiniTitle>
-                  <p className="text-[6px] leading-[1.35] text-slate-600">
-                    {p.languages?.join(" · ")}
-                  </p>
-                </div>
-              </>
-            )}
-          </aside>
-        </div>
-      </div>
-    ),
-
-    "creative-blob-photo": (
-      <div className={shellClass("p-4")}>
-        <div
-          className="rounded-[1.4rem] p-4"
-          style={{ background: `linear-gradient(135deg, ${accent}22, #fff)` }}
-        >
-          <div className="flex items-center gap-3">
-            <Photo template={template} accent={accent} />
-
-            <div>
-              <p
-                className="text-[6px] font-black uppercase tracking-[.22em]"
-                style={{ color: accent }}
-              >
-                Creative
-              </p>
-
-              <h3 className="text-[15px] font-black">{p.name}</h3>
-
-              <p className="text-[7px] font-bold" style={{ color: accent }}>
-                {p.title}
-              </p>
-
-              <div className="mt-1">{contactBlock}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <section className="rounded-xl bg-slate-50 p-2">
-            <MiniTitle accent={accent}>Profile</MiniTitle>
-            <p className="text-[6px] leading-[1.3] text-slate-600">
-              {p.summary}
-            </p>
-          </section>
-
-          <section className="rounded-xl bg-slate-50 p-2">
-            <MiniTitle accent={accent}>Skills</MiniTitle>
-            <p className="text-[6px] leading-[1.3] text-slate-600">
-              {p.skills.join(" · ")}
-            </p>
-          </section>
-
-          <section className="rounded-xl bg-slate-50 p-2">
-            <MiniTitle accent={accent}>Experience</MiniTitle>
-            <MiniExp data={p} />
-          </section>
-
-          <section className="rounded-xl bg-slate-50 p-2">
-            <MiniTitle accent={accent}>Education</MiniTitle>
-            <p className="text-[6px] leading-[1.3] text-slate-600">
-              {p.education}
-            </p>
-
-            {modalPreview && (
-              <div className="mt-3">
-                <MiniTitle accent={accent}>Languages</MiniTitle>
-                <p className="text-[6px] leading-[1.3] text-slate-600">
-                  {p.languages?.join(" · ")}
-                </p>
-              </div>
-            )}
-          </section>
-        </div>
-
-        {modalPreview && extraPreviewSections}
-      </div>
-    ),
-
-    "luxury-oval-photo": (
-      <div className={creamShellClass("p-4")}>
-        <div className="text-center">
-          <div className="flex justify-center">
-            <Photo template={template} accent={accent} />
-          </div>
-
-          <p
-            className="mt-2 text-[6px] font-black uppercase tracking-[.28em]"
-            style={{ color: accent }}
-          >
-            Premium CV
-          </p>
-
-          <h3 className="mt-1 font-serif text-[16px] font-bold">{p.name}</h3>
-
-          <p className="text-[7px] text-slate-600">{p.title}</p>
-
-          <div
-            className="mx-auto mt-2 h-[2px] w-16"
-            style={{ backgroundColor: accent }}
-          />
-        </div>
-
-        <main className="mt-4 grid grid-cols-[40%_60%] gap-3">
-          <aside>
-            <MiniTitle accent={accent}>Skills</MiniTitle>
-            <MiniSkills data={p} />
-
-            {modalPreview && (
-              <>
-                <div className="mt-3">
-                  <MiniTitle accent={accent}>Education</MiniTitle>
-                  <p className="text-[6px] leading-[1.35] text-slate-600">
-                    {p.education}
-                  </p>
-                </div>
-
-                <div className="mt-3">
-                  <MiniTitle accent={accent}>Languages</MiniTitle>
-                  <p className="text-[6px] leading-[1.35] text-slate-600">
-                    {p.languages?.join(" · ")}
-                  </p>
-                </div>
-              </>
-            )}
-          </aside>
-
-          <section>
-            <MiniTitle accent={accent}>Profile</MiniTitle>
-            <p className="text-[6.5px] leading-[1.4] text-slate-600">
-              {p.summary}
-            </p>
-
-            <div className="mt-3">
-              <MiniTitle accent={accent}>Experience</MiniTitle>
-              <MiniExp data={p} />
-            </div>
-
-            {extraPreviewSections}
-          </section>
-        </main>
-      </div>
-    ),
-
-    "london-executive": (
-      <div className={shellClass()}>
-        <header
-          className="p-5 text-white"
-          style={{ background: `linear-gradient(135deg, ${dark}, #020617)` }}
-        >
-          <p
-            className="text-[6px] font-black uppercase tracking-[.28em]"
-            style={{ color: accent }}
-          >
-            Executive Profile
-          </p>
-
-          <h3 className="mt-1 text-[16px] font-black">{p.name}</h3>
-
-          <p className="text-[7px] text-white/70">{p.title}</p>
-        </header>
-
-        <div className="grid grid-cols-[35%_65%] gap-3 p-4">
-          <aside>
-            <MiniTitle accent={accent}>Leadership</MiniTitle>
-            <MiniSkills data={p} />
-
-            {modalPreview && (
-              <div className="mt-3">
-                <MiniTitle accent={accent}>Contact</MiniTitle>
-                <p className="text-[6px] leading-[1.35] text-slate-600">
-                  {p.email}
-                  <br />
-                  {p.phone}
-                  <br />
-                  {p.location}
-                </p>
-              </div>
-            )}
-          </aside>
-
-          <main>
-            <MiniTitle accent={accent}>Career Profile</MiniTitle>
-            <p className="text-[6.5px] text-slate-600">{p.summary}</p>
-
-            <div className="mt-3">
-              <MiniTitle accent={accent}>Experience</MiniTitle>
-              <MiniExp data={p} />
-            </div>
-
-            {extraPreviewSections}
-          </main>
-        </div>
-      </div>
-    ),
-
-    "clean-ats": (
-      <div className={shellClass("p-5")}>
-        {headerBasic}
-
-        <main className="mt-4 space-y-3">
-          <section>{profileBlock}</section>
-
-          <section>
-            <MiniTitle accent={accent}>Professional Experience</MiniTitle>
-            <MiniExp data={p} />
-          </section>
-
-          <section>
-            <MiniTitle accent={accent}>Skills</MiniTitle>
-            <p className="text-[6.5px] text-slate-600">
-              {p.skills.join(" | ")}
-            </p>
-          </section>
-
-          {modalPreview && (
-            <>
-              <section>
-                <MiniTitle accent={accent}>Education</MiniTitle>
-                <p className="text-[6.5px] text-slate-600">{p.education}</p>
-              </section>
-
-              <section>
-                <MiniTitle accent={accent}>Certifications</MiniTitle>
-                <p className="text-[6.5px] text-slate-600">
-                  {p.certifications?.join(" | ")}
-                </p>
-              </section>
-
-              <section>
-                <MiniTitle accent={accent}>Languages</MiniTitle>
-                <p className="text-[6.5px] text-slate-600">
-                  {p.languages?.join(" | ")}
-                </p>
-              </section>
-            </>
-          )}
-        </main>
-      </div>
-    ),
-
-    "classic-pro": (
-      <div className={shellClass("p-5")}>
-        <header className="text-center">
-          <h3 className="text-[16px] font-serif font-bold">{p.name}</h3>
-
-          <p
-            className="mt-1 text-[7px] uppercase tracking-[.18em]"
-            style={{ color: accent }}
-          >
-            {p.title}
-          </p>
-
-          <div className="mt-1">{contactBlock}</div>
-        </header>
-
-        <div className="my-3 h-px" style={{ backgroundColor: accent }} />
-
-        <main className="space-y-3">
-          <section>{profileBlock}</section>
-
-          <section>
-            <MiniTitle accent={accent}>Employment</MiniTitle>
-            <MiniExp data={p} />
-          </section>
-
-          {modalPreview && (
-            <>
-              <section>
-                <MiniTitle accent={accent}>Skills</MiniTitle>
-                <MiniSkills data={p} />
-              </section>
-
-              <section>
-                <MiniTitle accent={accent}>Education</MiniTitle>
-                <p className="text-[6px] text-slate-600">{p.education}</p>
-              </section>
-
-              {extraPreviewSections}
-            </>
-          )}
-        </main>
-      </div>
-    ),
-
-    "tech-minimal": (
-      <div className={shellClass("p-4")}>
-        <header className="rounded-2xl bg-slate-950 p-4 text-white">
-          <p className="text-[6px] font-mono" style={{ color: accent }}>
-            const candidate =
-          </p>
-
-          <h3 className="font-mono text-[15px] font-black">{p.name}</h3>
-
-          <p className="text-[7px] text-white/60">{p.title}</p>
-        </header>
-
-        <main className="mt-4 grid grid-cols-[55%_45%] gap-3">
-          <section>
-            {profileBlock}
-
-            <div className="mt-3">
-              <MiniTitle accent={accent}>Experience</MiniTitle>
-              <MiniExp data={p} />
-            </div>
-
-            {extraPreviewSections}
-          </section>
-
-          <aside>
-            <MiniTitle accent={accent}>Stack</MiniTitle>
-            <MiniSkills data={p} />
-
-            {modalPreview && (
-              <div className="mt-3">
-                <MiniTitle accent={accent}>Education</MiniTitle>
-                <p className="text-[6px] text-slate-600">{p.education}</p>
-              </div>
-            )}
-          </aside>
-        </main>
-      </div>
-    ),
-
-    "graduate-fresh": (
-      <div className={shellClass("p-4")}>
-        <header
-          className="rounded-2xl p-4"
-          style={{ backgroundColor: `${accent}14` }}
-        >
-          <h3 className="text-[16px] font-black">{p.name}</h3>
-
-          <p className="text-[7px] font-bold" style={{ color: accent }}>
-            {p.title}
-          </p>
-
-          <div className="mt-1">{contactBlock}</div>
-        </header>
-
-        <main className="mt-3 grid grid-cols-2 gap-2">
-          <section className="rounded-xl border p-2">
-            <MiniTitle accent={accent}>Profile</MiniTitle>
-            <p className="text-[6px] text-slate-600">{p.summary}</p>
-          </section>
-
-          <section className="rounded-xl border p-2">
-            <MiniTitle accent={accent}>Education</MiniTitle>
-            <p className="text-[6px] text-slate-600">{p.education}</p>
-          </section>
-
-          <section className="col-span-2 rounded-xl border p-2">
-            <MiniTitle accent={accent}>Experience</MiniTitle>
-            <MiniExp data={p} />
-          </section>
-
-          {modalPreview && (
-            <>
-              <section className="rounded-xl border p-2">
-                <MiniTitle accent={accent}>Skills</MiniTitle>
-                <MiniSkills data={p} />
-              </section>
-
-              <section className="rounded-xl border p-2">
-                <MiniTitle accent={accent}>Certifications</MiniTitle>
-                <p className="text-[6px] leading-[1.35] text-slate-600">
-                  {p.certifications?.join(" · ")}
-                </p>
-              </section>
-            </>
-          )}
-        </main>
-      </div>
-    ),
-
-    default: (
-      <div className={shellClass("p-5")}>
-        {headerBasic}
-
-        <main className="mt-4 space-y-3">
-          <section>{profileBlock}</section>
-
-          <section>
-            <MiniTitle accent={accent}>Experience</MiniTitle>
-            <MiniExp data={p} />
-          </section>
-
-          <section>
-            <MiniTitle accent={accent}>Skills</MiniTitle>
-            <MiniSkills data={p} />
-          </section>
-
-          {modalPreview && (
-            <>
-              <section>
-                <MiniTitle accent={accent}>Education</MiniTitle>
-                <p className="text-[6px] text-slate-600">{p.education}</p>
-              </section>
-
-              {extraPreviewSections}
-            </>
-          )}
-        </main>
-      </div>
-    ),
-  };
-
-  return layoutMap[layout] || layoutMap.default;
-}
-
-function FullTitle({ children, accent, light = false }) {
-  return (
-    <p className="mb-2 border-b pb-1 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: light ? "#fff" : accent, borderColor: light ? "rgba(255,255,255,.25)" : `${accent}55` }}>
-      {children}
-    </p>
-  );
-}
-
-function FullExperience({ data, light = false }) {
-  return (
-    <div className="space-y-4">
-      {data.experience.map((job) => (
+  const renderExperienceList = (light = false) => (
+    <div className={blockSpace}>
+      {p.experience.map((job) => (
         <div key={job.role}>
-          <div className="flex justify-between gap-3">
-            <div>
-              <p className={`text-[12px] font-black ${light ? "text-white" : "text-slate-950"}`}>{job.role}</p>
-              <p className={`text-[11px] ${light ? "text-white/70" : "text-slate-500"}`}>{job.company}</p>
-            </div>
-            <p className={`text-[10px] font-bold ${light ? "text-white/55" : "text-slate-400"}`}>{job.date}</p>
+          <div className="flex justify-between gap-2">
+            <p className={`${fBold} ${light ? "text-white" : ""}`}>{job.role}</p>
+            <p className={`${fDate} ${light ? "text-white/60" : ""}`}>{job.date}</p>
           </div>
-          <ul className="mt-2 space-y-1">
-            {job.points.map((point) => (
-              <li key={point} className={`text-[10.5px] leading-[1.55] ${light ? "text-white/75" : "text-slate-600"}`}>• {point}</li>
+          <p className={`${fBody} font-medium ${light ? "text-white/70" : "text-slate-500"}`}>{job.company}</p>
+          <ul className={large ? "mt-1.5 space-y-1 pl-1" : "space-y-0.5"}>
+            {job.points.slice(0, large ? 3 : 1).map((point, i) => (
+              <li key={i} className={`${fBody} ${light ? "text-white/65" : "text-slate-600"}`}>• {point}</li>
             ))}
           </ul>
         </div>
       ))}
     </div>
   );
-}
 
-function FullSkills({ data, light = false }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {data.skills.map((skill) => (
-        <span key={skill} className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-700"}`}>
+  const renderSkills = (light = false) => (
+    <div className="flex flex-wrap gap-1">
+      {p.skills.slice(0, large ? undefined : 6).map((skill) => (
+        <span key={skill} className={`rounded-full px-1.5 py-0.5 font-bold ${large ? "text-[10px] px-2.5 py-1" : "text-[5.5px]"} ${light ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>
           {skill}
         </span>
       ))}
     </div>
   );
-}
 
-function List({ items, light = false }) {
-  return (
-    <ul className="space-y-1.5">
-      {items.map((item) => (
-        <li key={item} className={`text-[10.5px] leading-[1.55] ${light ? "text-white/75" : "text-slate-600"}`}>• {item}</li>
+  const renderBulletList = (items, light = false) => (
+    <ul className={large ? "space-y-1" : "space-y-0.5"}>
+      {items.slice(0, large ? undefined : 2).map((item, i) => (
+        <li key={i} className={`${fBody} ${light ? "text-white/70" : "text-slate-600"}`}>• {item}</li>
       ))}
     </ul>
   );
-}
 
-function FullReadyCVPage({ template, selectedColor }) {
-  const p = getFullProfile(template);
-  const accent = selectedColor || template.colors[0];
-  const dark = template.colors.find((color) => color !== accent) || template.colors[1] || template.colors[0];
+  const headerBasic = (
+    <header className="border-b pb-2" style={{ borderColor: `${accent}55` }}>
+      <h3 className={fName}>{p.name}</h3>
+      <p className="mt-0.5" style={{ color: accent }}>{p.title}</p>
+      <p className={fMeta}>{p.email} · {p.phone} · {p.location}</p>
+    </header>
+  );
 
-  const twoColumnLayouts = [
-    "berlin-side-photo",
-    "corporate-circle-photo",
-    "dubai-corporate",
-    "hr-professional",
-    "premium-monogram",
-    "luxury-oval-photo",
-    "finance-analyst",
-    "project-manager",
-  ];
-
-  const creativeLayouts = [
-    "creative-blob-photo",
-    "marketing-bold",
-    "hospitality-premium",
-    "engineer-grid",
-    "teacher-friendly",
-    "data-analyst",
-  ];
-
-if (twoColumnLayouts.includes(template.layout)) {
-  return (
-    <div className="grid min-h-[1123px] w-full grid-cols-[32%_68%] bg-white text-slate-950">
-      <aside
-        className="min-h-[1123px] p-8 text-white"
-        style={{ background: `linear-gradient(180deg, ${dark}, ${accent})` }}
-      >
-        {template.photo && (
-          <div className="mb-5">
-            <Photo template={template} accent={accent} large />
+  const layouts = {
+    "eu-photo-document": (
+      <div className={`${paddingClass} bg-white ring-1 ring-slate-200`}>
+        <header className="flex gap-3 border-b pb-3" style={{ borderColor: `${accent}55` }}>
+          <Photo template={template} accent={accent} large={large} />
+          <div>
+            <p className={large ? "text-[9px] font-black tracking-widest text-slate-400 uppercase" : "text-[6px] font-black uppercase tracking-[.22em]"} style={{ color: accent }}>European CV</p>
+            <h3 className={fName}>{p.name}</h3>
+            <p className={fSub} style={{ color: accent }}>{p.title}</p>
           </div>
-        )}
+        </header>
+        <main className={`grid ${large ? "grid-cols-[30%_70%] gap-6" : "grid-cols-[35%_65%] gap-3"} ${componentMargin}`}>
+          <aside className={blockSpace}>
+            <div>{renderTitle("Details")}<p className={fBody}>{p.location}<br />{p.phone}<br />{p.email}</p></div>
+            <div>{renderTitle("Skills")}{renderSkills()}</div>
+            <div>{renderTitle("Languages")}{renderBulletList(p.languages)}</div>
+          </aside>
+          <section className={blockSpace}>
+            <div>{renderTitle("Profile")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Experience")}{renderExperienceList()}</div>
+            <div>{renderTitle("Education")}<p className={fBody}>{p.education}</p></div>
+          </section>
+        </main>
+      </div>
+    ),
+ "berlin-side-photo": (
+  <div
+    className="cv-a4-template overflow-hidden bg-white ring-1 ring-slate-200"
+    style={{
+      width: large ? "794px" : "100%",
+      minHeight: large ? "1123px" : "360px",
+      height: large ? "1123px" : "360px",
+    }}
+  >
+    <div className="grid h-full min-h-full grid-cols-[35%_65%] items-stretch">
+      <aside
+        data-full-height-sidebar="true"
+        className={`${large ? "p-8" : "p-4"} h-full min-h-full self-stretch text-white`}
+        style={{ background: dark }}
+      >
+        <Photo template={template} accent={accent} large={large} />
 
-        <h2 className="text-[25px] font-black leading-tight">
-          {p.name}
-        </h2>
+        <h3 className={`${fName} ${componentMargin}`}>{p.name}</h3>
 
-        <p className="mt-2 text-[12px] font-semibold text-white/75">
-          {p.title}
-        </p>
+        <p className={`${fBody} text-white/70`}>{p.title}</p>
 
-        <div className="mt-7 space-y-2 text-[10px] leading-5 text-white/75">
-          <p>{p.email}</p>
-          <p>{p.phone}</p>
-          <p>{p.location}</p>
-          <p>{p.linkedin}</p>
+        <div className={componentMargin}>
+          {renderTitle("Contact", "#fff")}
+          <p className={`${fBody} text-white/70`}>
+            {p.email}
+            <br />
+            {p.phone}
+            <br />
+            {p.location}
+          </p>
         </div>
 
-        <div className="mt-8">
-          <FullTitle accent={accent} light>
-            Skills
-          </FullTitle>
-          <FullSkills data={p} light />
+        <div className={componentMargin}>
+          {renderTitle("Skills", "#fff")}
+          {renderSkills(true)}
         </div>
 
-        <div className="mt-8">
-          <FullTitle accent={accent} light>
-            Languages
-          </FullTitle>
-          <List items={p.languages} light />
-        </div>
-
-        <div className="mt-8">
-          <FullTitle accent={accent} light>
-            Certifications
-          </FullTitle>
-          <List items={p.certifications} light />
+        <div className={componentMargin}>
+          {renderTitle("Certifications", "#fff")}
+          {renderBulletList(p.certifications, true)}
         </div>
       </aside>
 
-      <main className="min-h-[1123px] p-9">
-        <section>
-          <FullTitle accent={accent}>Profile</FullTitle>
-          <p className="text-[11px] leading-[1.65] text-slate-600">
-            {p.summary}
-          </p>
-        </section>
+      <main className={`${large ? "p-8 md:p-10" : "p-4"} h-full`}>
+        <div
+          className={large ? "rounded-2xl p-5" : "rounded-xl p-2.5"}
+          style={{ backgroundColor: `${accent}12` }}
+        >
+          {renderTitle("Profile")}
+          <p className={fBody}>{p.summary}</p>
+        </div>
 
-        <section className="mt-6">
-          <FullTitle accent={accent}>Employment History</FullTitle>
-          <FullExperience data={p} />
-        </section>
+        <div className={componentMargin}>
+          {renderTitle("Work History")}
+          {renderExperienceList()}
+        </div>
 
-        <section className="mt-6">
-          <FullTitle accent={accent}>Key Achievements</FullTitle>
-          <List items={p.achievements} />
-        </section>
-
-        <section className="mt-6">
-          <FullTitle accent={accent}>Education</FullTitle>
-          <p className="text-[11px] text-slate-600">
-            {p.education}
-          </p>
-        </section>
+        <div className={componentMargin}>
+          {renderTitle("Education")}
+          <p className={fBody}>{p.education}</p>
+        </div>
       </main>
     </div>
-  );
-}
-  if (creativeLayouts.includes(template.layout)) {
-    return (
-      <div className="h-full w-full bg-white p-9 text-slate-950">
-        <header className="rounded-[1.4rem] p-7" style={{ background: `linear-gradient(135deg, ${accent}18, #ffffff)`, border: `1px solid ${accent}25` }}>
-          <div className="flex items-center gap-5">
-            {template.photo && <Photo template={template} accent={accent} large />}
+  </div>
+),
+    "corporate-circle-photo": (
+      <div className={`${paddingClass} bg-white ring-1 ring-slate-200`}>
+        <div className="flex items-center gap-4">
+          <Photo template={template} accent={accent} large={large} />
+          <div><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></div>
+        </div>
+        <div className={`grid ${large ? "grid-cols-[65%_35%] gap-6" : "grid-cols-[62%_38%] gap-3"} ${componentMargin}`}>
+          <main className={blockSpace}>
+            <section>{renderTitle("Profile")}<p className={fBody}>{p.summary}</p></section>
+            <section>{renderTitle("Experience")}{renderExperienceList()}</section>
+          </main>
+          <aside className={`${large ? "rounded-2xl p-5" : "rounded-xl p-3"} h-fit`} style={{ backgroundColor: `${accent}10` }}>
+            <div>{renderTitle("Contact")}<p className={fMeta}>{p.email}<br />{p.phone}</p></div>
+            <div className={componentMargin}>{renderTitle("Expertise")}{renderSkills()}</div>
+            <div className={componentMargin}>{renderTitle("Education")}<p className={fBody}>{p.education}</p></div>
+            <div className={componentMargin}>{renderTitle("Certificates")}{renderBulletList(p.certifications)}</div>
+          </aside>
+        </div>
+      </div>
+    ),
+    "creative-blob-photo": (
+      <div className={`${paddingClass} bg-white ring-1 ring-slate-200`}>
+        <div className={`${large ? "rounded-[2rem] p-6" : "rounded-[1.4rem] p-3"}`} style={{ background: `linear-gradient(135deg, ${accent}22, #fff)` }}>
+          <div className="flex items-center gap-3">
+            <Photo template={template} accent={accent} large={large} />
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: accent }}>{template.name}</p>
-              <h2 className="mt-2 text-[32px] font-black leading-tight">{p.name}</h2>
-              <p className="mt-1 text-[13px] font-bold" style={{ color: accent }}>{p.title}</p>
-              <p className="mt-2 text-[10.5px] text-slate-500">{p.email} · {p.phone} · {p.location}</p>
+              <p className={fSub} style={{ color: accent }}>Creative Framework</p>
+              <h3 className={fName}>{p.name}</h3>
+              <p className={fBody} style={{ color: accent }}>{p.title}</p>
             </div>
           </div>
+        </div>
+        <div className={`grid grid-cols-2 ${large ? "gap-4 mt-6" : "gap-2 mt-3"}`}>
+          <section className={`${large ? "rounded-2xl p-4" : "rounded-xl p-2"} bg-slate-50`}>
+            {renderTitle("Profile")}<p className={fBody}>{p.summary}</p>
+          </section>
+          <section className={`${large ? "rounded-2xl p-4" : "rounded-xl p-2"} bg-slate-50`}>
+            {renderTitle("Skills")}{renderSkills()}
+          </section>
+          <section className={`${large ? "rounded-2xl p-4" : "rounded-xl p-2"} bg-slate-50 col-span-2`}>
+            {renderTitle("Experience")}{renderExperienceList()}
+          </section>
+        </div>
+      </div>
+    ),
+    "luxury-oval-photo": (
+      <div className={`${paddingClass} bg-[#FBF7EF] ring-1 ring-slate-200`}>
+        <div className="text-center">
+          <div className="flex justify-center"><Photo template={template} accent={accent} large={large} /></div>
+          <h3 className={`mt-1 font-serif font-bold ${large ? "text-3xl" : "text-[16px]"}`}>{p.name}</h3>
+          <p className={fSub} style={{ color: accent }}>{p.title}</p>
+          <div className="mx-auto mt-2 h-px w-16" style={{ backgroundColor: accent }} />
+        </div>
+        <main className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <aside className={blockSpace}>
+            <div>{renderTitle("Contact")}<p className={fBody}>{p.email}<br />{p.phone}</p></div>
+            <div>{renderTitle("Skills")}{renderSkills()}</div>
+          </aside>
+          <section className={blockSpace}>
+            <div>{renderTitle("Profile")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Experience")}{renderExperienceList()}</div>
+          </section>
+        </main>
+      </div>
+    ),
+    "london-executive": (
+      <div className={`${large ? "h-full min-h-[842px]" : "h-[360px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
+        <header className={large ? "p-8 text-white" : "p-4 text-white"} style={{ background: `linear-gradient(135deg, ${dark}, #020617)` }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={`${fSub} text-white/70`}>{p.title}</p>
+          <p className={fMeta} style={{ color: "#fff" }}>{p.email} · {p.phone} · {p.location}</p>
         </header>
-        <main className="mt-7 grid grid-cols-[58%_42%] gap-7">
-          <div className="space-y-6">
-            <section><FullTitle accent={accent}>Profile</FullTitle><p className="text-[11px] leading-[1.65] text-slate-600">{p.summary}</p></section>
-            <section><FullTitle accent={accent}>Experience</FullTitle><FullExperience data={p} /></section>
-            <section><FullTitle accent={accent}>Achievements</FullTitle><List items={p.achievements} /></section>
-          </div>
-          <aside className="space-y-6">
-            <section><FullTitle accent={accent}>Skills</FullTitle><FullSkills data={p} /></section>
-            <section><FullTitle accent={accent}>Education</FullTitle><p className="text-[11px] text-slate-600">{p.education}</p></section>
-            <section><FullTitle accent={accent}>Certifications</FullTitle><List items={p.certifications} /></section>
-            <section><FullTitle accent={accent}>Languages</FullTitle><List items={p.languages} /></section>
+        <div className={`grid grid-cols-[32%_68%] ${large ? "p-8 gap-6" : "p-4 gap-3"}`}>
+          <aside className={blockSpace}>
+            <div>{renderTitle("Leadership")}{renderSkills()}</div>
+            <div>{renderTitle("Languages")}{renderBulletList(p.languages)}</div>
+          </aside>
+          <main className={blockSpace}>
+            <div>{renderTitle("Career Profile")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Experience")}{renderExperienceList()}</div>
+          </main>
+        </div>
+      </div>
+    ),
+    "clean-ats": (
+      <div className={paddingClass}>
+        {headerBasic}
+        <main className={large ? "space-y-6 mt-6" : "space-y-3 mt-4"}>
+          <section>{renderTitle("Professional Summary")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Professional Experience")}{renderExperienceList()}</section>
+          <section>{renderTitle("Technical Expertise")}{renderSkills()}</section>
+        </main>
+      </div>
+    ),
+    "classic-pro": (
+      <div className={paddingClass}>
+        <header className="text-center">
+          <h3 className={`font-serif font-bold ${large ? "text-3xl" : "text-[16px]"}`}>{p.name}</h3>
+          <p className={fSub} style={{ color: accent }}>{p.title}</p>
+          <p className={fMeta}>{p.email} · {p.phone} · {p.location}</p>
+        </header>
+        <div className="my-2 h-px" style={{ backgroundColor: accent }} />
+        <main className={large ? "space-y-5 mt-4" : "space-y-2.5 mt-2"}>
+          <section>{renderTitle("Executive Profile")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Employment")}{renderExperienceList()}</section>
+          <section>{renderTitle("Key Credentials")}{renderSkills()}</section>
+        </main>
+      </div>
+    ),
+    "tech-minimal": (
+      <div className={paddingClass}>
+        <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"} bg-slate-950 text-white`}>
+          <p className="font-mono text-cyan-400 text-[9px]">const candidate = () =&gt; &#123;</p>
+          <h3 className={`font-mono ${large ? "text-2xl pl-2" : "text-[14px]"}`}>{p.name}</h3>
+          <p className="text-slate-400 text-[10px] pl-2">{p.title}</p>
+        </header>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <section className={blockSpace}>
+            <div>{renderTitle("Summary")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Logs")}{renderExperienceList()}</div>
+          </section>
+          <aside className={blockSpace}>
+            <div>{renderTitle("Tech Stack")}{renderSkills()}</div>
+            <div>{renderTitle("Contact Profile")}<p className={fMeta}>{p.email}<br />{p.phone}</p></div>
           </aside>
         </main>
       </div>
-    );
-  }
-
-  return (
-    <div className="h-full w-full bg-white p-10 text-slate-950">
-      <header className="border-b pb-5" style={{ borderColor: `${accent}55` }}>
-        <div className="flex items-center gap-5">
-          {template.photo && <Photo template={template} accent={accent} large />}
-          <div>
-            <h2 className="text-[34px] font-black leading-tight">{p.name}</h2>
-            <p className="mt-1 text-[12px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>{p.title}</p>
-            <p className="mt-2 text-[10.5px] text-slate-500">{p.email} · {p.phone} · {p.location}</p>
-            <p className="mt-1 text-[10.5px] text-slate-500">{p.linkedin}</p>
+    ),
+    "graduate-fresh": (
+      <div className={paddingClass}>
+        <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"}`} style={{ backgroundColor: `${accent}14` }}>
+          <h3 className={fName}>{p.name}</h3>
+          <p className={fSub} style={{ color: accent }}>{p.title}</p>
+        </header>
+        <main className={`grid grid-cols-2 ${large ? "gap-4 mt-4" : "gap-2 mt-2"}`}>
+          <section className="rounded-xl border p-2">{renderTitle("Profile")}<p className={fBody}>{p.summary}</p></section>
+          <section className="rounded-xl border p-2">{renderTitle("Education")}<p className={fBody}>{p.education}</p></section>
+          <section className="col-span-2 rounded-xl border p-2">{renderTitle("Experience")}{renderExperienceList()}</section>
+        </main>
+      </div>
+    ),
+    "formal-uk": (
+      <div className={paddingClass}>
+        <header className="border-2 p-3 text-center" style={{ borderColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></header>
+        <main className={large ? "space-y-6 mt-6" : "space-y-3 mt-4"}>
+          <section>{renderTitle("Career History")}{renderExperienceList()}</section>
+          <section>{renderTitle("Education & Skills")}{renderSkills()}</section>
+        </main>
+      </div>
+    ),
+    "senior-director": (
+      <div className={`${large ? "h-full min-h-[842px]" : "h-[360px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
+        <div className="h-3" style={{ backgroundColor: accent }} />
+        <div className={large ? "p-8" : "p-4"}>
+          <h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p>
+          <div className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+            <aside className={blockSpace}>
+              <div>{renderTitle("Board Skills")}{renderSkills()}</div>
+              <div>{renderTitle("Contact")}<p className={fMeta}>{p.email}<br />{p.phone}</p></div>
+            </aside>
+            <main className={blockSpace}>
+              <div>{renderTitle("Corporate Vision")}<p className={fBody}>{p.summary}</p></div>
+              <div>{renderTitle("Track Record")}{renderExperienceList()}</div>
+            </main>
           </div>
         </div>
-      </header>
-      <main className="mt-6 space-y-5">
-        <section><FullTitle accent={accent}>Professional Summary</FullTitle><p className="text-[11px] leading-[1.65] text-slate-600">{p.summary}</p></section>
-        <section><FullTitle accent={accent}>Employment History</FullTitle><FullExperience data={p} /></section>
-        <section><FullTitle accent={accent}>Key Achievements</FullTitle><List items={p.achievements} /></section>
-        <section><FullTitle accent={accent}>Skills</FullTitle><FullSkills data={p} /></section>
-        <section className="grid grid-cols-2 gap-8">
-          <div><FullTitle accent={accent}>Education</FullTitle><p className="text-[11px] text-slate-600">{p.education}</p></div>
-          <div><FullTitle accent={accent}>Certifications</FullTitle><List items={p.certifications} /></div>
-        </section>
-        <section className="grid grid-cols-2 gap-8">
-          <div><FullTitle accent={accent}>Languages</FullTitle><List items={p.languages} /></div>
-          <div><FullTitle accent={accent}>References</FullTitle><p className="text-[10.5px] text-slate-600">References available on request.</p></div>
-        </section>
-      </main>
+      </div>
+    ),
+    "admin-professional": (
+      <div className={paddingClass}>
+        <header className="flex items-stretch">
+          <div className="w-2 rounded-full" style={{ backgroundColor: accent }} />
+          <div className="pl-3"><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></div>
+        </header>
+        <main className={large ? "space-y-6 mt-6" : "space-y-3 mt-4"}>
+          <section className="border-l-4 pl-3" style={{ borderColor: accent }}>{renderTitle("Profile")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Admin Experience")}{renderExperienceList()}</section>
+          <section>{renderSkills()}</section>
+        </main>
+      </div>
+    ),
+    "healthcare-clinical": (
+      <div className={paddingClass}>
+        <header className="flex items-center justify-between">
+          <div><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></div>
+          <div className={`${large ? "h-14 w-14 text-xl" : "h-8 w-8 text-xs"} flex items-center justify-center rounded-full text-white`} style={{ backgroundColor: accent }}>+</div>
+        </header>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <section className={blockSpace}>
+            <div>{renderTitle("Bio Summary")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Clinical Framework")}{renderExperienceList()}</div>
+          </section>
+          <aside className={`${large ? "p-5 rounded-2xl" : "p-2.5 rounded-xl"}`} style={{ backgroundColor: `${accent}12` }}>
+            {renderTitle("Medical Skills")}{renderSkills()}
+          </aside>
+        </main>
+      </div>
+    ),
+    "sales-leader": (
+      <div className={paddingClass}>
+        <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"} text-white`} style={{ background: `linear-gradient(135deg, ${accent}, ${dark})` }}>
+          <h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
+        </header>
+        <main className={componentMargin}>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-slate-50 p-1"><b className={large ? "text-sm" : "text-[10px]"}>128%</b><p className="text-[5px] md:text-[8px]">Target Achievement</p></div>
+            <div className="rounded-lg bg-slate-50 p-1"><b className={large ? "text-sm" : "text-[10px]"}>42+</b><p className="text-[5px] md:text-[8px]">Corporate Clients</p></div>
+            <div className="rounded-lg bg-slate-50 p-1"><b className={large ? "text-sm" : "text-[10px]"}>£2M</b><p className="text-[5px] md:text-[8px]">Revenue Generated</p></div>
+          </div>
+          <div className={componentMargin}>{renderTitle("Performance History")}{renderExperienceList()}</div>
+        </main>
+      </div>
+    ),
+    "finance-analyst": (
+      <div className={paddingClass}>
+        <header><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></header>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <section className={blockSpace}>
+            <div>{renderTitle("Analysis Summary")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderExperienceList()}</div>
+          </section>
+          <aside className={blockSpace}>
+            <div>{renderTitle("Quant Matrix")}{renderSkills()}</div>
+            <div>{renderTitle("Education Details")}<p className={fBody}>{p.education}</p></div>
+          </aside>
+        </main>
+      </div>
+    ),
+    "stockholm-clean": (
+      <div className={paddingClass}>
+        <header className="flex justify-between">
+          <div><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></div>
+          <div className={`${large ? "h-16 w-16" : "h-10 w-10"} rounded-full`} style={{ backgroundColor: `${accent}18` }} />
+        </header>
+        <main className={large ? "space-y-6 mt-8" : "space-y-3 mt-4"}>
+          <section>{renderTitle("Profile Core")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Selected Experience")}{renderExperienceList()}</section>
+        </main>
+      </div>
+    ),
+    "dubai-corporate": (
+      <div className={`${large ? "h-full min-h-[842px]" : "h-[360px]"} overflow-hidden bg-white ring-1 ring-slate-200`}>
+        <header className={`${large ? "p-8" : "p-4"} text-right text-white`} style={{ backgroundColor: dark }}>
+          <h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: "#fff" }}>{p.title}</p>
+        </header>
+        <main className={`grid grid-cols-[30%_70%] ${large ? "p-8 gap-6" : "p-4 gap-3"}`}>
+          <aside>{renderTitle("Expertise")}{renderSkills()}</aside>
+          <section className={blockSpace}>
+            <div>{renderTitle("Summary")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Corporate Milestones")}{renderExperienceList()}</div>
+          </section>
+        </main>
+      </div>
+    ),
+    "canada-simple": (
+      <div className={paddingClass}>
+        <header className="border-l-8 pl-3" style={{ borderColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></header>
+        <main className={large ? "space-y-5 mt-6" : "space-y-3 mt-4"}>
+          <section>{renderTitle("Summary of Qualifications")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Relevant Experience")}{renderExperienceList()}</section>
+          <section>{renderTitle("Core Competencies")}{renderSkills()}</section>
+        </main>
+      </div>
+    ),
+    "academic-scholar": (
+      <div className={paddingClass}>
+        <header>
+          <p className={fSub} style={{ color: accent }}>Curriculum Vitae</p>
+          <h3 className={`font-serif font-bold ${large ? "text-3xl" : "text-[17px]"}`}>{p.name}</h3>
+        </header>
+        <main className={large ? "space-y-5 mt-6" : "space-y-3 mt-4"}>
+          <section>{renderTitle("Research Profile")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Appointments")}{renderExperienceList()}</section>
+          <section>{renderTitle("Publications & Credentials")}{renderBulletList(p.certifications)}</section>
+        </main>
+      </div>
+    ),
+    "legal-advisor": (
+      <div className={paddingClass}>
+        <header className="text-center">
+          <h3 className={`font-serif font-bold ${large ? "text-3xl" : "text-[16px]"}`}>{p.name}</h3>
+          <p className={fSub} style={{ color: accent }}>{p.title}</p>
+        </header>
+        <main className={large ? "space-y-5 mt-6" : "space-y-3 mt-4"}>
+          <section>{renderTitle("Legal Summary")}<p className={fBody}>{p.summary}</p></section>
+          <section>{renderTitle("Practice History")}{renderExperienceList()}</section>
+        </main>
+      </div>
+    ),
+    "hospitality-premium": (
+      <div className={`${paddingClass} bg-[#FFF7F3]`}>
+        <header className={`${large ? "p-6 rounded-t-3xl" : "p-3 rounded-t-xl"} text-white`} style={{ backgroundColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: "#fff" }}>{p.title}</p></header>
+        <main className={`grid grid-cols-[60%_40%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <section className={blockSpace}>
+            <div>{renderTitle("Bio Portfolio")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderTitle("Guest Experience Log")}{renderExperienceList()}</div>
+          </section>
+          <aside>{renderTitle("Relations Skills")}{renderSkills()}</aside>
+        </main>
+      </div>
+    ),
+    "engineer-grid": (
+      <div className={paddingClass}>
+        <header className="grid grid-cols-[70%_30%] gap-2">
+          <div><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: accent }}>{p.title}</p></div>
+        </header>
+        <main className={`grid grid-cols-2 ${large ? "gap-4 mt-6" : "gap-2 mt-4"}`}>
+          <section className="rounded-xl border p-2">{renderTitle("Profile Strategy")}<p className={fBody}>{p.summary}</p></section>
+          <section className="rounded-xl border p-2">{renderTitle("Technical Stack")}{renderSkills()}</section>
+          <section className="col-span-2 rounded-xl border p-2">{renderTitle("Projects Ecosystem")}{renderExperienceList()}</section>
+        </main>
+      </div>
+    ),
+    "teacher-friendly": (
+      <div className={paddingClass}>
+        <header className={`${large ? "p-6 rounded-2xl" : "p-3 rounded-xl"}`} style={{ backgroundColor: `${accent}16` }}><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></header>
+        <main className={componentMargin}>
+          <section>{renderTitle("Pedagogy Core")}<p className={fBody}>{p.summary}</p></section>
+          <div className={`rounded-xl border-l-4 ${large ? "p-4 mt-4" : "p-2 mt-2"}`} style={{ borderColor: accent }}>{renderExperienceList()}</div>
+        </main>
+      </div>
+    ),
+    "project-manager": (
+      <div className={paddingClass}>
+        <header><h3 className={fName}>{p.name}</h3><p className={fSub} style={{ color: accent }}>{p.title}</p></header>
+        <main className={`grid grid-cols-[25%_75%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <aside className="space-y-2">
+            {["Plan", "Build", "Lead"].map((item) => (
+              <div key={item} className="rounded-lg p-2 text-center font-black text-white text-[8px] md:text-[12px]" style={{ backgroundColor: accent }}>{item}</div>
+            ))}
+          </aside>
+          <section className={blockSpace}>
+            <div>{renderTitle("Timeline Logs")}{renderExperienceList()}</div>
+            <div>{renderSkills()}</div>
+          </section>
+        </main>
+      </div>
+    ),
+    "customer-service": (
+      <div className={paddingClass}>
+        <header className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl text-white font-bold" style={{ backgroundColor: accent }}>★</div>
+          <div><h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p></div>
+        </header>
+        <main className={componentMargin}>
+          <div className="rounded-2xl bg-slate-50 p-3">{renderTitle("Statement")}<p className={fBody}>{p.summary}</p></div>
+          <div className={componentMargin}>{renderTitle("Service Record")}{renderExperienceList()}</div>
+        </main>
+      </div>
+    ),
+    "marketing-bold": (
+      <div className={`${large ? "h-full min-h-[842px] p-8 md:p-10" : "p-4 h-[360px]"} overflow-y-auto bg-white ring-1 ring-slate-200`}>
+        <header className={`${large ? "p-8 rounded-3xl" : "p-3.5 rounded-xl"} mb-4`} style={{ background: `linear-gradient(135deg, ${accent}22, #fff, ${accent}08)` }}>
+          <h3 className={`${fName} text-slate-900 font-extrabold`}>{p.name}</h3>
+          <p className={`${fSub} mt-1`} style={{ color: accent }}>{p.title}</p>
+          <p className={fMeta}>{p.email} · {p.phone} · {p.location}</p>
+        </header>
+        <main className={`grid ${large ? "grid-cols-[65%_35%] gap-6" : "grid-cols-[60%_40%] gap-2.5"}`}>
+          <div className={blockSpace}>
+            <section className="bg-slate-50/60 rounded-xl p-2.5">
+              {renderTitle("Impact Scope")}
+              <p className={fBody}>{p.summary}</p>
+            </section>
+            <section className="bg-slate-50/60 rounded-xl p-2.5">
+              {renderTitle("Professional Timeline")}
+              {renderExperienceList()}
+            </section>
+          </div>
+          <aside className={blockSpace}>
+            <section className="bg-slate-50/60 rounded-xl p-2.5">
+              {renderTitle("Marketing Toolkit")}
+              {renderSkills()}
+            </section>
+            <section className="bg-slate-50/60 rounded-xl p-2.5">
+              {renderTitle("Credentials")}
+              {renderBulletList(p.certifications)}
+            </section>
+          </aside>
+        </main>
+      </div>
+    ),
+    "hr-professional": (
+      <div className={paddingClass}>
+        <header className="rounded-xl border p-3" style={{ borderColor: accent }}><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: accent }}>{p.title}</p></header>
+        <main className={`grid grid-cols-[40%_60%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <aside>{renderTitle("People Framework")}{renderSkills()}</aside>
+          <section className={blockSpace}>
+            <div>{renderTitle("Bio Profile")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderExperienceList()}</div>
+          </section>
+        </main>
+      </div>
+    ),
+    "data-analyst": (
+      <div className={paddingClass}>
+        <header><h3 className={fName}>{p.name}</h3><p className={fMeta} style={{ color: accent }}>{p.title}</p></header>
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {["SQL", "BI Tools", "KPI Matrix", "ETL Systems"].map((item) => (
+            <div key={item} className="rounded-lg p-2 text-center text-[7px] md:text-[11px] font-black" style={{ backgroundColor: `${accent}18`, color: accent }}>{item}</div>
+          ))}
+        </div>
+        <main className={componentMargin}>
+          <section>{renderTitle("Data Portfolio")}<p className={fBody}>{p.summary}</p></section>
+          <div className={componentMargin}>{renderTitle("Analytics Experience")}{renderExperienceList()}</div>
+        </main>
+      </div>
+    ),
+    "premium-monogram": (
+      <div className={`${paddingClass} bg-[#FBF7EF]`}>
+        <header className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border font-serif font-bold text-sm md:text-xl" style={{ borderColor: accent, color: accent }}>IM</div>
+          <h3 className={fName}>{p.name}</h3><p className={fMeta}>{p.title}</p>
+        </header>
+        <main className={`grid grid-cols-[35%_65%] ${large ? "gap-6 mt-6" : "gap-3 mt-4"}`}>
+          <aside>{renderTitle("Expertise Identity")}{renderSkills()}</aside>
+          <section className={blockSpace}>
+            <div>{renderTitle("Profile Architecture")}<p className={fBody}>{p.summary}</p></div>
+            <div>{renderExperienceList()}</div>
+          </section>
+        </main>
+      </div>
+    ),
+  };
+
+  return layouts[layout] || (
+    <div className={paddingClass}>
+      {headerBasic}
+      <main className="mt-3">{renderTitle("Summary")}<p className={fBody}>{p.summary}</p>{renderExperienceList()}</main>
     </div>
   );
 }
 
 function CVPreview({ template, selectedColor, large = false }) {
-  return (
-    <MiniPreview
-      template={template}
-      selectedColor={selectedColor}
-      modalPreview={large}
-    />
-  );
+  return <UnifiedTemplateEngine template={template} selectedColor={selectedColor} large={large} />;
 }
 
 function Stepper() {
@@ -1255,92 +805,59 @@ function TemplateCard({
   onColorChange,
   onSelect,
   onPreview,
-  onUse,
 }) {
   return (
     <div
-      onClick={onSelect}
-      className={`group cursor-pointer rounded-[1.7rem] border bg-white p-3 transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${
+      className={`group mx-auto flex w-full max-w-[360px] flex-col justify-between rounded-[1.45rem] border bg-white p-2.5 transition sm:max-w-none sm:rounded-[1.7rem] sm:p-3 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.16)] ${
         selected
           ? "border-slate-950 shadow-[0_20px_60px_rgba(15,23,42,0.16)]"
           : "border-slate-200 shadow-sm"
       }`}
     >
-      <div className="relative overflow-hidden rounded-[1.35rem] bg-slate-100">
-        <CVPreview template={template} selectedColor={selectedColor} />
+      <div className="relative h-[360px] w-full overflow-hidden rounded-[1.1rem] bg-white sm:rounded-[1.35rem]">
+        <CVPreview
+          template={template}
+          selectedColor={selectedColor}
+          large={false}
+        />
 
-        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[10px] font-black text-slate-700 shadow-sm">
+        <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-black text-slate-700 shadow-sm sm:left-3 sm:top-3 sm:px-3 sm:text-[10px]">
           {template.tag}
         </span>
 
+        <div className="absolute inset-0 z-10 flex items-end justify-center gap-2 bg-gradient-to-t from-slate-950/55 via-slate-950/10 to-transparent p-3 opacity-100 transition sm:items-center sm:bg-slate-950/0 sm:p-0 sm:opacity-0 sm:group-hover:bg-slate-950/45 sm:group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={onPreview}
+            className="rounded-full bg-white px-4 py-2 text-[11px] font-black text-slate-950 shadow-lg transition hover:scale-105"
+          >
+            Preview
+          </button>
+
+          <button
+            type="button"
+            onClick={onSelect}
+            className="rounded-full bg-slate-950 px-4 py-2 text-[11px] font-black text-white shadow-lg transition hover:scale-105"
+          >
+            Use
+          </button>
+        </div>
+
         {selected && (
-          <span className="absolute right-3 top-3 rounded-full bg-slate-950 px-3 py-1 text-[10px] font-black text-white shadow-sm">
+          <span className="absolute right-2 top-2 z-10 rounded-full bg-slate-950 px-2.5 py-1 text-[9px] font-black text-white shadow-sm sm:right-3 sm:top-3 sm:px-3 sm:text-[10px]">
             Selected
           </span>
         )}
-
-        {/* Desktop hover buttons */}
-        <div className="absolute inset-0 hidden items-center justify-center gap-2 bg-slate-950/0 opacity-0 transition group-hover:bg-slate-950/45 group-hover:opacity-100 md:flex">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onPreview();
-            }}
-            className="rounded-full bg-white px-4 py-2 text-[11px] font-black text-slate-950 shadow-lg"
-          >
-            Preview
-          </button>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onUse();
-            }}
-            className="rounded-full bg-slate-950 px-4 py-2 text-[11px] font-black text-white shadow-lg"
-          >
-            Use
-          </button>
-        </div>
-
-        {/* Mobile always visible buttons */}
-        <div className="absolute inset-x-3 bottom-3 flex gap-2 md:hidden">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onPreview();
-            }}
-            className="flex-1 rounded-full bg-white px-3 py-2 text-[10px] font-black text-slate-950 shadow-lg"
-          >
-            Preview
-          </button>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onUse();
-            }}
-            className="flex-1 rounded-full bg-slate-950 px-3 py-2 text-[10px] font-black text-white shadow-lg"
-          >
-            Use
-          </button>
-        </div>
       </div>
 
-      <div className="mt-4 flex items-start justify-between gap-3 px-1 pb-1">
-        <div>
-          <h3 className="text-sm font-black text-slate-950">
+
+      <div className="mt-3 flex items-start justify-between gap-2 px-1 pb-1 sm:mt-4 sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-black text-slate-950">
             {template.name}
           </h3>
 
-          <p className="mt-1 text-xs font-semibold text-slate-500">
+          <p className="mt-1 truncate text-xs font-semibold text-slate-500">
             {template.category} CV template
           </p>
 
@@ -1351,13 +868,23 @@ function TemplateCard({
           />
         </div>
 
-        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">
           {template.ats}% ATS
         </span>
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
 function PreviewModal({
   template,
   selectedColor,
@@ -1412,74 +939,132 @@ function PreviewModal({
           </div>
         </div>
 
-        <div className="mx-auto h-[78vh] min-h-[620px] w-full max-w-[820px] overflow-y-auto overflow-x-hidden rounded-[1.4rem] bg-slate-100 p-4 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:min-h-[720px] sm:p-6">
-          <div className="flex w-full justify-center">
-            <div className="preview-scale-holder">
-              <div className="preview-scale-inner">
-                <CVPreview
-                  template={template}
-                  selectedColor={selectedColor}
-                  large
-                />
-              </div>
-            </div>
-          </div>
+    <div className="preview-modal-scroll mx-auto h-[78vh] min-h-[620px] w-full max-w-[850px] overflow-hidden rounded-[1.4rem] bg-slate-100 p-3 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:min-h-[720px] sm:p-6">
+       <div className="preview-scroll-area">
+  <div className="preview-scale-holder">
+    <div className="preview-scale-inner">
+      <CVPreview
+        template={template}
+        selectedColor={selectedColor}
+        large
+      />
+    </div>
+  </div>
+</div>
         </div>
       </div>
 
-    <style jsx>{`
+<style jsx>{`
+  .preview-modal-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .preview-scroll-area {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
   .preview-scale-holder {
-    width: 360px;
-    min-height: calc(1123px * 0.45);
+    --preview-scale: 0.40;
+
+    width: calc((794px * var(--preview-scale)) + 18px);
+    min-width: calc((794px * var(--preview-scale)) + 18px);
+    height: calc(1123px * var(--preview-scale));
+    min-height: calc(1123px * var(--preview-scale));
     display: flex;
     justify-content: center;
     align-items: flex-start;
     overflow: visible;
+    margin: 0 auto 24px auto;
   }
 
   .preview-scale-inner {
-    width: 320px;
-    min-width: 320px;
+    width: 794px;
+    min-width: 794px;
+    height: 1123px;
     min-height: 1123px;
-    transform: scale(1);
+    transform: scale(var(--preview-scale));
     transform-origin: top center;
+    overflow: visible;
+    border-radius: 22px;
   }
 
-  @media (max-width: 380px) {
-    .preview-scale-holder {
-      width: 340px;
-    }
+  .preview-scale-inner :global(.cv-a4-template),
+  .preview-scale-inner :global(#cv-download) {
+    width: 794px !important;
+    min-height: 1123px !important;
+    height: 1123px !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    box-shadow: 0 18px 55px rgba(15, 23, 42, 0.16) !important;
+  }
 
-    .preview-scale-inner {
-      transform: scale(0.95);
+  .preview-scale-inner :global(.cv-a4-template > div),
+  .preview-scale-inner :global(#cv-download > div) {
+    height: 100% !important;
+    min-height: 1123px !important;
+    align-items: stretch !important;
+  }
+
+  .preview-scale-inner :global(aside[data-full-height-sidebar="true"]) {
+    height: 100% !important;
+    min-height: 1123px !important;
+    align-self: stretch !important;
+  }
+
+  @media (max-width: 360px) {
+    .preview-scale-holder {
+      --preview-scale: 0.38;
+    }
+  }
+
+  @media (min-width: 390px) {
+    .preview-scale-holder {
+      --preview-scale: 0.41;
+    }
+  }
+
+  @media (min-width: 430px) {
+    .preview-scale-holder {
+      --preview-scale: 0.44;
+    }
+  }
+
+  @media (min-width: 480px) {
+    .preview-scale-holder {
+      --preview-scale: 0.50;
     }
   }
 
   @media (min-width: 640px) {
     .preview-scale-holder {
-      width: 560px;
-      min-height: calc(1123px * 1.55);
-    }
-
-    .preview-scale-inner {
-      transform: scale(1.55);
+      --preview-scale: 0.72;
     }
   }
 
   @media (min-width: 768px) {
     .preview-scale-holder {
-      width: 620px;
-      min-height: calc(1123px * 1.65);
+      --preview-scale: 0.86;
     }
+  }
 
-    .preview-scale-inner {
-      transform: scale(1.65);
+  @media (min-width: 1024px) {
+    .preview-scale-holder {
+      --preview-scale: 1;
     }
   }
 `}</style>
     </div>
   );
 }
+
 function OldCVPopup({ template, selectedColor, onClose }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -1487,7 +1072,11 @@ function OldCVPopup({ template, selectedColor, onClose }) {
 
   const goEmptyCreate = () => {
     localStorage.removeItem("qorliq-old-cv-data");
-    router.push(`/cv-builder/create?template=${template.id}&color=${encodeURIComponent(selectedColor || template.colors[0])}`);
+    router.push(
+      `/cv-builder/create?template=${template.id}&color=${encodeURIComponent(
+        selectedColor || template.colors[0]
+      )}`
+    );
   };
 
   const handleOldCVUpload = async (event) => {
@@ -1496,7 +1085,9 @@ function OldCVPopup({ template, selectedColor, onClose }) {
 
     const allowedExtensions = [".pdf", ".doc", ".docx", ".txt"];
     const fileName = file.name.toLowerCase();
-    const isAllowed = allowedExtensions.some((extension) => fileName.endsWith(extension));
+    const isAllowed = allowedExtensions.some((extension) =>
+      fileName.endsWith(extension)
+    );
 
     if (!isAllowed) {
       alert("Please upload PDF, DOC, DOCX or TXT file only.");
@@ -1529,7 +1120,12 @@ function OldCVPopup({ template, selectedColor, onClose }) {
       };
 
       localStorage.setItem("qorliq-old-cv-data", JSON.stringify(oldCVData));
-      router.push(`/cv-builder/create?template=${template.id}&color=${encodeURIComponent(selectedColor || template.colors[0])}&oldcv=yes`);
+
+      router.push(
+        `/cv-builder/create?template=${template.id}&color=${encodeURIComponent(
+          selectedColor || template.colors[0]
+        )}&oldcv=yes`
+      );
     } catch (error) {
       console.error("Old CV upload error:", error);
       alert("Unable to upload or extract this CV.");
@@ -1538,82 +1134,85 @@ function OldCVPopup({ template, selectedColor, onClose }) {
     }
   };
 
- return (
-  <div className="fixed inset-0 z-[99999] flex items-center justify-center overflow-y-auto bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
-    <div className="w-full max-w-[92vw] rounded-[1.4rem] bg-white p-4 text-slate-950 shadow-2xl sm:max-w-2xl sm:rounded-3xl sm:p-7">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-xs">
-            Selected Template
-          </p>
-
-          <h2 className="mt-1 text-xl font-black sm:mt-2 sm:text-3xl">
-            {template.name}
-          </h2>
-
-          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
-            Upload your old CV to prepare the new CV faster, or start with the selected professional template.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-500 hover:bg-slate-50 sm:px-4 sm:py-2"
-        >
-          ×
-        </button>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:mt-8 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-          <h3 className="text-lg font-black sm:text-xl">
-            Yes, I have old CV
-          </h3>
-
-          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
-            Upload PDF, DOC, DOCX or TXT. Your details will be extracted and prepared inside the selected template.
-          </p>
-
-          <label className="mt-4 block cursor-pointer rounded-full bg-slate-900 px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-slate-700 sm:mt-5 sm:px-5 sm:text-xs">
-            {uploading ? "Reading CV..." : "Upload Old CV"}
-
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={handleOldCVUpload}
-              className="hidden"
-            />
-          </label>
-
-          {uploadedFileName && (
-            <p className="mt-3 break-all text-xs font-semibold text-slate-500">
-              Uploaded: {uploadedFileName}
+  return (
+    <div className="fixed inset-0 z-[100001] flex items-center justify-center overflow-y-auto bg-slate-950/65 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+      <div className="w-full max-w-[420px] rounded-2xl bg-white p-4 text-slate-950 shadow-2xl sm:max-w-2xl sm:rounded-3xl sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">
+              Selected Template
             </p>
-          )}
-        </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <h3 className="text-lg font-black sm:text-xl">
-            No, start empty
-          </h3>
+            <h2 className="mt-1 text-xl font-black leading-tight sm:mt-2 sm:text-3xl">
+              {template.name}
+            </h2>
 
-          <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
-            Open the selected CV template with an empty form and fill your details manually.
-          </p>
+            <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+              Upload your old CV to prepare the new CV faster, or start with the
+              selected professional template.
+            </p>
+          </div>
 
           <button
             type="button"
-            onClick={goEmptyCreate}
-            className="mt-4 w-full rounded-full border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-950 transition hover:bg-slate-50 sm:mt-5 sm:px-5 sm:text-xs"
+            onClick={onClose}
+            className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-500 hover:bg-slate-50 sm:px-4 sm:py-2"
           >
-            Open Template
+            ×
           </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <h3 className="text-lg font-black sm:text-xl">
+              Yes, I have old CV
+            </h3>
+
+            <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+              Upload PDF, DOC, DOCX or TXT. Your details will be extracted and
+              prepared inside the selected template.
+            </p>
+
+            <label className="mt-4 block cursor-pointer rounded-full bg-slate-900 px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest text-white transition hover:bg-slate-700 sm:mt-5 sm:px-5 sm:text-xs">
+              {uploading ? "Reading CV..." : "Upload Old CV"}
+
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                onChange={handleOldCVUpload}
+                className="hidden"
+              />
+            </label>
+
+            {uploadedFileName && (
+              <p className="mt-3 break-words text-[11px] font-semibold text-slate-500 sm:text-xs">
+                Uploaded: {uploadedFileName}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <h3 className="text-lg font-black sm:text-xl">
+              No, start empty
+            </h3>
+
+            <p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+              Open the selected CV template with an empty form and fill your
+              details manually.
+            </p>
+
+            <button
+              type="button"
+              onClick={goEmptyCreate}
+              className="mt-4 w-full rounded-full border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-950 transition hover:bg-slate-50 sm:mt-5 sm:px-5 sm:text-xs"
+            >
+              Open Template
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default function CVBuilderPage() {
@@ -1678,41 +1277,29 @@ export default function CVBuilderPage() {
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredTemplates.map((template) => (
-           <TemplateCard
-  key={template.id}
-  template={template}
-  selected={selectedTemplateId === template.id}
-  selectedColor={selectedColors[template.id] || template.colors[0]}
-  onColorChange={(color) => setTemplateColor(template.id, color)}
-  onSelect={() => setSelectedTemplateId(template.id)}
-  onPreview={() => {
-    setSelectedTemplateId(template.id);
-    setPreviewTemplate(template);
-  }}
-  onUse={() => {
-    setSelectedTemplateId(template.id);
-    setShowOldCVPopup(true);
-  }}
-/>
+            <TemplateCard
+              key={template.id}
+              template={template}
+              selected={selectedTemplateId === template.id}
+              selectedColor={selectedColors[template.id] || template.colors[0]}
+              onColorChange={(color) => setTemplateColor(template.id, color)}
+              onSelect={() => setSelectedTemplateId(template.id)}
+              onPreview={() => setPreviewTemplate(template)}
+            />
           ))}
         </div>
       </section>
-<div className="fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur md:hidden">
-  <button
-    type="button"
-    onClick={() => {
-      setSelectedTemplateId(activeTemplate.id);
-      setShowOldCVPopup(true);
-    }}
-    className="w-full rounded-full bg-slate-900 px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-white transition active:scale-[0.98]"
-  >
-    Use This Template
-  </button>
 
-  <p className="mt-1 text-center text-[10px] font-semibold text-slate-500">
-    Selected: {activeTemplate.name}
-  </p>
-</div>
+      <div className="fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur md:hidden">
+        <button
+          type="button"
+          onClick={() => setShowOldCVPopup(true)}
+          className="w-full rounded-full bg-slate-900 px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-white transition active:scale-[0.98]"
+        >
+          Use This Template
+        </button>
+        <p className="mt-1 text-center text-[10px] font-semibold text-slate-500">Selected: {activeTemplate.name}</p>
+      </div>
 
       <div className="hidden border-t border-slate-200 bg-white px-6 py-5 md:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">

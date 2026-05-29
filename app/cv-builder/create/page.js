@@ -2431,18 +2431,77 @@ function CleanATSExactCV({ cv, config }) {
 }
 
 function EUPhotoDocumentCV({ cv, config }) {
+  const accent = config.accent || "#2563EB"; // Jo bhi dynamic color sets select ho
+
   return (
-    <div id="cv-download" className="grid bg-white text-black shadow-2xl" style={{ width: "794px", minHeight: "1123px", gridTemplateColumns: "280px 514px" }}>
-      <aside className="bg-slate-100 px-8 py-10">
-        <ExactPhoto cv={cv} config={config} large />
-        <h1 className="mt-6 text-3xl font-black leading-tight">{cv.fullName || "Your Name"}</h1>
-        <p className="mt-2 text-sm font-bold" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p>
-        <div className="mt-8"><ExactSideBlock cv={cv} config={config} /></div>
-      </aside>
-      <main className="space-y-8 px-10 py-10">
-        <ExactTitle title="European CV Profile" accent={config.accent} />
-        {hasText(cv.summary) ? <Paragraph text={cv.summary} /> : null}
-        <MainCVSections cv={cv} accent={config.accent} skipSummary />
+    <div 
+      id="cv-download" 
+      className="p-8 bg-white text-black shadow-2xl font-sans" 
+      style={{ width: "794px", minHeight: "1123px" }}
+    >
+      {/* 1. Header Layout Matching the Template */}
+      <header className="flex gap-4 border-b pb-4 mb-5" style={{ borderColor: `${accent}55` }}>
+        <div className="shrink-0">
+          <ExactPhoto cv={cv} config={config} large />
+        </div>
+        <div>
+          <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: accent }}>
+            European CV
+          </p>
+          <h1 className="text-3xl font-black text-slate-900 leading-tight">
+            {cv.fullName || "Your Name"}
+          </h1>
+          <p className="text-sm font-bold mt-1" style={{ color: accent }}>
+            {cv.jobTitle || "Professional Title"}
+          </p>
+        </div>
+      </header>
+
+      {/* 2. Main Columns Layout Matching the Template */}
+      <main className="grid grid-cols-[30%_70%] gap-8 items-start">
+        
+        {/* Aside Sidebar: Details & Skills */}
+        <aside className="space-y-6">
+          {/* Contact Details */}
+          <div>
+            <ExactTitle title="Details" accent={accent} />
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-700">
+              {cv.location && <>{cv.location}<br /></>}
+              {cv.phone && <>{cv.phone}<br /></>}
+              {cv.email && <>{cv.email}</>}
+            </p>
+          </div>
+
+          {/* Skills / Toolkit Section */}
+          <div>
+            <ExactTitle title="Skills" accent={accent} />
+            <div className="mt-2 text-[11px]">
+              <ExactSideBlock cv={cv} config={config} />
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content Area: Profile & Experience */}
+        <section className="space-y-6">
+          {/* Profile Summary */}
+          {hasText(cv.summary) && (
+            <div>
+              <ExactTitle title="Profile" accent={accent} />
+              <div className="mt-2 text-[11px] leading-relaxed text-slate-700">
+                <Paragraph text={cv.summary} />
+              </div>
+            </div>
+          )}
+
+          {/* Experience & Education via Main CV Blocks */}
+          <div>
+            <ExactTitle title="Experience" accent={accent} />
+            <div className="mt-2 text-[11px] leading-relaxed text-slate-700">
+              <MainCVSections cv={cv} accent={accent} skipSummary />
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
   );

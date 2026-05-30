@@ -2425,7 +2425,11 @@ function CleanATSExactCV({ cv, config }) {
   return (
     <CVPage>
       <ExactHeader cv={cv} config={config} label="ATS Optimised" />
-      <main className="mt-8 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main>
+
+      <main className="mt-8 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
     </CVPage>
   );
 }
@@ -2972,7 +2976,34 @@ function LondonExecutiveCV({ cv, config }) {
 }
 
 function ClassicProExactCV({ cv, config }) {
-  return <CVPage><header className="text-center"><h1 className="font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-sm font-black uppercase tracking-[0.22em]" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><div className="my-8 h-px" style={{ backgroundColor: config.accent }} /><main className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+  return (
+    <CVPage>
+      <header className="text-center">
+        <h1 className="font-serif text-5xl font-bold">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p
+          className="mt-2 text-sm font-black uppercase tracking-[0.22em]"
+          style={{ color: config.accent }}
+        >
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <div
+        className="my-8 h-px"
+        style={{ backgroundColor: config.accent }}
+      />
+
+      <main className="space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
 }
 
 function TechMinimalCV({ cv, config }) {
@@ -3055,7 +3086,49 @@ function HealthcareClinicalCV({ cv, config }) {
 }
 
 function SalesLeaderCV({ cv, config }) {
-  return <CVPage><header className="rounded-[1.8rem] p-8 text-white" style={{ background: `linear-gradient(135deg, ${config.accent}, ${exactDark(config)})` }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/75">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><div className="mt-6 grid grid-cols-3 gap-4 text-center"><div className="rounded-xl bg-slate-50 p-4"><b className="text-2xl">128%</b><p className="text-xs">Target</p></div><div className="rounded-xl bg-slate-50 p-4"><b className="text-2xl">42</b><p className="text-xs">Clients</p></div><div className="rounded-xl bg-slate-50 p-4"><b className="text-2xl">£2M</b><p className="text-xs">Pipeline</p></div></div><main className="mt-8 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+  return (
+    <CVPage>
+      <header
+        className="rounded-[1.8rem] p-8 text-white"
+        style={{
+          background: `linear-gradient(135deg, ${config.accent}, ${exactDark(config)})`,
+        }}
+      >
+        <h1 className="text-5xl font-black tracking-[-0.055em]">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p className="mt-2 text-lg text-white/75">
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} dark />
+      </header>
+
+      <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <b className="text-2xl">128%</b>
+          <p className="text-xs">Target</p>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-4">
+          <b className="text-2xl">42</b>
+          <p className="text-xs">Clients</p>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-4">
+          <b className="text-2xl">£2M</b>
+          <p className="text-xs">Pipeline</p>
+        </div>
+      </div>
+
+      <main className="mt-8 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
 }
 
 function FinanceAnalystCV({ cv, config }) {
@@ -3063,7 +3136,37 @@ function FinanceAnalystCV({ cv, config }) {
 }
 
 function StockholmCleanCV({ cv, config }) {
-  return <CVPage><header className="flex justify-between"><div><h1 className="text-5xl font-light tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg font-bold" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></div><div className="h-24 w-24 rounded-full" style={{ backgroundColor: `${config.accent}18` }} /></header><main className="mt-10 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
+  return (
+    <CVPage>
+      <header className="flex justify-between">
+        <div>
+          <h1 className="text-5xl font-light tracking-[-0.055em]">
+            {cv.fullName || "Your Name"}
+          </h1>
+
+          <p
+            className="mt-2 text-lg font-bold"
+            style={{ color: config.accent }}
+          >
+            {cv.jobTitle || "Professional Title"}
+          </p>
+
+          <ContactLine cv={cv} />
+        </div>
+
+        <div
+          className="h-24 w-24 rounded-full"
+          style={{ backgroundColor: `${config.accent}18` }}
+        />
+      </header>
+
+      <main className="mt-10 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
 }
 
 function DubaiCorporateCV({ cv, config }) {
@@ -3073,15 +3176,72 @@ function DubaiCorporateCV({ cv, config }) {
 function CanadaSimpleCV({ cv, config }) {
   return <CVPage><header className="border-l-[14px] pl-6" style={{ borderColor: config.accent }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /><SideCVSections cv={cv} accent={config.accent} /></main></CVPage>;
 }
-
 function AcademicScholarCV({ cv, config }) {
-  return <CVPage><header><p className="text-xs uppercase tracking-[0.3em]" style={{ color: config.accent }}>Curriculum Vitae</p><h1 className="mt-2 font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-black/60">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /><CVSection title="Publications" accent={config.accent}><Paragraph text="Add publications, conference talks or research outputs in Additional Sections." /></CVSection></main></CVPage>;
+  return (
+    <CVPage>
+      <header>
+        <p
+          className="text-xs uppercase tracking-[0.3em]"
+          style={{ color: config.accent }}
+        >
+          Curriculum Vitae
+        </p>
+
+        <h1 className="mt-2 font-serif text-5xl font-bold">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p className="mt-2 text-lg text-black/60">
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+
+        <SideCVSections cv={cv} accent={config.accent} />
+
+        <CVSection title="Publications" accent={config.accent}>
+          <Paragraph text="Add publications, conference talks or research outputs in Additional Sections." />
+        </CVSection>
+      </main>
+    </CVPage>
+  );
 }
 
 function LegalAdvisorCV({ cv, config }) {
-  return <CVPage><header className="text-center"><div className="mx-auto mb-4 h-20 w-20 rounded-full border-4" style={{ borderColor: config.accent }} /><h1 className="font-serif text-5xl font-bold">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-sm uppercase tracking-[0.22em]" style={{ color: config.accent }}>{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} /></header><main className="mt-9 space-y-8"><MainCVSections cv={cv} accent={config.accent} /></main></CVPage>;
-}
+  return (
+    <CVPage>
+      <header className="text-center">
+        <div
+          className="mx-auto mb-4 h-20 w-20 rounded-full border-4"
+          style={{ borderColor: config.accent }}
+        />
 
+        <h1 className="font-serif text-5xl font-bold">
+          {cv.fullName || "Your Name"}
+        </h1>
+
+        <p
+          className="mt-2 text-sm uppercase tracking-[0.22em]"
+          style={{ color: config.accent }}
+        >
+          {cv.jobTitle || "Professional Title"}
+        </p>
+
+        <ContactLine cv={cv} />
+      </header>
+
+      <main className="mt-9 space-y-8">
+        <MainCVSections cv={cv} accent={config.accent} />
+
+        <SideCVSections cv={cv} accent={config.accent} />
+      </main>
+    </CVPage>
+  );
+}
 function HospitalityPremiumCV({ cv, config }) {
   return <CVPage ivory><header className="rounded-t-[2rem] p-8 text-white" style={{ backgroundColor: config.accent }}><h1 className="text-5xl font-black tracking-[-0.055em]">{cv.fullName || "Your Name"}</h1><p className="mt-2 text-lg text-white/80">{cv.jobTitle || "Professional Title"}</p><ContactLine cv={cv} dark /></header><main className="mt-9 grid gap-9 grid-cols-[0.58fr_0.42fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
 }
@@ -3640,47 +3800,42 @@ function SideCVSections({ cv, accent = "#111827", dark = false }) {
   return (
     <>
       {hasList(cv.skills) ? (
-        <div className="mt-8 first:mt-0">
-          <SmallTitle title="Skills" dark={dark} />
+        <SideSection title="Skills" accent={accent} dark={dark}>
           <SkillPills
             items={cv.skills}
             levels={cv.skillLevels}
             dark={dark}
             accent={accent}
           />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasList(cv.languages) ? (
-        <div className="mt-8">
-          <SmallTitle title="Languages" dark={dark} />
+        <SideSection title="Languages" accent={accent} dark={dark}>
           <LanguageList
             items={cv.languages}
             levels={cv.languageLevels}
             dark={dark}
           />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasList(cv.strengths) ? (
-        <div className="mt-8">
-          <SmallTitle title="Strengths" dark={dark} />
+        <SideSection title="Strengths" accent={accent} dark={dark}>
           <BulletList items={cv.strengths} dark={dark} />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasList(cv.hobbies) ? (
-        <div className="mt-8">
-          <SmallTitle title="Interests" dark={dark} />
+        <SideSection title="Interests" accent={accent} dark={dark}>
           <BulletList items={cv.hobbies} dark={dark} />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasText(cv.references) ? (
-        <div className="mt-8">
-          <SmallTitle title="References" dark={dark} />
+        <SideSection title="References" accent={accent} dark={dark}>
           <Paragraph text={cv.references} dark={dark} />
-        </div>
+        </SideSection>
       ) : null}
     </>
   );
@@ -3968,6 +4123,29 @@ function SmallTitle({ title, dark = false }) {
     >
       {title}
     </p>
+  );
+}
+function SideSection({ title, children, accent = "#111827", dark = false }) {
+  return (
+    <section className="mt-8 first:mt-0">
+      <h3
+        className={`text-xs font-black uppercase tracking-[0.2em] ${
+          dark ? "text-white" : ""
+        }`}
+        style={!dark ? { color: accent } : undefined}
+      >
+        {title}
+      </h3>
+
+      <div
+        className="mt-2 h-px w-full"
+        style={{
+          backgroundColor: dark ? "rgba(255,255,255,0.22)" : `${accent}35`,
+        }}
+      />
+
+      <div className="mt-3">{children}</div>
+    </section>
   );
 }
 

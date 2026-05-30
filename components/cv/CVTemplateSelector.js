@@ -113,11 +113,45 @@ const completeCVData = {
     "Arabic (Professional)",
     "Urdu (Conversational)",
   ],
-  achievements: [
-    "Improved reporting accuracy by 38% through structural pipeline controls.",
-    "Successfully managed high-volume client document systems with zero data leaks.",
-    "Reduced workflow processing duration by 22% over 12 calendar months.",
-  ],
+ achievements: [
+  "Improved reporting accuracy by 38% through structural pipeline controls.",
+  "Successfully managed high-volume client document systems with zero data leaks.",
+  "Reduced workflow processing duration by 22% over 12 calendar months.",
+],
+
+strengths: [
+  "Strong attention to detail",
+  "Confident stakeholder communication",
+  "Fast learner with ownership mindset",
+  "Calm under pressure",
+],
+
+hobbies: [
+  "Reading business case studies",
+  "Community volunteering",
+  "Travel and culture",
+  "Productivity systems",
+],
+
+projects: [
+  {
+    title: "Operations Reporting Dashboard",
+    description:
+      "Designed a weekly KPI dashboard that improved management visibility and reduced manual reporting time.",
+  },
+  {
+    title: "Document Control Improvement",
+    description:
+      "Rebuilt internal filing structure with clear naming rules, access controls, and review checkpoints.",
+  },
+],
+
+references: [
+  "Available upon request",
+  "Professional references can be provided after interview stage",
+],
+
+
   experience: [
     {
       role: "Operations Manager",
@@ -210,24 +244,46 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
     <p className={fTitle} style={{ color: customAccent, borderColor: `${customAccent}55` }}>{text}</p>
   );
 
-  const renderExperienceList = (light = false) => (
-    <div className={blockSpace}>
-      {p.experience.map((job) => (
-        <div key={job.role}>
-          <div className="flex justify-between gap-2">
-            <p className={`${fBold} ${light ? "text-white" : ""}`}>{job.role}</p>
-            <p className={`${fDate} ${light ? "text-white/60" : ""}`}>{job.date}</p>
-          </div>
-          <p className={`${fBody} font-medium ${light ? "text-white/70" : "text-slate-500"}`}>{job.company}</p>
-          <ul className={large ? "mt-1.5 space-y-1 pl-1" : "space-y-0.5"}>
-            {job.points.slice(0, large ? 4 : 2).map((point, i) => (
-              <li key={i} className={`${fBody} ${light ? "text-white/65" : "text-slate-600"}`}>• {point}</li>
-            ))}
-          </ul>
+ const renderExperienceList = (light = false) => (
+  <div className={blockSpace}>
+    {p.experience.map((job) => (
+      <div key={job.role}>
+        <div className="flex justify-between gap-2">
+          <p className={`${fBold} ${light ? "text-white" : ""}`}>
+            {job.role}
+          </p>
+
+          <p className={`${fDate} ${light ? "text-white/60" : ""}`}>
+            {job.date}
+          </p>
         </div>
-      ))}
-    </div>
-  );
+
+        <p
+          className={`${fBody} font-medium ${
+            light ? "text-white/70" : "text-slate-500"
+          }`}
+        >
+          {job.company}
+        </p>
+
+        <ul className={large ? "mt-1.5 space-y-1 pl-1" : "space-y-0.5"}>
+          {job.points.slice(0, large ? 4 : 2).map((point, i) => (
+            <li
+              key={i}
+              className={`${fBody} ${
+                light ? "text-white/65" : "text-slate-600"
+              }`}
+            >
+              • {point}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+
+    {renderLargePreviewExtras(light)}
+  </div>
+);
 
   const renderSkills = (light = false) => (
     <div className="flex flex-wrap gap-1">
@@ -246,6 +302,68 @@ function UnifiedTemplateEngine({ template, selectedColor, large = false }) {
       ))}
     </ul>
   );
+  const renderProjectList = (light = false) => (
+  <div className={large ? "space-y-2" : "space-y-1"}>
+    {p.projects.map((project) => (
+      <div key={project.title}>
+        <p
+          className={`${fBold} ${
+            light ? "text-white" : "text-slate-900"
+          }`}
+        >
+          {project.title}
+        </p>
+
+        <p
+          className={`${fBody} ${
+            light ? "text-white/70" : "text-slate-600"
+          }`}
+        >
+          {project.description}
+        </p>
+      </div>
+    ))}
+  </div>
+);
+const renderLargePreviewExtras = (light = false) => {
+  if (!large) return null;
+
+  const titleColor = light ? "#fff" : accent;
+
+  return (
+    <>
+      <div>
+        {renderTitle("Projects", titleColor)}
+        {renderProjectList(light)}
+      </div>
+
+      <div>
+        {renderTitle("Strengths", titleColor)}
+        {renderBulletList(p.strengths, light)}
+      </div>
+
+      <div>
+        {renderTitle("Certificates", titleColor)}
+        {renderBulletList(p.certifications, light)}
+      </div>
+
+      <div>
+        {renderTitle("Languages", titleColor)}
+        {renderBulletList(p.languages, light)}
+      </div>
+
+      <div>
+        {renderTitle("Hobbies", titleColor)}
+        {renderBulletList(p.hobbies, light)}
+      </div>
+
+      <div>
+        {renderTitle("References", titleColor)}
+        {renderBulletList(p.references, light)}
+      </div>
+    </>
+  );
+};
 
   const headerBasic = (
     <header className="border-b pb-2" style={{ borderColor: `${accent}55` }}>
@@ -905,7 +1023,6 @@ function TemplateCard({
 
 
 
-
 function PreviewModal({
   template,
   selectedColor,
@@ -916,19 +1033,22 @@ function PreviewModal({
   if (!template) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-slate-950/85 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
-      <div className="relative z-[100000] mx-auto w-full max-w-6xl rounded-[1.5rem] bg-white p-4 shadow-2xl sm:rounded-[2rem] sm:p-6">
-        <div className="mb-4 flex flex-col justify-between gap-4 sm:mb-5 sm:flex-row sm:items-center">
+    <div className="fixed inset-0 z-[99999] overflow-hidden bg-slate-950/85 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+      <div className="relative z-[100000] mx-auto flex h-full w-full max-w-6xl flex-col rounded-[1.5rem] bg-white p-4 shadow-2xl sm:rounded-[2rem] sm:p-6">
+        <div className="mb-4 flex shrink-0 flex-col justify-between gap-4 sm:mb-5 sm:flex-row sm:items-center">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 sm:text-xs">
               Preview Template
             </p>
+
             <h2 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">
               {template.name}
             </h2>
+
             <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
               Same template card design with more complete CV content.
             </p>
+
             <div className="mt-3 flex flex-wrap items-center gap-3 sm:mt-4">
               <ColorPicker
                 template={template}
@@ -946,6 +1066,7 @@ function PreviewModal({
             >
               Close
             </button>
+
             <button
               type="button"
               onClick={onUse}
@@ -956,8 +1077,7 @@ function PreviewModal({
           </div>
         </div>
 
-        {/* ✅ FIX: overflow-hidden hata diya, overflow-y-auto rakha sirf scroll ke liye */}
-        <div className="preview-modal-scroll mx-auto w-full max-w-[850px] rounded-[1.4rem] bg-slate-100 p-2 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:p-4">
+        <div className="preview-modal-scroll mx-auto min-h-0 w-full max-w-[850px] flex-1 rounded-[1.4rem] bg-slate-100 p-2 shadow-[0_25px_80px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:p-4">
           <div className="preview-scroll-area">
             <div className="preview-scale-holder">
               <div className="preview-scale-inner">
@@ -975,25 +1095,34 @@ function PreviewModal({
       <style jsx>{`
         .preview-modal-scroll {
           -webkit-overflow-scrolling: touch;
+          overflow: hidden;
         }
 
-        /* ✅ FIX: overflow-x: hidden hata diya — yahi left/right cut kar raha tha */
         .preview-scroll-area {
-          width: 100%;
-          overflow-y: auto;
-          overflow-x: auto; /* ✅ auto — clip nahi hoga */
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-          padding: 8px 4px; /* ✅ symmetrical padding */
-          max-height: 75vh;
-          min-height: 480px;
-        }
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 8px 4px;
+
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* IE / old Edge */
+  -ms-overflow-style: none;
+}
+
+/* Chrome, Safari, Edge */
+.preview-scroll-area::-webkit-scrollbar {
+  display: none;
+}
 
         .preview-scale-holder {
           --preview-scale: 0.40;
 
-          /* ✅ FIX: min-width zero — warna flex overflow ho jaata hai */
           width: calc(794px * var(--preview-scale));
           min-width: calc(794px * var(--preview-scale));
           height: calc(1123px * var(--preview-scale));
@@ -1002,7 +1131,6 @@ function PreviewModal({
           justify-content: center;
           align-items: flex-start;
           overflow: visible;
-          /* ✅ FIX: margin auto + flex-shrink: 0 */
           margin: 0 auto 16px auto;
           flex-shrink: 0;
         }
@@ -1041,40 +1169,52 @@ function PreviewModal({
           align-self: stretch !important;
         }
 
-        /* ✅ Mobile scales — thoda badhaye for better visibility */
         @media (max-width: 360px) {
-          .preview-scale-holder { --preview-scale: 0.36; }
-          .preview-scroll-area { min-height: 420px; }
+          .preview-scale-holder {
+            --preview-scale: 0.36;
+          }
         }
 
         @media (min-width: 361px) and (max-width: 389px) {
-          .preview-scale-holder { --preview-scale: 0.38; }
+          .preview-scale-holder {
+            --preview-scale: 0.38;
+          }
         }
 
         @media (min-width: 390px) {
-          .preview-scale-holder { --preview-scale: 0.42; }
+          .preview-scale-holder {
+            --preview-scale: 0.42;
+          }
         }
 
         @media (min-width: 430px) {
-          .preview-scale-holder { --preview-scale: 0.46; }
+          .preview-scale-holder {
+            --preview-scale: 0.46;
+          }
         }
 
         @media (min-width: 480px) {
-          .preview-scale-holder { --preview-scale: 0.52; }
+          .preview-scale-holder {
+            --preview-scale: 0.52;
+          }
         }
 
         @media (min-width: 640px) {
-          .preview-scale-holder { --preview-scale: 0.72; }
-          .preview-scroll-area { min-height: 600px; }
+          .preview-scale-holder {
+            --preview-scale: 0.72;
+          }
         }
 
         @media (min-width: 768px) {
-          .preview-scale-holder { --preview-scale: 0.86; }
+          .preview-scale-holder {
+            --preview-scale: 0.86;
+          }
         }
 
         @media (min-width: 1024px) {
-          .preview-scale-holder { --preview-scale: 1; }
-          .preview-scroll-area { max-height: 80vh; min-height: 720px; }
+          .preview-scale-holder {
+            --preview-scale: 1;
+          }
         }
       `}</style>
     </div>

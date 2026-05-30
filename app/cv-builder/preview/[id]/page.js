@@ -424,12 +424,7 @@ function EUPhotoDocumentCV({ cv, config }) {
         <div className="grid grid-cols-[30%_70%] items-start gap-8">
           <aside className="space-y-6">
             <div>
-              <p
-                className="mb-2 text-xs font-black uppercase tracking-wider"
-                style={{ color: accent }}
-              >
-                Contact
-              </p>
+           <SmallHeadingLine title="Contact" accent={accent} />
 
               <div className="text-[12px] leading-relaxed text-slate-600">
                 <ContactLine cv={cv} />
@@ -444,12 +439,7 @@ function EUPhotoDocumentCV({ cv, config }) {
           <main className="space-y-6">
             {hasText(cv.summary) && (
               <div>
-                <p
-                  className="mb-2 text-xs font-black uppercase tracking-wider"
-                  style={{ color: accent }}
-                >
-                  Profile
-                </p>
+           <SmallHeadingLine title="Profile" accent={accent} />
 
                 <p className="whitespace-pre-line text-[12px] leading-relaxed text-slate-700">
                   {cv.summary}
@@ -783,18 +773,14 @@ function GraduateFreshCV({ cv, config }) {
 
             {hasList(cv.skills) && (
               <div className="mt-5">
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-black/70">
-                  Skills
-                </p>
+               <SmallHeadingLine title="Skills" accent={accent} />
                 <SkillPills items={cv.skills} levels={cv.skillLevels} />
               </div>
             )}
 
             {hasList(cv.languages) && (
               <div className="mt-5">
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-black/70">
-                  Languages
-                </p>
+             <SmallHeadingLine title="Languages" accent={accent} />
                 <LanguageList
                   items={cv.languages}
                   levels={cv.languageLevels}
@@ -873,9 +859,7 @@ function GraduateFreshCV({ cv, config }) {
                 {(hasList(certificates) || hasText(certificates)) && (
                   <div>
                     {/* Dynamic Selected Accent Color Applied */}
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.15em]" style={{ color: accent }}>
-                      Certifications
-                    </p>
+                 <SmallHeadingLine title="Certifications" accent={accent} />
                     {hasList(certificates) ? (
                       <BulletList items={certificates} />
                     ) : (
@@ -888,9 +872,7 @@ function GraduateFreshCV({ cv, config }) {
                 {(hasList(achievements) || hasText(achievements)) && (
                   <div>
                     {/* Dynamic Selected Accent Color Applied */}
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.15em]" style={{ color: accent }}>
-                      Achievements
-                    </p>
+                <SmallHeadingLine title="Achievements" accent={accent} />
                     {hasList(achievements) ? (
                       <BulletList items={achievements} />
                     ) : (
@@ -979,18 +961,14 @@ function GraduateFreshCV({ cv, config }) {
                 {hasList(cv.strengths) && (
                   <div className="mb-5">
                     {/* Dynamic Selected Accent Color */}
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.15em]" style={{ color: accent }}>
-                      Strengths
-                    </p>
+                   <SmallHeadingLine title="Strengths" accent={accent} />
                     <BulletList items={cv.strengths} />
                   </div>
                 )}
                 {hasList(cv.hobbies) && (
                   <div>
                     {/* Dynamic Selected Accent Color */}
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.15em]" style={{ color: accent }}>
-                      Hobbies & Interests
-                    </p>
+                 <SmallHeadingLine title="Hobbies & Interests" accent={accent} />
                     <BulletList items={cv.hobbies} />
                   </div>
                 )}
@@ -1003,18 +981,14 @@ function GraduateFreshCV({ cv, config }) {
                 {hasText(cv.references) && (
                   <div className="mb-5">
                     {/* Dynamic Selected Accent Color */}
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.15em]" style={{ color: accent }}>
-                      References
-                    </p>
+               <SmallHeadingLine title="References" accent={accent} />
                     <Paragraph text={cv.references} />
                   </div>
                 )}
                 {typeof additionalSections === "string" && additionalSections.trim().length > 0 && (
                   <div>
                     {/* Dynamic Selected Accent Color */}
-                    <p className="mb-2 text-xs font-black uppercase tracking-[0.15em]" style={{ color: accent }}>
-                      Additional Information
-                    </p>
+                 <SmallHeadingLine title="Additional Information" accent={accent} />
                     <Paragraph text={additionalSections} />
                   </div>
                 )}
@@ -1617,52 +1591,46 @@ function SideCVSections({ cv, accent = "#111827", dark = false }) {
   return (
     <>
       {hasList(cv.skills) ? (
-        <div className="mt-8 first:mt-0">
-          <SmallTitle title="Skills" dark={dark} accent={accent} />
+        <SideSection title="Skills" accent={accent} dark={dark}>
           <SkillPills
             items={cv.skills}
             levels={cv.skillLevels}
             dark={dark}
             accent={accent}
           />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasList(cv.languages) ? (
-        <div className="mt-8">
-          <SmallTitle title="Languages" dark={dark} accent={accent} />
+        <SideSection title="Languages" accent={accent} dark={dark}>
           <LanguageList
             items={cv.languages}
             levels={cv.languageLevels}
             dark={dark}
           />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasList(cv.strengths) ? (
-        <div className="mt-8">
-          <SmallTitle title="Strengths" dark={dark} accent={accent} />
+        <SideSection title="Strengths" accent={accent} dark={dark}>
           <BulletList items={cv.strengths} dark={dark} />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasList(cv.hobbies) ? (
-        <div className="mt-8">
-          <SmallTitle title="Interests" dark={dark} accent={accent} />
+        <SideSection title="Interests" accent={accent} dark={dark}>
           <BulletList items={cv.hobbies} dark={dark} />
-        </div>
+        </SideSection>
       ) : null}
 
       {hasText(cv.references) ? (
-        <div className="mt-8">
-          <SmallTitle title="References" dark={dark} accent={accent} />
+        <SideSection title="References" accent={accent} dark={dark}>
           <Paragraph text={cv.references} dark={dark} />
-        </div>
+        </SideSection>
       ) : null}
     </>
   );
 }
-
 function CVSection({ title, children, accent }) {
   return (
     <section>
@@ -1683,6 +1651,39 @@ function SmallTitle({ title, dark = false, accent = "#111827" }) {
     >
       {title}
     </p>
+  );
+}
+function SmallHeadingLine({ title, accent = "#111827" }) {
+  return (
+    <div className="mb-3">
+      <p
+        className="text-xs font-black uppercase tracking-[0.15em]"
+        style={{ color: accent }}
+      >
+        {title}
+      </p>
+
+      <div
+        className="mt-2 h-px w-full"
+        style={{ backgroundColor: `${accent}35` }}
+      />
+    </div>
+  );
+}
+function SideSection({ title, children, accent = "#111827", dark = false }) {
+  return (
+    <section className="mt-8 first:mt-0">
+      <SmallTitle title={title} dark={dark} accent={accent} />
+
+      <div
+        className="mb-3 mt-2 h-px w-full"
+        style={{
+          backgroundColor: dark ? "rgba(255,255,255,0.25)" : `${accent}35`,
+        }}
+      />
+
+      {children}
+    </section>
   );
 }
 

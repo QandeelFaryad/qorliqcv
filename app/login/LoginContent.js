@@ -3,6 +3,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+function GmailIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <path
+        fill="#EA4335"
+        d="M24 27.5 6 14.2V38c0 2.2 1.8 4 4 4h4V22.8l10 7.4 10-7.4V42h4c2.2 0 4-1.8 4-4V14.2L24 27.5z"
+      />
+      <path
+        fill="#FBBC04"
+        d="M6 14.2 24 27.5 42 14.2V10c0-2.2-1.8-4-4-4h-1.3L24 15.4 11.3 6H10c-2.2 0-4 1.8-4 4v4.2z"
+      />
+      <path fill="#34A853" d="M34 42h4c2.2 0 4-1.8 4-4V14.2l-8 5.9V42z" />
+      <path fill="#4285F4" d="M6 14.2V38c0 2.2 1.8 4 4 4h4V20.1l-8-5.9z" />
+    </svg>
+  );
+}
 
 export default function LoginContent() {
   const router = useRouter();
@@ -195,6 +218,15 @@ const handleManualLogin = async (e) => {
 
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-12 text-white">
+      <div className="mx-auto mb-8 flex max-w-6xl items-center justify-between">
+  <Link
+    href="/cv-builder"
+    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:border-qorliqGold hover:bg-qorliqGold hover:text-black"
+  >
+    <span className="text-lg leading-none">←</span>
+    Back to CV Builder
+  </Link>
+</div>
       <section className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
@@ -257,13 +289,14 @@ const handleManualLogin = async (e) => {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="mt-6 flex w-full items-center justify-center rounded-full bg-white px-5 py-4 text-sm font-black text-black transition hover:bg-qorliqGold"
-          >
-            Continue with Google / Gmail
-          </button>
+         <button
+  type="button"
+  onClick={handleGoogleLogin}
+  className="mt-6 flex w-full items-center justify-center gap-3 rounded-full bg-white px-5 py-4 text-sm font-black text-black transition hover:bg-qorliqGold"
+>
+  <GmailIcon />
+  Continue with Google / Gmail
+</button>
 
           <div className="my-6 flex items-center gap-4">
             <div className="h-px flex-1 bg-white/10" />

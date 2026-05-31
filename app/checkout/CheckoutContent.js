@@ -25,6 +25,14 @@ export default function CheckoutContent() {
   const [subscriptionId, setSubscriptionId] = useState("");
   const [intentLoading, setIntentLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [customerForm, setCustomerForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    address: "",
+  });
+
   const intentCreatedRef = useRef(false);
 
   const planId = searchParams.get("plan") || "";
@@ -34,6 +42,13 @@ export default function CheckoutContent() {
   const selectedPlan = pricingPlans.find((plan) => plan.id === planId);
   const isSubscription = selectedPlan?.type === "subscription";
 
+  const updateCustomerForm = (field, value) => {
+    setCustomerForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   useEffect(() => {
     if (status === "unauthenticated") {
       const callbackUrl = `/checkout?plan=${planId}&cvId=${cvId}&template=${template}`;
@@ -42,14 +57,23 @@ export default function CheckoutContent() {
   }, [status, router, planId, cvId, template]);
 
   useEffect(() => {
+    if (session?.user?.email) {
+      setCustomerForm((prev) => ({
+        ...prev,
+        email: prev.email || session.user.email,
+      }));
+    }
+  }, [session?.user?.email]);
+
+  useEffect(() => {
     const createIntent = async () => {
       try {
-      if (status !== "authenticated") return;
-if (!selectedPlan) return;
-if (clientSecret) return;
-if (intentCreatedRef.current) return;
+        if (status !== "authenticated") return;
+        if (!selectedPlan) return;
+        if (clientSecret) return;
+        if (intentCreatedRef.current) return;
 
-intentCreatedRef.current = true;
+        intentCreatedRef.current = true;
 
         setIntentLoading(true);
         setError("");
@@ -63,26 +87,28 @@ intentCreatedRef.current = true;
             planId,
             cvId,
             template,
+            customerForm
           }),
         });
 
         const data = await res.json();
 
         if (!res.ok || !data.success) {
+          intentCreatedRef.current = false;
           setError(data.error || "Unable to load payment form.");
           return;
         }
 
-     setClientSecret(data.clientSecret);
+        setClientSecret(data.clientSecret);
 
-if (data.subscriptionId) {
-  setSubscriptionId(data.subscriptionId);
-}
-     } catch (error) {
-  intentCreatedRef.current = false;
-  console.error("Create intent error:", error);
-  setError("Unable to load payment form.");
-}finally {
+        if (data.subscriptionId) {
+          setSubscriptionId(data.subscriptionId);
+        }
+      } catch (error) {
+        intentCreatedRef.current = false;
+        console.error("Create intent error:", error);
+        setError("Unable to load payment form.");
+      } finally {
         setIntentLoading(false);
       }
     };
@@ -138,6 +164,7 @@ if (data.subscriptionId) {
           </p>
 
           <button
+            type="button"
             onClick={() =>
               router.push(`/pricing?cvId=${cvId}&template=${template}`)
             }
@@ -163,26 +190,70 @@ if (data.subscriptionId) {
           </h1>
 
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
-            Enter your card details below. Your payment is processed securely by
-            Stripe.
+            Enter your customer details and card details below. Your payment is
+            processed securely by Stripe.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <InfoCard
               title="Customer"
-              value={session?.user?.email || "Logged in"}
+              value={customerForm.email || session?.user?.email || "Logged in"}
             />
+
             <InfoCard
               title="Selected Template"
               value={template || "Selected CV template"}
             />
+
             <InfoCard
               title="Payment Type"
               value={
                 isSubscription ? "Recurring subscription" : "One-time payment"
               }
             />
+
             <InfoCard title="Access" value="PDF and MS Word download included" />
+          </div>
+
+          <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/30 p-5">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
+              Customer Details
+            </p>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <CheckoutInput
+                label="First Name"
+                value={customerForm.firstName}
+                onChange={(value) => updateCustomerForm("firstName", value)}
+                placeholder="Enter first name"
+                required
+              />
+
+              <CheckoutInput
+                label="Last Name"
+                value={customerForm.lastName}
+                onChange={(value) => updateCustomerForm("lastName", value)}
+                placeholder="Enter last name"
+                required
+              />
+
+              <CheckoutInput
+                label="Email Address"
+                type="email"
+                value={customerForm.email}
+                onChange={(value) => updateCustomerForm("email", value)}
+                placeholder="Enter email address"
+                required
+              />
+
+              <CheckoutInput
+                label="Address"
+                value={customerForm.address}
+                onChange={(value) => updateCustomerForm("address", value)}
+                placeholder="Enter billing address"
+                required
+              />
+            </div>
           </div>
 
           <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/30 p-5">
@@ -198,12 +269,13 @@ if (data.subscriptionId) {
               ) : clientSecret && elementsOptions ? (
                 <Elements stripe={stripePromise} options={elementsOptions}>
                   <StripePaymentForm
-  selectedPlan={selectedPlan}
-  cvId={cvId}
-  template={template}
-  planId={planId}
-  subscriptionId={subscriptionId}
-/>
+                    selectedPlan={selectedPlan}
+                    cvId={cvId}
+                    template={template}
+                    planId={planId}
+                    subscriptionId={subscriptionId}
+                    customerForm={customerForm}
+                  />
                 </Elements>
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
@@ -243,6 +315,7 @@ if (data.subscriptionId) {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
               Billing
             </p>
+
             <p className="mt-1 text-sm font-bold text-white/80">
               {isSubscription ? "Recurring subscription" : "One-time payment"}
             </p>
@@ -278,7 +351,8 @@ function StripePaymentForm({
   template,
   planId,
   subscriptionId,
-})  {
+  customerForm,
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -289,110 +363,134 @@ function StripePaymentForm({
 
   const isSubscription = selectedPlan?.type === "subscription";
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!stripe || !elements) {
-    setMessage("Stripe is not ready yet.");
-    return;
-  }
-
-  try {
-    setIsProcessing(true);
-    setMessage("");
-
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-      confirmParams: {
-        return_url: `${window.location.origin}/cv-builder/success?cvId=${
-          cvId || ""
-        }&template=${template || ""}&plan=${planId || ""}`,
-      },
-    });
-
-    if (error) {
-      setMessage(error.message || "Payment failed. Please try again.");
+    if (!stripe || !elements) {
+      setMessage("Stripe is not ready yet.");
       return;
     }
 
-    if (paymentIntent?.status === "succeeded") {
-      if (isSubscription) {
-        const verifyRes = await fetch("/api/stripe/sync-subscription", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+    if (
+      !customerForm?.firstName?.trim() ||
+      !customerForm?.lastName?.trim() ||
+      !customerForm?.email?.trim() ||
+      !customerForm?.address?.trim()
+    ) {
+      setMessage("Please complete customer details first.");
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setMessage("");
+
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          payment_method_data: {
+            billing_details: {
+              name: `${customerForm.firstName.trim()} ${customerForm.lastName.trim()}`,
+              email: customerForm.email.trim(),
+              address: {
+                line1: customerForm.address.trim(),
+              },
+            },
           },
-          body: JSON.stringify({
-            subscriptionId,
-            planId,
-          }),
-        });
+          return_url: `${window.location.origin}/cv-builder/success?cvId=${
+            cvId || ""
+          }&template=${template || ""}&plan=${planId || ""}`,
+        },
+      });
 
-        const verifyData = await verifyRes.json();
-
-        console.log("Subscription verify response:", verifyData);
-
-        if (!verifyRes.ok || !verifyData.success) {
-          setMessage(
-            verifyData.error ||
-              "Payment completed, but subscription verification failed."
-          );
-          return;
-        }
+      if (error) {
+        setMessage(error.message || "Payment failed. Please try again.");
+        return;
       }
 
-      if (!isSubscription) {
-        const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            paymentIntentId: paymentIntent.id,
-            planId,
-            cvId,
-          }),
-        });
+      if (paymentIntent?.status === "succeeded") {
+        if (isSubscription) {
+          const verifyRes = await fetch("/api/stripe/sync-subscription", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              subscriptionId,
+              planId,
+              customerForm,
+            }),
+          });
 
-        const oneTimeData = await oneTimeRes.json();
+          const verifyData = await verifyRes.json();
 
-        console.log("One-time verify response:", oneTimeData);
+          console.log("Subscription verify response:", verifyData);
 
-        if (
-          !oneTimeRes.ok ||
-          !oneTimeData.success ||
-          oneTimeData.hasAccess !== true
-        ) {
-          setMessage(
-            oneTimeData.error ||
-              "Payment completed, but one-time access could not be activated."
-          );
-          return;
+          if (!verifyRes.ok || !verifyData.success) {
+            setMessage(
+              verifyData.error ||
+                "Payment completed, but subscription verification failed."
+            );
+            return;
+          }
         }
+
+        if (!isSubscription) {
+          const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id,
+              planId,
+              cvId,
+              customerForm,
+            }),
+          });
+
+          const oneTimeData = await oneTimeRes.json();
+
+          console.log("One-time verify response:", oneTimeData);
+
+          if (
+            !oneTimeRes.ok ||
+            !oneTimeData.success ||
+            oneTimeData.hasAccess !== true
+          ) {
+            setMessage(
+              oneTimeData.error ||
+                "Payment completed, but one-time access could not be activated."
+            );
+            return;
+          }
+        }
+
+        router.push(
+          `/cv-builder/success?cvId=${cvId || ""}&template=${
+            template || ""
+          }&plan=${planId || ""}&payment_intent=${paymentIntent.id}`
+        );
+        return;
       }
 
-      router.push(
-        `/cv-builder/success?cvId=${cvId || ""}&template=${
-          template || ""
-        }&plan=${planId || ""}&payment_intent=${paymentIntent.id}`
-      );
-      return;
-    }
+      if (paymentIntent?.status === "processing") {
+        setMessage(
+          "Payment is processing. Please wait and refresh after a moment."
+        );
+        return;
+      }
 
-    if (paymentIntent?.status === "processing") {
-      setMessage("Payment is processing. Please wait and refresh after a moment.");
-      return;
+      setMessage("Payment is not completed yet. Please try again.");
+    } catch (error) {
+      console.error("Payment confirm error:", error);
+      setMessage("Payment failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
+  };
 
-    setMessage("Payment is not completed yet. Please try again.");
-  } catch (error) {
-    console.error("Payment confirm error:", error);
-    setMessage("Payment failed. Please try again.");
-  } finally {
-    setIsProcessing(false);
-  }
-};
   return (
     <form onSubmit={handleSubmit}>
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -420,12 +518,39 @@ const handleSubmit = async (e) => {
   );
 }
 
+function CheckoutInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  required = false,
+}) {
+  return (
+    <div>
+      <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">
+        {label} {required ? <span className="text-qorliqGold">*</span> : null}
+      </label>
+
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15"
+      />
+    </div>
+  );
+}
+
 function InfoCard({ title, value }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
         {title}
       </p>
+
       <p className="mt-2 break-words text-sm font-bold text-white/80">
         {value}
       </p>

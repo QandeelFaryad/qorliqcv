@@ -10,6 +10,10 @@ export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function cleanText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export async function POST(req) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -39,7 +43,14 @@ export async function POST(req) {
     await connectDB();
 
     const body = await req.json().catch(() => ({}));
-    const { paymentIntentId, planId } = body;
+    const { paymentIntentId, planId, customerForm } = body;
+
+    const customerDetails = {
+      firstName: cleanText(customerForm?.firstName),
+      lastName: cleanText(customerForm?.lastName),
+      email: cleanText(customerForm?.email).toLowerCase(),
+      address: cleanText(customerForm?.address),
+    };
 
     const user = await User.findOne({
       email: session.user.email.toLowerCase().trim(),
@@ -57,7 +68,9 @@ export async function POST(req) {
     }
 
     if (paymentIntentId) {
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        paymentIntentId
+      );
 
       if (paymentIntent.status !== "succeeded") {
         return NextResponse.json(
@@ -96,6 +109,30 @@ export async function POST(req) {
 
             stripePaymentIntentId: paymentIntent.id,
 
+            billingFirstName:
+              customerDetails.firstName ||
+              paymentIntent.charges?.data?.[0]?.billing_details?.name ||
+              "",
+            billingLastName: customerDetails.lastName || "",
+            billingEmail:
+              customerDetails.email ||
+              paymentIntent.receipt_email ||
+              session.user.email.toLowerCase().trim(),
+            billingAddress:
+              customerDetails.address ||
+              paymentIntent.charges?.data?.[0]?.billing_details?.address
+                ?.line1 ||
+              "",
+
+            billingDetails: {
+              firstName: customerDetails.firstName,
+              lastName: customerDetails.lastName,
+              email:
+                customerDetails.email ||
+                session.user.email.toLowerCase().trim(),
+              address: customerDetails.address,
+            },
+
             downloadLimit: 5,
             downloadCount: 0,
             editLimit: 1,
@@ -118,13 +155,13 @@ export async function POST(req) {
         subscriptionEndDate: updatedUser.subscriptionEndDate,
         accessExpiresAt: updatedUser.accessExpiresAt,
         hasActiveSubscription: updatedUser.hasActiveSubscription,
+        billingDetails: updatedUser.billingDetails || null,
       });
     }
 
     const now = new Date();
 
-    const endDate =
-      user.accessExpiresAt || user.subscriptionEndDate || null;
+    const endDate = user.accessExpiresAt || user.subscriptionEndDate || null;
 
     const hasOneTimePlan =
       user.accessType === "one-time" ||
@@ -150,6 +187,7 @@ export async function POST(req) {
         subscriptionEndDate: user.subscriptionEndDate,
         accessExpiresAt: user.accessExpiresAt,
         hasActiveSubscription: true,
+        billingDetails: user.billingDetails || null,
       });
     }
 

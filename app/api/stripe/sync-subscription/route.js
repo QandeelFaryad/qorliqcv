@@ -10,6 +10,10 @@ export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function cleanText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export async function POST(req) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -37,7 +41,14 @@ export async function POST(req) {
     await connectDB();
 
     const body = await req.json().catch(() => ({}));
-    const { subscriptionId, planId } = body;
+    const { subscriptionId, planId, customerForm } = body;
+
+    const customerDetails = {
+      firstName: cleanText(customerForm?.firstName),
+      lastName: cleanText(customerForm?.lastName),
+      email: cleanText(customerForm?.email).toLowerCase(),
+      address: cleanText(customerForm?.address),
+    };
 
     const user = await User.findOne({
       email: session.user.email.toLowerCase().trim(),
@@ -55,11 +66,6 @@ export async function POST(req) {
 
     const now = new Date();
 
-    /*
-      FIRST: Check one-time access.
-      Agar user ne one-time plan buy kiya hai, uske paas stripeSubscriptionId nahi hota.
-      Isliye subscription error dene se pehle one-time access verify karna zaroori hai.
-    */
     const isOneTimePlan =
       user.plan === "one-time" ||
       user.plan === "one_time" ||
@@ -92,12 +98,10 @@ export async function POST(req) {
         hasOneTimeAccess: true,
         accessType: "one-time",
         paymentStatus: "paid",
+        billingDetails: user.billingDetails || null,
       });
     }
 
-    /*
-      SECOND: Check normal subscription.
-    */
     const finalSubscriptionId = subscriptionId || user.stripeSubscriptionId;
 
     if (!finalSubscriptionId) {
@@ -116,7 +120,7 @@ export async function POST(req) {
     const subscription = await stripe.subscriptions.retrieve(
       finalSubscriptionId,
       {
-        expand: ["items.data.price", "latest_invoice"],
+        expand: ["items.data.price", "latest_invoice", "customer"],
       }
     );
 
@@ -126,7 +130,6 @@ export async function POST(req) {
     let subscriptionStartDate = null;
     let subscriptionEndDate = null;
 
-    // 1. Try subscription direct period fields
     if (subscription.current_period_start) {
       subscriptionStartDate = new Date(
         subscription.current_period_start * 1000
@@ -137,7 +140,6 @@ export async function POST(req) {
       subscriptionEndDate = new Date(subscription.current_period_end * 1000);
     }
 
-    // 2. Try subscription item period fields
     const item = subscription.items?.data?.[0];
 
     if (!subscriptionStartDate && item?.current_period_start) {
@@ -148,7 +150,6 @@ export async function POST(req) {
       subscriptionEndDate = new Date(item.current_period_end * 1000);
     }
 
-    // 3. Try latest invoice line period
     if (
       (!subscriptionStartDate || !subscriptionEndDate) &&
       subscription.latest_invoice
@@ -174,7 +175,6 @@ export async function POST(req) {
 
     const isActive = stripeActive && !isExpired;
 
-    // 4. Final fallback
     if (!subscriptionStartDate && isActive) {
       subscriptionStartDate = new Date();
     }
@@ -190,6 +190,13 @@ export async function POST(req) {
       typeof subscription.customer === "string"
         ? subscription.customer
         : subscription.customer?.id || user.stripeCustomerId;
+
+    const stripeCustomer =
+      typeof subscription.customer === "object" ? subscription.customer : null;
+
+    const stripeName = stripeCustomer?.name || "";
+    const stripeEmail = stripeCustomer?.email || "";
+    const stripeAddress = stripeCustomer?.address?.line1 || "";
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
@@ -210,6 +217,48 @@ export async function POST(req) {
           stripeSubscriptionId: subscription.id,
           subscriptionStartDate,
           subscriptionEndDate,
+
+          billingFirstName:
+            customerDetails.firstName || user.billingFirstName || "",
+          billingLastName:
+            customerDetails.lastName || user.billingLastName || "",
+          billingEmail:
+            customerDetails.email ||
+            user.billingEmail ||
+            stripeEmail ||
+            session.user.email.toLowerCase().trim(),
+          billingAddress:
+            customerDetails.address ||
+            user.billingAddress ||
+            stripeAddress ||
+            "",
+
+          billingDetails: {
+            firstName:
+              customerDetails.firstName ||
+              user.billingDetails?.firstName ||
+              user.billingFirstName ||
+              "",
+            lastName:
+              customerDetails.lastName ||
+              user.billingDetails?.lastName ||
+              user.billingLastName ||
+              "",
+            email:
+              customerDetails.email ||
+              user.billingDetails?.email ||
+              user.billingEmail ||
+              stripeEmail ||
+              session.user.email.toLowerCase().trim(),
+            address:
+              customerDetails.address ||
+              user.billingDetails?.address ||
+              user.billingAddress ||
+              stripeAddress ||
+              "",
+            stripeName,
+          },
+
           updatedAt: new Date(),
         },
       },
@@ -222,10 +271,6 @@ export async function POST(req) {
       plan: updatedUser.plan,
       subscriptionStartDate: updatedUser.subscriptionStartDate,
       subscriptionEndDate: updatedUser.subscriptionEndDate,
-      directStart: subscription.current_period_start,
-      directEnd: subscription.current_period_end,
-      itemStart: item?.current_period_start,
-      itemEnd: item?.current_period_end,
     });
 
     return NextResponse.json({
@@ -239,6 +284,7 @@ export async function POST(req) {
       hasActiveSubscription: updatedUser.hasActiveSubscription,
       hasOneTimeAccess: false,
       accessType: updatedUser.accessType || "subscription",
+      billingDetails: updatedUser.billingDetails || null,
     });
   } catch (error) {
     console.error("Verify subscription error:", error);

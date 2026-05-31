@@ -162,23 +162,50 @@ export default function CheckoutContent() {
   }, [status, selectedPlan, planId, cvId, template, clientSecret]);
 
   const elementsOptions = useMemo(() => {
-    if (!clientSecret) return null;
+  if (!clientSecret) return null;
 
-    return {
-      clientSecret,
-      appearance: {
-        theme: "night",
-        variables: {
-          colorPrimary: "#d6b25e",
-          colorBackground: "#050505",
-          colorText: "#ffffff",
-          colorDanger: "#ff6b6b",
+  return {
+    clientSecret,
+    appearance: {
+      theme: "stripe",
+      variables: {
+        colorPrimary: "#d6b25e",
+        colorBackground: "#ffffff",
+        colorText: "#111827",
+        colorDanger: "#dc2626",
+        borderRadius: "14px",
+        fontFamily: "Inter, system-ui, sans-serif",
+        spacingUnit: "4px",
+      },
+      rules: {
+        ".Input": {
+          border: "1px solid #e5e7eb",
+          boxShadow: "none",
+          fontSize: "15px",
+          padding: "14px",
+        },
+        ".Input:focus": {
+          border: "1px solid #d6b25e",
+          boxShadow: "0 0 0 4px rgba(214,178,94,0.16)",
+        },
+        ".Label": {
+          fontSize: "12px",
+          fontWeight: "700",
+          color: "#4b5563",
+        },
+        ".Tab": {
+          border: "1px solid #e5e7eb",
           borderRadius: "14px",
-          fontFamily: "Inter, system-ui, sans-serif",
+          padding: "12px",
+        },
+        ".Tab--selected": {
+          borderColor: "#d6b25e",
+          boxShadow: "0 0 0 3px rgba(214,178,94,0.16)",
         },
       },
-    };
-  }, [clientSecret]);
+    },
+  };
+}, [clientSecret]);
 
   if (status === "loading") {
     return (
@@ -222,55 +249,130 @@ export default function CheckoutContent() {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-[#050505] px-4 py-10 text-white md:py-12">
-      <section className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_420px]">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 md:p-8">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
-            Secure Checkout
-          </p>
+return (
+  <main className="min-h-screen w-full overflow-x-hidden bg-[#050505] text-white">
+    <section className="w-full px-0 py-0 sm:px-5 sm:py-5 lg:px-8 lg:py-10">
+      <div className="w-full min-w-0 lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8">
+      
+{/* Mobile Order Summary */}
+<div className="w-full border-b border-qorliqGold/25 bg-gradient-to-br from-qorliqGold/20 via-white/[0.06] to-black px-4 py-10 shadow-2xl lg:hidden">
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0 flex-1">
+      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-qorliqGold">
+        Order Summary
+      </p>
 
-          <h1 className="mt-4 text-3xl font-black tracking-[-0.04em] md:text-5xl">
-            Complete your CV order.
-          </h1>
+      <h2 className="mt-1 truncate text-lg font-black leading-tight text-white">
+        {selectedPlan.name}
+      </h2>
 
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
-            Enter your billing details and card details below. Your payment is
-            processed securely by Stripe.
-          </p>
+      <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-white/55">
+        {selectedPlan.smallText ||
+          (isSubscription ? "Recurring subscription" : "One-time payment")}
+      </p>
+    </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+    <div className="shrink-0 text-right">
+      <p className="text-xl font-black leading-none tracking-[-0.04em] text-white">
+        {selectedPlan.price}
+      </p>
+
+      <button
+        type="button"
+        onClick={() =>
+          router.push(`/pricing?cvId=${cvId}&template=${template}`)
+        }
+        className="mt-2 rounded-full border border-white/15 bg-black/30 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.1em] text-white/75"
+      >
+        Change
+      </button>
+    </div>
+  </div>
+
+  <div className="mt-4 grid grid-cols-2 gap-2.5">
+    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5">
+      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
+        Payment
+      </p>
+      <p className="mt-0.5 text-[11px] font-bold text-white/80">
+        {isSubscription ? "Subscription" : "One-time"}
+      </p>
+    </div>
+
+    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5">
+      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
+        Access
+      </p>
+      <p className="mt-0.5 text-[11px] font-bold text-white/80">
+        PDF + Word
+      </p>
+    </div>
+  </div>
+</div>
+
+        {/* Main Checkout Card */}
+       <div className="w-full min-w-0 rounded-none border-0 bg-white/[0.055] p-4 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-[26px] sm:border sm:border-white/10 sm:p-6 lg:p-8">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-qorliqGold sm:text-xs">
+              Secure Checkout
+            </p>
+
+            <h1 className="mt-3 text-[28px] font-black leading-[1.05] tracking-[-0.05em] sm:text-4xl lg:text-5xl">
+              Complete your CV order.
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              Enter your billing details and complete payment securely through Stripe.
+            </p>
+          </div>
+
+          {/* Mobile-friendly info row */}
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <InfoCard
               title="Customer"
               value={customerForm.email || session?.user?.email || "Logged in"}
             />
 
             <InfoCard
-              title="Selected Template"
-              value={template || "Selected CV template"}
+              title="Template"
+              value={template || "Selected"}
             />
 
             <InfoCard
-              title="Payment Type"
-              value={
-                isSubscription ? "Recurring subscription" : "One-time payment"
-              }
+              title="Payment"
+              value={isSubscription ? "Subscription" : "One-time"}
             />
 
-            <InfoCard title="Access" value="PDF and MS Word download included" />
+            <InfoCard
+              title="Access"
+              value="PDF + Word"
+            />
           </div>
 
-          <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/30 p-5">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
-              Billing Details
-            </p>
+          {/* Billing Details */}
+          <div className="mt-5 rounded-[22px] border border-white/10 bg-black/35 p-4 sm:mt-7 sm:p-5 lg:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/55">
+                  Billing Details
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-white/35">
+                  Required for payment confirmation and receipt.
+                </p>
+              </div>
+
+              <span className="shrink-0 rounded-full bg-qorliqGold/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-qorliqGold">
+                Required
+              </span>
+            </div>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <CheckoutInput
-                label="Name"
+                label="First Name"
                 value={customerForm.firstName}
                 onChange={(value) => updateCustomerForm("firstName", value)}
-                placeholder="Enter first name"
+                placeholder="First name"
                 required
               />
 
@@ -278,18 +380,20 @@ export default function CheckoutContent() {
                 label="Last Name"
                 value={customerForm.lastName}
                 onChange={(value) => updateCustomerForm("lastName", value)}
-                placeholder="Enter last name"
+                placeholder="Last name"
                 required
               />
 
-              <CheckoutInput
-                label="Email Address"
-                type="email"
-                value={customerForm.email}
-                onChange={(value) => updateCustomerForm("email", value)}
-                placeholder="Enter email address"
-                required
-              />
+              <div className="sm:col-span-2">
+                <CheckoutInput
+                  label="Email Address"
+                  type="email"
+                  value={customerForm.email}
+                  onChange={(value) => updateCustomerForm("email", value)}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
 
               <PhoneInput
                 label="Mobile Number"
@@ -297,7 +401,7 @@ export default function CheckoutContent() {
                 countryFlag={customerForm.mobileCountryFlag}
                 value={customerForm.mobileNumber}
                 onChange={(value) => updateCustomerForm("mobileNumber", value)}
-                placeholder="Enter mobile number"
+                placeholder="Mobile number"
                 required
               />
 
@@ -312,93 +416,110 @@ export default function CheckoutContent() {
                 label="Postal Code"
                 value={customerForm.postalCode}
                 onChange={(value) => updateCustomerForm("postalCode", value)}
-                placeholder="Enter postal code"
+                placeholder="Postal code"
                 required
-              />
-
-              <CheckoutInput
-                label="Address Line 1"
-                value={customerForm.addressLine1}
-                onChange={(value) => updateCustomerForm("addressLine1", value)}
-                placeholder="House / flat / street"
-                required
-              />
-
-              <CheckoutInput
-                label="Address Line 2"
-                value={customerForm.addressLine2}
-                onChange={(value) => updateCustomerForm("addressLine2", value)}
-                placeholder="Apartment / area / optional"
               />
 
               <CheckoutInput
                 label="City / Town"
                 value={customerForm.city}
                 onChange={(value) => updateCustomerForm("city", value)}
-                placeholder="Enter city or town"
+                placeholder="City or town"
                 required
               />
 
-              
+              <div className="sm:col-span-2">
+                <CheckoutInput
+                  label="Address Line 1"
+                  value={customerForm.addressLine1}
+                  onChange={(value) => updateCustomerForm("addressLine1", value)}
+                  placeholder="House / flat / street"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <CheckoutInput
+                  label="Address Line 2"
+                  value={customerForm.addressLine2}
+                  onChange={(value) => updateCustomerForm("addressLine2", value)}
+                  placeholder="Apartment / area / optional"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/30 p-5">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
-              Card Details
-            </p>
+     {/* Payment Details */}
+{/* Payment Details */}
+<div className="relative z-30 mt-5 rounded-[24px] border border-white/10 bg-[#0b0b0b] p-4 shadow-2xl shadow-black/25 sm:mt-7 sm:p-5 lg:p-6">
+  <div className="relative z-10 border-b border-white/10 pb-4">
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">
+          Payment Details
+        </p>
 
-            <div className="mt-5">
-              {intentLoading ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
-                  Loading secure payment form...
-                </div>
-              ) : clientSecret && elementsOptions ? (
-                <Elements stripe={stripePromise} options={elementsOptions}>
-                  <StripePaymentForm
-                    selectedPlan={selectedPlan}
-                    cvId={cvId}
-                    template={template}
-                    planId={planId}
-                    subscriptionId={subscriptionId}
-                    customerForm={customerForm}
-                  />
-                </Elements>
-              ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
-                  Payment form not loaded.
-                </div>
-              )}
-            </div>
+        <p className="mt-1 text-xs leading-5 text-white/40">
+          Secure encrypted payment powered by Stripe.
+        </p>
+      </div>
 
-            <p className="mt-4 text-xs leading-6 text-white/40">
-              Your card details are handled securely by Stripe.
-            </p>
-          </div>
+      <span className="shrink-0 rounded-full border border-green-400/20 bg-green-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-green-300">
+        Secure
+      </span>
+    </div>
+  </div>
+
+  <div className="relative z-40 mt-5 w-full min-w-0">
+    {intentLoading ? (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
+        Loading secure payment form...
+      </div>
+    ) : clientSecret && elementsOptions ? (
+      <Elements stripe={stripePromise} options={elementsOptions}>
+        <StripePaymentForm
+          selectedPlan={selectedPlan}
+          cvId={cvId}
+          template={template}
+          planId={planId}
+          subscriptionId={subscriptionId}
+          customerForm={customerForm}
+        />
+      </Elements>
+    ) : (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
+        Payment form not loaded.
+      </div>
+    )}
+  </div>
+</div>
 
           {error ? (
-            <p className="mt-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <p className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
               {error}
             </p>
           ) : null}
         </div>
 
-        <aside className="h-fit rounded-[2rem] border border-qorliqGold/30 bg-qorliqGold/10 p-6">
+        {/* Desktop Order Summary */}
+        <aside className="hidden h-fit rounded-[28px] border border-qorliqGold/30 bg-qorliqGold/10 p-6 shadow-2xl lg:block">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
             Order Summary
           </p>
 
-          <h2 className="mt-4 text-3xl font-black">{selectedPlan.name}</h2>
+          <h2 className="mt-4 text-3xl font-black leading-tight">
+            {selectedPlan.name}
+          </h2>
 
-          <p className="mt-2 text-5xl font-black tracking-[-0.05em]">
+          <p className="mt-3 text-5xl font-black tracking-[-0.05em]">
             {selectedPlan.price}
           </p>
 
-          <p className="mt-2 text-sm text-white/50">
+          <p className="mt-2 text-sm leading-6 text-white/50">
             {selectedPlan.smallText}
           </p>
 
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+          <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
               Billing
             </p>
@@ -410,8 +531,8 @@ export default function CheckoutContent() {
 
           <div className="mt-6 space-y-3">
             {selectedPlan.features?.map((feature) => (
-              <div key={feature} className="flex gap-3 text-sm text-white/70">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-qorliqGold" />
+              <div key={feature} className="flex gap-3 text-sm leading-6 text-white/70">
+                <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-qorliqGold" />
                 <span>{feature}</span>
               </div>
             ))}
@@ -422,14 +543,15 @@ export default function CheckoutContent() {
             onClick={() =>
               router.push(`/pricing?cvId=${cvId}&template=${template}`)
             }
-            className="mt-7 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:bg-white/10"
+            className="mt-7 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10"
           >
             Change Plan
           </button>
         </aside>
-      </section>
-    </main>
-  );
+      </div>
+    </section>
+  </main>
+);
 }
 
 function StripePaymentForm({
@@ -589,31 +711,50 @@ function StripePaymentForm({
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <PaymentElement onReady={() => setIsReady(true)} />
-      </div>
+return (
+  <form
+    onSubmit={handleSubmit}
+    className="relative z-50 w-full min-w-0"
+    style={{
+      touchAction: "manipulation",
+      WebkitTapHighlightColor: "transparent",
+    }}
+  >
+    <div className="relative z-50 w-full min-w-0 rounded-[22px] border border-slate-200 bg-white p-3 shadow-xl sm:p-4">
+      <PaymentElement
+        onReady={() => setIsReady(true)}
+        options={{
+          layout: {
+            type: "tabs",
+            defaultCollapsed: false,
+          },
+        }}
+      />
+    </div>
 
-      {message ? (
-        <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {message}
-        </p>
-      ) : null}
+    {message ? (
+      <p className="relative z-50 mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
+        {message}
+      </p>
+    ) : null}
 
-      <button
-        type="submit"
-        disabled={!stripe || !elements || !isReady || isProcessing}
-        className="mt-6 w-full rounded-full bg-qorliqGold px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isProcessing
-          ? "Processing Payment..."
-          : isSubscription
-          ? "Pay & Start Subscription"
-          : "Pay Now"}
-      </button>
-    </form>
-  );
+    <button
+      type="submit"
+      disabled={!stripe || !elements || !isReady || isProcessing}
+      className="relative z-50 mt-5 flex min-h-[58px] w-full items-center justify-center rounded-2xl bg-qorliqGold px-5 py-4 text-center text-[12px] font-black uppercase tracking-[0.12em] text-black shadow-xl shadow-qorliqGold/20 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-full"
+    >
+      {isProcessing
+        ? "Processing Securely..."
+        : isSubscription
+        ? "Confirm & Start Subscription"
+        : "Confirm Payment"}
+    </button>
+
+    <p className="relative z-50 mt-4 text-center text-[11px] leading-5 text-white/40 sm:text-xs">
+      Your payment details are encrypted and processed securely.
+    </p>
+  </form>
+);
 }
 
 function CheckoutInput({
@@ -625,8 +766,8 @@ function CheckoutInput({
   required = false,
 }) {
   return (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">
+    <div className="w-full min-w-0">
+      <label className="text-[11px] font-black uppercase tracking-[0.13em] text-white/50">
         {label} {required ? <span className="text-qorliqGold">*</span> : null}
       </label>
 
@@ -636,39 +777,43 @@ function CheckoutInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15"
+        className="mt-2 h-[54px] w-full min-w-0 rounded-2xl border border-white/10 bg-[#101010] px-4 text-base font-semibold text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15 sm:text-sm"
       />
     </div>
   );
 }
-
 function CountrySelect({ label, value, onChange, required = false }) {
   return (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">
+    <div className="w-full min-w-0">
+      <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.13em] text-white/50">
         {label} {required ? <span className="text-qorliqGold">*</span> : null}
       </label>
 
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm font-semibold text-white outline-none transition focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15"
-      >
-        {COUNTRIES.map((country) => (
-          <option
-            key={country.code}
-            value={country.code}
-            className="bg-black text-white"
-          >
-            {country.flag} {country.name}
-          </option>
-        ))}
-      </select>
+      <div className="relative w-full">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          className="h-[56px] w-full appearance-none rounded-2xl border border-white/10 bg-[#101010] px-4 pr-11 text-[15px] font-semibold text-white outline-none transition focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15"
+        >
+          {COUNTRIES.map((country) => (
+            <option
+              key={country.code}
+              value={country.code}
+              className="bg-black text-white"
+            >
+              {country.flag} {country.name}
+            </option>
+          ))}
+        </select>
+
+        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-white/45">
+          ▼
+        </span>
+      </div>
     </div>
   );
 }
-
 function PhoneInput({
   label,
   countryCode,
@@ -679,13 +824,13 @@ function PhoneInput({
   required = false,
 }) {
   return (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">
+    <div className="w-full min-w-0">
+      <label className="text-[11px] font-black uppercase tracking-[0.13em] text-white/50">
         {label} {required ? <span className="text-qorliqGold">*</span> : null}
       </label>
 
-      <div className="mt-2 flex overflow-hidden rounded-2xl border border-white/10 bg-black/40 transition focus-within:border-qorliqGold focus-within:ring-4 focus-within:ring-qorliqGold/15">
-        <div className="flex items-center gap-2 border-r border-white/10 px-4 text-sm font-black text-white">
+      <div className="mt-2 flex h-[54px] w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#101010] transition focus-within:border-qorliqGold focus-within:ring-4 focus-within:ring-qorliqGold/15">
+        <div className="flex shrink-0 items-center gap-1.5 border-r border-white/10 px-3 text-sm font-black text-white">
           <span>{countryFlag}</span>
           <span>{countryCode}</span>
         </div>
@@ -696,21 +841,20 @@ function PhoneInput({
           onChange={(e) => onChange(e.target.value.replace(/[^\d\s-]/g, ""))}
           placeholder={placeholder}
           required={required}
-          className="w-full bg-transparent px-4 py-4 text-sm font-semibold text-white outline-none placeholder:text-white/25"
+          className="min-w-0 flex-1 bg-transparent px-3 text-base font-semibold text-white outline-none placeholder:text-white/25 sm:text-sm"
         />
       </div>
     </div>
   );
 }
-
 function InfoCard({ title, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
+    <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.075] to-black/30 p-4 shadow-lg shadow-black/10 sm:block">
+      <p className="shrink-0 text-[10px] font-black uppercase tracking-[0.13em] text-qorliqGold/80 sm:text-[10px]">
         {title}
       </p>
 
-      <p className="mt-2 break-words text-sm font-bold text-white/80">
+      <p className="min-w-0 break-words text-right text-sm font-bold leading-5 text-white/85 sm:mt-1 sm:text-left">
         {value}
       </p>
     </div>

@@ -237,97 +237,92 @@ export async function POST(req) {
       });
     }
 
-    if (selectedPlan.type === "subscription") {
-      const subscription = await stripe.subscriptions.create({
-        customer: customerId,
-        items: [
-          {
-            price: stripePriceId,
-            quantity: 1,
-          },
-        ],
-        automatic_tax: {
-          enabled: true,
+ if (selectedPlan.type === "subscription") {
+const subscription = await stripe.subscriptions.create({
+  customer: customerId,
+  items: [
+    {
+      price: stripePriceId,
+      quantity: 1,
+    },
+  ],
+  automatic_tax: {
+    enabled: true,
+  },
+  payment_behavior: "default_incomplete",
+  payment_settings: {
+    save_default_payment_method: "on_subscription",
+  payment_method_types: [
+    "card",
+    "paypal",
+    "amazon_pay",
+    "revolut_pay",
+  ],
+  },
+  expand: ["latest_invoice.confirmation_secret"],
+  metadata,
+});
+
+  const invoice = subscription.latest_invoice;
+
+  const clientSecret =
+    invoice?.confirmation_secret?.client_secret || null;
+
+  if (!clientSecret) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Unable to create subscription payment.",
+        debug: {
+          planId,
+          selectedPlanType: selectedPlan.type,
+          stripePriceEnv: selectedPlan.stripePriceEnv,
+          stripePriceId,
+          subscriptionId: subscription.id,
+          subscriptionStatus: subscription.status,
+          latestInvoiceId:
+            typeof invoice === "object" ? invoice.id : invoice,
+          invoiceStatus:
+            typeof invoice === "object" ? invoice.status : null,
+          hasConfirmationSecret: Boolean(invoice?.confirmation_secret),
         },
-        payment_behavior: "default_incomplete",
-        payment_settings: {
-          save_default_payment_method: "on_subscription",
-        },
-        expand: [
-          "latest_invoice.confirmation_secret",
-          "latest_invoice.payment_intent",
-        ],
-        metadata,
-      });
+      },
+      { status: 500 }
+    );
+  }
 
-      const invoice = subscription.latest_invoice;
+  const updatedUser = await User.findByIdAndUpdate(
+    user._id,
+    {
+      $set: {
+        plan: planId,
+        planType: "subscription",
+        accessType: "subscription",
 
-      const confirmationSecret =
-        invoice?.confirmation_secret?.client_secret || null;
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscription.id,
 
-      const paymentIntentSecret =
-        invoice?.payment_intent?.client_secret || null;
+        subscriptionStatus: subscription.status || "incomplete",
+        hasActiveSubscription: false,
+        subscriptionStartDate: new Date(),
+        subscriptionEndDate: null,
 
-      const clientSecret = confirmationSecret || paymentIntentSecret;
+        billingDetails,
 
-      if (!clientSecret) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Unable to create subscription payment.",
-            debug: {
-              planId,
-              selectedPlanType: selectedPlan.type,
-              stripePriceEnv: selectedPlan.stripePriceEnv,
-              stripePriceId,
-              subscriptionId: subscription.id,
-              subscriptionStatus: subscription.status,
-              latestInvoiceId:
-                typeof invoice === "object" ? invoice.id : invoice,
-              invoiceStatus:
-                typeof invoice === "object" ? invoice.status : null,
-              hasConfirmationSecret: Boolean(invoice?.confirmation_secret),
-              hasPaymentIntent: Boolean(invoice?.payment_intent),
-            },
-          },
-          { status: 500 }
-        );
-      }
+        updatedAt: new Date(),
+      },
+    },
+    { new: true }
+  );
 
-      const updatedUser = await User.findByIdAndUpdate(
-        user._id,
-        {
-          $set: {
-            plan: planId,
-            planType: "subscription",
-            accessType: "subscription",
-
-            stripeCustomerId: customerId,
-            stripeSubscriptionId: subscription.id,
-
-            subscriptionStatus: subscription.status || "incomplete",
-            hasActiveSubscription: false,
-            subscriptionStartDate: new Date(),
-            subscriptionEndDate: null,
-
-            billingDetails,
-
-            updatedAt: new Date(),
-          },
-
-       
-        },
-        { new: true }
-      );
-
-      return NextResponse.json({
-        success: true,
-        type: "subscription",
-        clientSecret,
-        subscriptionId: subscription.id,
-        dbUpdated: Boolean(updatedUser),
-      });
-    }
+  return NextResponse.json({
+    success: true,
+    type: "subscription",
+    clientSecret,
+    subscriptionId: subscription.id,
+    dbUpdated: Boolean(updatedUser),
+  });
+}
 
     const price = await stripe.prices.retrieve(stripePriceId);
 

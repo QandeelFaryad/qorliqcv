@@ -2774,127 +2774,128 @@ function CleanATSExactCV({ cv, config }) {
 }
 
 function EUPhotoDocumentCV({ cv, config }) {
-  const accent = config.accent || "#2563EB";
+  const accent = config?.accent || "#2563EB";
 
   return (
     <div
-      id="cv-download"
-      className="p-8 bg-white text-black shadow-2xl font-sans"
-      style={{ width: "794px", minHeight: "1123px" }}
+      className="cv-a4-template bg-white text-black shadow-2xl font-sans"
+      style={{
+        width: "794px",
+        minHeight: "1123px",
+        padding: "32px",
+      }}
     >
       <header
-        className="flex gap-4 border-b pb-4 mb-5"
+        className="mb-5 flex gap-4 border-b pb-4"
         style={{ borderColor: `${accent}55` }}
       >
         <div className="shrink-0">
           <ExactPhoto cv={cv} config={config} large />
         </div>
 
-        <div>
+        <div className="min-w-0 flex-1">
           <p
-            className="text-[10px] font-black tracking-widest uppercase mb-1"
+            className="mb-1 text-[10px] font-black uppercase tracking-widest"
             style={{ color: accent }}
           >
             European CV
           </p>
 
-          <h1 className="text-3xl font-black text-slate-900 leading-tight">
-            {cv.fullName || "Your Name"}
+          <h1 className="break-words text-3xl font-black leading-tight text-slate-900">
+            {cv?.fullName || "Your Name"}
           </h1>
 
-          <p className="text-sm font-bold mt-1" style={{ color: accent }}>
-            {cv.jobTitle || "Professional Title"}
+          <p className="mt-1 text-sm font-bold" style={{ color: accent }}>
+            {cv?.jobTitle || "Professional Title"}
           </p>
+
+          <ContactLine cv={cv} />
         </div>
       </header>
 
-      <main className="grid grid-cols-[30%_70%] gap-8 items-start">
-  <aside
-  className={`h-full min-h-0 overflow-hidden bg-[#17181D] p-3 sm:p-5 lg:block ${
-    mobileMode === "preview" ? "block" : "hidden"
-  }`}
->
-  <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#101116] shadow-inner">
-    <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-qorliqGold">
-          Preview
-        </p>
-        <p className="text-[11px] font-semibold text-white/40">
-          {config.name}
-        </p>
-      </div>
+      <main className="grid grid-cols-[30%_70%] items-start gap-8">
+      <aside className="space-y-5">
+  {hasList(cv.skills) ? (
+    <CVSection title="Skills" accent={accent}>
+      <SkillPills items={cv.skills} levels={cv.skillLevels} />
+    </CVSection>
+  ) : null}
 
-      <span className="rounded-full bg-[#17181D] px-3 py-1.5 text-xs font-black text-white/70 shadow-sm">
-        {livePreviewCV.atsScore}%
-      </span>
-    </div>
+  {hasList(cv.languages) ? (
+    <CVSection title="Languages" accent={accent}>
+      <LanguageList items={cv.languages} levels={cv.languageLevels} />
+    </CVSection>
+  ) : null}
 
-    <div className="preview-viewport">
-      <div className="preview-fit-box">
-        <TemplateRenderer cv={livePreviewCV} config={config} />
-      </div>
-    </div>
-  </div>
+  {hasList(cv.certifications) ? (
+    <CVSection title="Certifications" accent={accent}>
+      <BulletList items={cv.certifications} />
+    </CVSection>
+  ) : null}
 
-  <style jsx>{`
-    .preview-viewport {
-      flex: 1;
-      min-height: 0;
-      width: 100%;
-      overflow: auto;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 12px;
-    }
-
-    .preview-fit-box {
-      width: 794px;
-      min-width: 794px;
-      min-height: 1123px;
-      transform-origin: top center;
-      transform: scale(
-        min(
-          calc((100vw - 48px) / 794),
-          calc((100dvh - 72px - 70px - 90px) / 1123)
-        )
-      );
-    }
-
-    @media (min-width: 1024px) {
-      .preview-viewport {
-        align-items: center;
-        overflow: hidden;
-        padding: 18px;
-      }
-
-      .preview-fit-box {
-        transform: scale(
-          min(
-            calc((54vw - 72px) / 794),
-            calc((100dvh - 72px - 110px) / 1123)
-          )
-        );
-      }
-    }
-  `}</style>
+  {hasList(cv.hobbies) ? (
+    <CVSection title="Hobbies" accent={accent}>
+      <BulletList items={cv.hobbies} />
+    </CVSection>
+  ) : null}
 </aside>
 
         <section className="space-y-6">
-          {hasText(cv.summary) && (
-            <div>
-              <ExactTitle title="Profile" accent={accent} />
+          {hasText(cv.summary) ? (
+            <CVSection title="Professional Summary" accent={accent}>
+              <HtmlText html={cv.summary} />
+            </CVSection>
+          ) : null}
 
-              <div className="mt-2 text-[11px] leading-relaxed text-slate-700">
-                <Paragraph text={cv.summary} />
-              </div>
-            </div>
-          )}
+          {hasValidExperience(cv) ? (
+            <CVSection title="Work Experience" accent={accent}>
+              <ExperienceContent cv={cv} />
+            </CVSection>
+          ) : null}
 
-          <div className="text-[11px] leading-relaxed text-slate-700">
-            <MainCVSections cv={cv} accent={accent} skipSummary />
-          </div>
+          {hasValidEducation(cv) ? (
+            <CVSection title="Education" accent={accent}>
+              <EducationContent cv={cv} />
+            </CVSection>
+          ) : null}
+
+          {hasValidProjects(cv) ? (
+            <CVSection title="Projects" accent={accent}>
+              <ProjectsContent cv={cv} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.achievements) ? (
+            <CVSection title="Achievements" accent={accent}>
+              <BulletList items={cv.achievements} />
+            </CVSection>
+          ) : null}
+
+          {hasList(cv.strengths) ? (
+            <CVSection title="Strengths" accent={accent}>
+              <BulletList items={cv.strengths} />
+            </CVSection>
+          ) : null}
+
+          {hasText(cv.references) ? (
+            <CVSection title="References" accent={accent}>
+              <Paragraph text={cv.references} />
+            </CVSection>
+          ) : null}
+
+          {Array.isArray(cv.additionalSections)
+            ? cv.additionalSections.map((section, index) =>
+                section?.title || section?.description ? (
+                  <CVSection
+                    key={index}
+                    title={section.title || "Additional Information"}
+                    accent={accent}
+                  >
+                    <HtmlText html={section.description || ""} />
+                  </CVSection>
+                ) : null
+              )
+            : null}
         </section>
       </main>
     </div>
@@ -4464,7 +4465,7 @@ function BulletList({ items, dark = false }) {
     </ul>
   );
 }
-function SkillPills({ items, levels = [], dark = false, accent = "#111827" }) {
+function SkillPills({ items, levels = [], dark = false, accent = "#2563EB" }) {
   const list = normalizeList(items);
   if (!list.length) return null;
 

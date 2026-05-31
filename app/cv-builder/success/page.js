@@ -602,7 +602,7 @@ const downloadPDF = async () => {
     await waitForImages(exportElement);
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await new Promise((resolve) => setTimeout(resolve, 700));
 
     const exportWidth = 794;
     const a4HeightPx = 1123;
@@ -634,10 +634,6 @@ const downloadPDF = async () => {
     exportElement.style.opacity = "1";
     exportElement.style.visibility = "visible";
 
-    /*
-      Only real full-height sidebars should be stretched.
-      Corporate Circle / small rounded aside will stay normal.
-    */
     const hasFullHeightSidebar =
       exportElement.querySelector('[data-full-height-sidebar="true"]') !== null;
 
@@ -668,7 +664,51 @@ const downloadPDF = async () => {
       grid.style.overflow = "visible";
     });
 
-    const pixelRatio = 1.5;
+    /*
+      Profile photo frame fix
+      Add data-profile-photo-frame="true" on your photo wrapper.
+    */
+    const profileFrames = exportElement.querySelectorAll(
+      ".profile-photo-frame, .cv-photo-frame, [data-profile-photo-frame='true']"
+    );
+
+    profileFrames.forEach((frame) => {
+      frame.style.overflow = "hidden";
+      frame.style.display = "flex";
+      frame.style.alignItems = "center";
+      frame.style.justifyContent = "center";
+
+      const img = frame.querySelector("img");
+
+      if (img) {
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.maxWidth = "100%";
+        img.style.maxHeight = "100%";
+        img.style.objectFit = "cover";
+        img.style.objectPosition = "center";
+        img.style.display = "block";
+      }
+    });
+
+    const exportImages = exportElement.querySelectorAll("img");
+
+    exportImages.forEach((img) => {
+      img.style.maxWidth = "100%";
+      img.style.objectPosition = "center";
+      img.style.display = "block";
+
+      if (!img.closest("[data-profile-photo-frame='true']")) {
+        img.style.objectFit = img.style.objectFit || "contain";
+      }
+    });
+
+    /*
+      Quality settings:
+      2.4 gives clear PDF.
+      JPEG 0.94 keeps size close to 1MB depending on CV/photo.
+    */
+    const pixelRatio = 2.4;
 
     const fullCanvas = await toCanvas(exportElement, {
       cacheBust: true,
@@ -726,10 +766,10 @@ const downloadPDF = async () => {
         return canvas.height;
       }
 
-      const scanStartX = Math.floor(canvas.width * 0.42);
-      const scanWidth = Math.floor(canvas.width * 0.52);
+      const scanStartX = Math.floor(canvas.width * 0.38);
+      const scanWidth = Math.floor(canvas.width * 0.58);
 
-      const searchFromY = Math.max(idealCutY - 60, startY);
+      const searchFromY = Math.max(idealCutY - 80, startY);
       const searchToY = Math.max(
         startY + Math.floor(pageHeight * 0.55),
         startY + 140
@@ -760,16 +800,6 @@ const downloadPDF = async () => {
       return idealCutY;
     };
 
-    /*
-      Full-height sidebar templates:
-      - no top padding on page 2
-      - no bottom padding on page 1
-      - exact A4 cut
-
-      Other templates:
-      - safe cut
-      - 8mm bottom/top padding
-    */
     const nextPageTopPaddingMm = hasFullHeightSidebar ? 0 : 8;
     const pageBottomPaddingMm = hasFullHeightSidebar ? 0 : 8;
 
@@ -781,152 +811,117 @@ const downloadPDF = async () => {
       (pageBottomPaddingMm / pdfHeightMm) * pageHeightCanvas
     );
 
- let y = 0;
-let pageIndex = 0;
+    let y = 0;
+    let pageIndex = 0;
 
-/*
-  IMPORTANT:
-  Sometimes html-to-image creates canvas 1-20px taller than A4.
-  Without tolerance, it creates a blank second PDF page.
-*/
-const blankPageToleranceCanvas = Math.floor(pixelRatio * 30);
+    const blankPageToleranceCanvas = Math.floor(pixelRatio * 35);
 
-// If CV fits in one A4 page, export only one page.
-if (fullCanvas.height <= pageHeightCanvas + blankPageToleranceCanvas) {
-  const pageCanvas = document.createElement("canvas");
-  pageCanvas.width = fullCanvas.width;
-  pageCanvas.height = pageHeightCanvas;
+    const addCanvasPageToPdf = (sourceY, sourceHeight, topPaddingCanvas = 0) => {
+      const pageCanvas = document.createElement("canvas");
 
-  const ctx = pageCanvas.getContext("2d");
+      pageCanvas.width = fullCanvas.width;
+      pageCanvas.height = pageHeightCanvas;
 
-  if (!ctx) {
-    throw new Error("Unable to create PDF page canvas.");
-  }
+      const ctx = pageCanvas.getContext("2d");
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      if (!ctx) {
+        throw new Error("Unable to create PDF page canvas.");
+      }
 
-  ctx.drawImage(
-    fullCanvas,
-    0,
-    0,
-    fullCanvas.width,
-    Math.min(fullCanvas.height, pageHeightCanvas),
-    0,
-    0,
-    fullCanvas.width,
-    Math.min(fullCanvas.height, pageHeightCanvas)
-  );
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
 
-  const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.82);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
 
-  if (!pageDataUrl || pageDataUrl === "data:,") {
-    throw new Error("PDF page capture failed.");
-  }
+      ctx.drawImage(
+        fullCanvas,
+        0,
+        sourceY,
+        fullCanvas.width,
+        sourceHeight,
+        0,
+        topPaddingCanvas,
+        fullCanvas.width,
+        sourceHeight
+      );
 
-  pdf.addImage(
-    pageDataUrl,
-    "JPEG",
-    0,
-    0,
-    pdfWidthMm,
-    pdfHeightMm,
-    undefined,
-    "FAST"
-  );
-} else {
-  while (y < fullCanvas.height) {
-    const remainingHeight = fullCanvas.height - y;
+      const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.94);
 
-    // Stop if only tiny blank/tolerance area is left.
-    if (remainingHeight <= blankPageToleranceCanvas) {
-      break;
+      if (!pageDataUrl || pageDataUrl === "data:,") {
+        throw new Error("PDF page capture failed.");
+      }
+
+      if (pageIndex > 0) {
+        pdf.addPage();
+      }
+
+      pdf.addImage(
+        pageDataUrl,
+        "JPEG",
+        0,
+        0,
+        pdfWidthMm,
+        pdfHeightMm,
+        undefined,
+        "MEDIUM"
+      );
+
+      pageIndex += 1;
+    };
+
+    if (fullCanvas.height <= pageHeightCanvas + blankPageToleranceCanvas) {
+      addCanvasPageToPdf(
+        0,
+        Math.min(fullCanvas.height, pageHeightCanvas),
+        0
+      );
+    } else {
+      while (y < fullCanvas.height) {
+        const remainingHeight = fullCanvas.height - y;
+
+        if (remainingHeight <= blankPageToleranceCanvas) {
+          break;
+        }
+
+        const willNeedAnotherPage =
+          remainingHeight > pageHeightCanvas + blankPageToleranceCanvas;
+
+        const topPaddingCanvas = hasFullHeightSidebar
+          ? 0
+          : pageIndex === 0
+          ? 0
+          : nextPageTopPaddingCanvas;
+
+        const bottomPaddingCanvas = hasFullHeightSidebar
+          ? 0
+          : willNeedAnotherPage
+          ? pageBottomPaddingCanvas
+          : 0;
+
+        const availablePageHeight =
+          pageHeightCanvas - topPaddingCanvas - bottomPaddingCanvas;
+
+        const cutY = hasFullHeightSidebar
+          ? Math.min(y + pageHeightCanvas, fullCanvas.height)
+          : willNeedAnotherPage
+          ? findSafePageCut(fullCanvas, y, availablePageHeight)
+          : fullCanvas.height;
+
+        const sliceHeight = Math.max(
+          1,
+          Math.min(cutY - y, fullCanvas.height - y)
+        );
+
+        if (sliceHeight <= blankPageToleranceCanvas && pageIndex > 0) {
+          break;
+        }
+
+        addCanvasPageToPdf(y, sliceHeight, topPaddingCanvas);
+
+        y += sliceHeight;
+      }
     }
-
-    const willNeedAnotherPage =
-      remainingHeight > pageHeightCanvas + blankPageToleranceCanvas;
-
-    const topPaddingCanvas = hasFullHeightSidebar
-      ? 0
-      : pageIndex === 0
-      ? 0
-      : nextPageTopPaddingCanvas;
-
-    const bottomPaddingCanvas = hasFullHeightSidebar
-      ? 0
-      : willNeedAnotherPage
-      ? pageBottomPaddingCanvas
-      : 0;
-
-    const availablePageHeight =
-      pageHeightCanvas - topPaddingCanvas - bottomPaddingCanvas;
-
-    const cutY = hasFullHeightSidebar
-      ? Math.min(y + pageHeightCanvas, fullCanvas.height)
-      : willNeedAnotherPage
-      ? findSafePageCut(fullCanvas, y, availablePageHeight)
-      : fullCanvas.height;
-
-    let sliceHeight = Math.max(
-      1,
-      Math.min(cutY - y, fullCanvas.height - y)
-    );
-
-    // If last slice is tiny, do not create another blank page.
-    if (sliceHeight <= blankPageToleranceCanvas && pageIndex > 0) {
-      break;
-    }
-
-    const pageCanvas = document.createElement("canvas");
-    pageCanvas.width = fullCanvas.width;
-    pageCanvas.height = pageHeightCanvas;
-
-    const ctx = pageCanvas.getContext("2d");
-
-    if (!ctx) {
-      throw new Error("Unable to create PDF page canvas.");
-    }
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-    ctx.drawImage(
-      fullCanvas,
-      0,
-      y,
-      fullCanvas.width,
-      sliceHeight,
-      0,
-      topPaddingCanvas,
-      fullCanvas.width,
-      sliceHeight
-    );
-
-    const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.82);
-
-    if (!pageDataUrl || pageDataUrl === "data:,") {
-      throw new Error("PDF page capture failed.");
-    }
-
-    if (pageIndex > 0) {
-      pdf.addPage();
-    }
-
-    pdf.addImage(
-      pageDataUrl,
-      "JPEG",
-      0,
-      0,
-      pdfWidthMm,
-      pdfHeightMm,
-      undefined,
-      "FAST"
-    );
-
-    y += sliceHeight;
-    pageIndex += 1;
-  }
-}
 
     const fileName = `${safeFileName(cv.fullName || "qorliq-cv")}.pdf`;
 
@@ -1129,6 +1124,77 @@ if (fullCanvas.height <= pageHeightCanvas + blankPageToleranceCanvas) {
 /* =========================
    TEMPLATE RENDERER
 ========================= */
+function hasHtmlText(value) {
+  if (!value) return false;
+
+  const clean = String(value)
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, "")
+    .trim();
+
+  return Boolean(clean);
+}
+
+function HtmlText({ html, className = "" }) {
+  if (!html) return null;
+
+  return (
+    <>
+      <div
+        className={`cv-html-text ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+
+      <style jsx global>{`
+        .cv-html-text p {
+          margin: 0 0 6px !important;
+        }
+
+        .cv-html-text ul {
+          list-style-type: disc !important;
+          padding-left: 20px !important;
+          margin: 6px 0 !important;
+        }
+
+        .cv-html-text ol {
+          list-style-type: decimal !important;
+          padding-left: 20px !important;
+          margin: 6px 0 !important;
+        }
+
+        .cv-html-text li {
+          display: list-item !important;
+          margin: 3px 0 !important;
+        }
+
+        .cv-html-text strong,
+        .cv-html-text b {
+          font-weight: 800 !important;
+        }
+
+        .cv-html-text em,
+        .cv-html-text i {
+          font-style: italic !important;
+        }
+
+        .cv-html-text u {
+          text-decoration: underline !important;
+        }
+
+        .cv-html-text s,
+        .cv-html-text strike {
+          text-decoration: line-through !important;
+        }
+
+        .cv-html-text a {
+          color: #2563eb !important;
+          text-decoration: underline !important;
+          font-weight: 700 !important;
+        }
+      `}</style>
+    </>
+  );
+}
 
 function TemplateRenderer({ cv, config }) {
   const layout = config.layout || config.id || "clean-ats";
@@ -1309,7 +1375,10 @@ function BerlinSidePhotoCV({ cv, config }) {
           style={{ backgroundColor: `${accent}12` }}
         >
           <CVSection title="Profile" accent={accent}>
-            <Paragraph text={cv.summary} />
+            <HtmlText
+  html={cv.summary}
+  className="text-[12px] leading-relaxed text-slate-700"
+/>
           </CVSection>
         </section>
 
@@ -2388,11 +2457,14 @@ function ProjectManagerCV({ cv, config }) {
       </header>
 
       <main className="mt-9 space-y-8">
-        {hasText(cv.summary) ? (
-          <CVSection title="Professional Summary" accent={config.accent}>
-            <Paragraph text={cv.summary} />
-          </CVSection>
-        ) : null}
+       {hasHtmlText(cv.summary) ? (
+  <CVSection title="Professional Summary" accent={accent}>
+    <HtmlText
+      html={cv.summary}
+      className="text-[12px] leading-relaxed text-slate-700"
+    />
+  </CVSection>
+) : null}
 
         <CVSection title="Project Timeline" accent={config.accent}>
           <div
@@ -2682,9 +2754,12 @@ function MainCVSections({
 }) {
   return (
     <>
-      {!skipSummary && hasText(cv.summary) ? (
+      {!skipSummary && hasHtmlText(cv.summary) ? (
         <CVSection title="Professional Summary" accent={accent}>
-          <Paragraph text={cv.summary} />
+          <HtmlText
+            html={cv.summary}
+            className="text-[12px] leading-relaxed text-slate-700"
+          />
         </CVSection>
       ) : null}
 
@@ -2957,7 +3032,9 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
   const items = getValidExperience(cv);
 
   if (!items.length) {
-    return hasText(cv.experience) ? <Paragraph text={cv.experience} /> : null;
+    return hasHtmlText(cv.experience) ? (
+      <HtmlText html={cv.experience} />
+    ) : null;
   }
 
   return (
@@ -2997,8 +3074,11 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
             ) : null}
           </div>
 
-          {hasText(item.description) ? (
-            <Paragraph text={item.description} className="mt-2" />
+          {hasHtmlText(item.description) ? (
+            <HtmlText
+              html={item.description}
+              className="mt-2 text-[12px] leading-relaxed text-slate-700"
+            />
           ) : null}
         </div>
       ))}
@@ -3151,38 +3231,78 @@ function AdditionalSectionsContent({ cv, accent }) {
 }
 
 function ProfilePhoto({ cv, config, large = false, dark = false }) {
-  const accent = config.accent;
+  const accent = config?.accent || "#2563EB";
 
-  const shapeMap = {
-    eu: "rounded-md",
-    square: "rounded-xl",
-    "circle-ring": "rounded-full ring-4 ring-white",
-    blob: "rounded-[42%_58%_55%_45%/48%_42%_58%_52%]",
-    oval: "rounded-[45%]",
+  const shapeStyleMap = {
+    eu: "8px",
+    square: "16px",
+    "circle-ring": "9999px",
+    blob: "42% 58% 55% 45% / 48% 42% 58% 52%",
+    oval: "45%",
   };
 
-  const shape = shapeMap[config.photoShape] || "rounded-full";
-  const size = large ? "h-32 w-32" : "h-24 w-24";
+  const borderRadius = shapeStyleMap[config?.photoShape] || "9999px";
+
+  const size = large ? 128 : 96;
+
+  const zoom = Math.max(1, Number(cv?.photoZoom) || 1);
+  const posX = Number.isFinite(Number(cv?.photoPositionX))
+    ? Number(cv.photoPositionX)
+    : 50;
+  const posY = Number.isFinite(Number(cv?.photoPositionY))
+    ? Number(cv.photoPositionY)
+    : 50;
 
   return (
     <div
-      className={`${size} ${shape} shrink-0 overflow-hidden border bg-slate-100 shadow`}
-      style={{ borderColor: dark ? "rgba(255,255,255,.35)" : accent }}
+      className="shrink-0 bg-slate-100 shadow"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        minWidth: `${size}px`,
+        maxWidth: `${size}px`,
+        minHeight: `${size}px`,
+        maxHeight: `${size}px`,
+        borderRadius,
+        overflow: "hidden",
+        border: `1px solid ${dark ? "rgba(255,255,255,.35)" : accent}`,
+        position: "relative",
+        display: "block",
+        lineHeight: 0,
+        boxSizing: "border-box",
+      }}
     >
-      {hasText(cv.photo) ? (
+      {hasText(cv?.photo) ? (
         <img
           src={cv.photo}
           alt={cv.fullName || "Profile"}
-          className="h-full w-full object-cover"
+          crossOrigin="anonymous"
+          draggable={false}
           style={{
-            transform: `scale(${Number(cv.photoZoom) || 1})`,
-            transformOrigin: `${Number(cv.photoPositionX) || 50}% ${
-              Number(cv.photoPositionY) || 50
-            }%`,
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            maxWidth: "none",
+            display: "block",
+            objectFit: "cover",
+            objectPosition: `${posX}% ${posY}%`,
+            transform: `scale(${zoom})`,
+            transformOrigin: `${posX}% ${posY}%`,
+            borderRadius,
           }}
         />
       ) : (
-        <DefaultAvatar name={cv.fullName} accent={accent} />
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius,
+            overflow: "hidden",
+          }}
+        >
+          <DefaultAvatar name={cv?.fullName} accent={accent} />
+        </div>
       )}
     </div>
   );

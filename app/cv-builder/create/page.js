@@ -178,12 +178,7 @@ const steps = [
   },
 ];
 
-const summarySuggestions = [
-  "Results-driven professional with strong experience improving operations, reporting, service delivery and team performance in fast-paced business environments.",
-  "Motivated and detail-focused professional with proven ability to manage tasks, communicate effectively and deliver high-quality results.",
-  "Experienced professional with strong organisational, problem-solving and communication skills, focused on improving efficiency and supporting business goals.",
-  "Dedicated professional with a strong background in administration, coordination and service delivery, with a focus on accuracy and continuous improvement.",
-];
+
 
 const experienceSuggestions = [
   "Improved reporting accuracy by 38% through better workflow controls and clear documentation.",
@@ -231,7 +226,7 @@ export default function CreateCVPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex  min-h-screen items-center justify-center bg-[#101116] text-white">
+        <main className="flex min-h-screen items-center justify-center bg-[#101116] text-white">
           <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
             Loading Builder...
           </p>
@@ -250,8 +245,7 @@ function CreateCVContent() {
 
   const [form, setForm] = useState(emptyForm);
   const [currentStep, setCurrentStep] = useState(0);
-  const [mobileMode, setMobileMode] = useState("create");
-  const [isMobileSwitchFixed, setIsMobileSwitchFixed] = useState(false);
+  const [mobileMode, setMobileMode] = useState("edit");
 
   const [skillInput, setSkillInput] = useState("");
   const [languageInput, setLanguageInput] = useState("");
@@ -266,13 +260,28 @@ function CreateCVContent() {
   const [cvId, setCvId] = useState(null);
 
   const baseConfig = templateConfig[form.template] || templateConfig["clean-ats"];
+
   const config = {
     ...baseConfig,
     accent: form.selectedColor || baseConfig.accent,
     selectedColor: form.selectedColor || baseConfig.accent,
   };
 
-  const templateSupportsPhoto = config.photo;
+  const templateSupportsPhoto = Boolean(config.photo);
+
+  const livePreviewCV = useMemo(
+    () => ({
+      ...form,
+      atsScore: calculateATSScore(form),
+      experience: formatExperience(form.experiences),
+      education: formatEducation(form.educations),
+      projects: formatProjects(form.projectsList),
+      certifications: formatCertifications(form.certificationsList),
+    }),
+    [form]
+  );
+
+  const progressPercent = Math.round(((currentStep + 1) / steps.length) * 100);
 
   useEffect(() => {
     const template = searchParams.get("template") || "clean-ats";
@@ -307,7 +316,11 @@ function CreateCVContent() {
     setForm((prev) => ({
       ...prev,
       template: templateConfig[template] ? template : "clean-ats",
-      selectedColor: color || oldCVData?.selectedColor || prev.selectedColor,
+      selectedColor:
+        color ||
+        oldCVData?.selectedColor ||
+        templateConfig[template]?.accent ||
+        prev.selectedColor,
 
       fullName: oldCVData?.fullName || prev.fullName,
       jobTitle: oldCVData?.jobTitle || prev.jobTitle,
@@ -348,27 +361,6 @@ function CreateCVContent() {
         : prev.educations,
     }));
   }, [searchParams]);
-useEffect(() => {
-  const handleScroll = () => {
-    setIsMobileSwitchFixed(window.scrollY > 180);
-  };
-
-  window.addEventListener("scroll", handleScroll, { passive: true });
-  handleScroll();
-
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
-  const livePreviewCV = useMemo(
-    () => ({
-      ...form,
-      atsScore: calculateATSScore(form),
-      experience: formatExperience(form.experiences),
-      education: formatEducation(form.educations),
-      projects: formatProjects(form.projectsList),
-      certifications: formatCertifications(form.certificationsList),
-    }),
-    [form]
-  );
 
   const loadCVData = async (id) => {
     setLoading(true);
@@ -391,76 +383,75 @@ useEffect(() => {
         alert("CV data response me nahi mili.");
         return;
       }
+setForm({
+  ...emptyForm,
+  template: templateConfig[cvData.template] ? cvData.template : "clean-ats",
+  selectedColor:
+    cvData.selectedColor ||
+    templateConfig[cvData.template]?.accent ||
+    "#2563EB",
 
-      setForm({
-        ...emptyForm,
-        template: templateConfig[cvData.template] ? cvData.template : "clean-ats",
-        selectedColor:
-          cvData.selectedColor ||
-          templateConfig[cvData.template]?.accent ||
-          "#2563EB",
-        fullName: cvData.fullName || "",
-        jobTitle: cvData.jobTitle || "",
-        email: cvData.email || "",
-        phone: cvData.phone || "",
-        location: cvData.location || "",
-        linkedIn: cvData.linkedIn || "",
-        github: cvData.github || "",
-        portfolio: cvData.portfolio || "",
-        website: cvData.website || "",
+  fullName: cvData.fullName || "",
+  jobTitle: cvData.jobTitle || "",
+  email: cvData.email || "",
+  phone: cvData.phone || "",
+  location: cvData.location || "",
+  linkedIn: cvData.linkedIn || "",
+  github: cvData.github || "",
+  portfolio: cvData.portfolio || "",
+  website: cvData.website || "",
 
-        photo: cvData.photo || "",
-        photoZoom: cvData.photoZoom || 1,
-        photoPositionX: cvData.photoPositionX || 50,
-        photoPositionY: cvData.photoPositionY || 50,
+  photo: cvData.photo || "",
+  photoZoom: cvData.photoZoom || 1,
+  photoPositionX: cvData.photoPositionX || 50,
+  photoPositionY: cvData.photoPositionY || 50,
 
-        summary: cvData.summary || "",
+  summary: cvData.summary || "",
 
-        skills: Array.isArray(cvData.skills) ? cvData.skills : [],
-        skillLevels: Array.isArray(cvData.skillLevels)
-          ? cvData.skillLevels
-          : [],
-        languages: Array.isArray(cvData.languages) ? cvData.languages : [],
-        languageLevels: Array.isArray(cvData.languageLevels)
-          ? cvData.languageLevels
-          : [],
-        strengths: Array.isArray(cvData.strengths) ? cvData.strengths : [],
-        achievements: Array.isArray(cvData.achievements)
-          ? cvData.achievements
-          : [],
-        hobbies: Array.isArray(cvData.hobbies) ? cvData.hobbies : [],
-        references: cvData.references || "",
-        additionalSections: Array.isArray(cvData.additionalSections) ? cvData.additionalSections : [],
+  skills: Array.isArray(cvData.skills) ? cvData.skills : [],
+  skillLevels: Array.isArray(cvData.skillLevels) ? cvData.skillLevels : [],
+  languages: Array.isArray(cvData.languages) ? cvData.languages : [],
+  languageLevels: Array.isArray(cvData.languageLevels)
+    ? cvData.languageLevels
+    : [],
+  strengths: Array.isArray(cvData.strengths) ? cvData.strengths : [],
+  achievements: Array.isArray(cvData.achievements)
+    ? cvData.achievements
+    : [],
+  hobbies: Array.isArray(cvData.hobbies) ? cvData.hobbies : [],
+  references: cvData.references || "",
+  additionalSections: Array.isArray(cvData.additionalSections)
+    ? cvData.additionalSections
+    : [],
 
-        certifications: Array.isArray(cvData.certifications)
-          ? cvData.certifications
-          : [],
+  certifications: Array.isArray(cvData.certifications)
+    ? cvData.certifications
+    : [],
 
-        experience: cvData.experience || "",
-        education: cvData.education || "",
-        projects: cvData.projects || "",
+  experience: cvData.experience || "",
+  education: cvData.education || "",
+  projects: cvData.projects || "",
 
-        experiences:
-          Array.isArray(cvData.experiences) && cvData.experiences.length
-            ? cvData.experiences
-            : [{ ...emptyExperience }],
+  experiences:
+    Array.isArray(cvData.experiences) && cvData.experiences.length
+      ? cvData.experiences
+      : [{ ...emptyExperience }],
 
-        educations:
-          Array.isArray(cvData.educations) && cvData.educations.length
-            ? cvData.educations
-            : [{ ...emptyEducation }],
+  educations:
+    Array.isArray(cvData.educations) && cvData.educations.length
+      ? cvData.educations
+      : [{ ...emptyEducation }],
 
-        projectsList:
-          Array.isArray(cvData.projectsList) && cvData.projectsList.length
-            ? cvData.projectsList
-            : [],
+  projectsList:
+    Array.isArray(cvData.projectsList) && cvData.projectsList.length
+      ? cvData.projectsList
+      : [],
 
-        certificationsList:
-          Array.isArray(cvData.certificationsList) &&
-          cvData.certificationsList.length
-            ? cvData.certificationsList
-            : [],
-      });
+  certificationsList:
+    Array.isArray(cvData.certificationsList) && cvData.certificationsList.length
+      ? cvData.certificationsList
+      : [],
+});
     } catch (error) {
       console.error("Load CV error:", error);
       alert("Failed to load CV data.");
@@ -625,6 +616,7 @@ useEffect(() => {
           photoPositionX: 50,
           photoPositionY: 50,
         }));
+
         setUploadingPhoto(false);
       };
 
@@ -661,18 +653,21 @@ useEffect(() => {
     if (!form.fullName.trim()) {
       alert("Full name is required.");
       setCurrentStep(0);
+      setMobileMode("edit");
       return false;
     }
 
     if (!form.jobTitle.trim()) {
       alert("Job title is required.");
       setCurrentStep(0);
+      setMobileMode("edit");
       return false;
     }
 
     if (!form.email.trim()) {
       alert("Email address is required.");
       setCurrentStep(0);
+      setMobileMode("edit");
       return false;
     }
 
@@ -685,26 +680,24 @@ useEffect(() => {
     );
 
     if (!validExperience) {
-      alert(
-        "Please add at least one work experience with title, company and start date."
-      );
+      alert("Please add at least one work experience with title, company and start date.");
       setCurrentStep(2);
+      setMobileMode("edit");
       return false;
     }
 
     if (!validEducation) {
-      alert(
-        "Please add at least one education record with degree, institution and start date."
-      );
+      alert("Please add at least one education record with degree, institution and start date.");
       setCurrentStep(3);
+      setMobileMode("edit");
       return false;
     }
 
     return true;
   };
 
-  const handlePreview = async (e) => {
-    e.preventDefault();
+  const handleSave = async (e) => {
+    e?.preventDefault?.();
 
     if (saving) return;
     if (!validateBeforeSubmit()) return;
@@ -715,6 +708,7 @@ useEffect(() => {
       const payload = {
         template: form.template,
         selectedColor: form.selectedColor || config.accent,
+
         fullName: form.fullName,
         jobTitle: form.jobTitle,
         email: form.email,
@@ -820,6 +814,15 @@ useEffect(() => {
     setIsEditMode(false);
     setCvId(null);
     setCurrentStep(0);
+    setMobileMode("edit");
+  };
+
+  const goNext = () => {
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+  };
+
+  const goBack = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
   if (loading) {
@@ -832,436 +835,468 @@ useEffect(() => {
     );
   }
 
-  return (
-    <main className="min-h-screen  overflow-visible bg-[#101116] px-4 pb-40 pt-6 text-white md:px-6 md:py-8 lg:pb-8">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[-160px] top-[-160px] h-[420px] w-[420px] rounded-full bg-qorliqGold/16 blur-[120px]" />
-        <div className="absolute right-[-160px] top-[25%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[130px]" />
-        <div className="absolute bottom-[-180px] left-[35%] h-[420px] w-[420px] rounded-full bg-white/5 blur-[120px]" />
+return (
+  <main className="h-[100dvh] overflow-hidden bg-[#101116] text-white">
+    <header className="flex h-[72px] items-center justify-between border-b border-white/10 bg-[#17181D] px-4 shadow-lg sm:px-6 lg:px-8">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-qorliqGold text-sm font-black text-black">
+          Q
+        </div>
+
+        <div>
+          <p className="text-sm font-black text-white">
+            {isEditMode ? "Edit CV" : "Create CV"}
+          </p>
+          <p className="text-[11px] font-semibold text-white/40">
+            Qorliq CV Builder
+          </p>
+        </div>
       </div>
 
-      <section className="relative mx-auto max-w-[1600px]">
-        <BuilderHero isEditMode={isEditMode} atsScore={calculateATSScore(form)} />
+      <div className="hidden items-center gap-3 lg:flex">
+        {["Choose template", "Enter details", "Download CV"].map((item, index) => {
+          const active =
+            (currentStep <= 0 && index === 0) ||
+            (currentStep > 0 && currentStep < 6 && index === 1) ||
+            (currentStep === 6 && index === 2);
 
-        <BetterCVStepper currentStep={currentStep} setCurrentStep={setCurrentStep} />
-
-   
-<div className={isMobileSwitchFixed ? "mb-[96px] lg:hidden" : "lg:hidden"}>
-  <MobileCreatePreviewSwitch
-    mode={mobileMode}
-    setMode={setMobileMode}
-    atsScore={livePreviewCV.atsScore}
-    templateName={config.name}
-    fixed={isMobileSwitchFixed}
-  />
-</div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
-          <form
-           onSubmit={handlePreview}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
-      e.preventDefault();
-    }
-  }}
-            className={`min-w-0 rounded-[1.4rem] border border-white/10 bg-white/[0.055] p-4 shadow-2xl backdrop-blur-xl sm:rounded-[2rem] sm:p-5 md:p-6 ${
-              mobileMode === "create" ? "block" : "hidden lg:block"
-            }`}
-          >
-            <StepHeader
-              steps={steps}
-              currentStep={currentStep}
-              setCurrentStep={setCurrentStep}
-            />
-
-            <ATSInlineCard score={livePreviewCV.atsScore} />
-
-            <div className="mt-7">
-              {currentStep === 0 ? (
-                <BasicInfoStep
-                  form={form}
-                  updateField={updateField}
-                  cvTemplates={cvTemplates}
-                  fileInputRef={fileInputRef}
-                  templateSupportsPhoto={templateSupportsPhoto}
-                  uploadingPhoto={uploadingPhoto}
-                  handlePhotoUpload={handlePhotoUpload}
-                  handleRemoveImage={handleRemoveImage}
-                />
-              ) : null}
-
-              {currentStep === 1 ? (
-                <SummaryStep form={form} updateField={updateField} />
-              ) : null}
-
-              {currentStep === 2 ? (
-                <ExperienceStep
-                  form={form}
-                  updateArrayItem={updateArrayItem}
-                  addArrayItem={addArrayItem}
-                  removeArrayItem={removeArrayItem}
-                />
-              ) : null}
-
-              {currentStep === 3 ? (
-                <EducationStep
-                  form={form}
-                  updateArrayItem={updateArrayItem}
-                  addArrayItem={addArrayItem}
-                  removeArrayItem={removeArrayItem}
-                />
-              ) : null}
-
-              {currentStep === 4 ? (
-                <SkillsStep
-                  form={form}
-                  skillInput={skillInput}
-                  setSkillInput={setSkillInput}
-                  languageInput={languageInput}
-                  setLanguageInput={setLanguageInput}
-                  strengthInput={strengthInput}
-                  setStrengthInput={setStrengthInput}
-                  addSimpleItem={addSimpleItem}
-                  removeSimpleItem={removeSimpleItem}
-                  addSkill={addSkill}
-                  removeSkill={removeSkill}
-                  updateSkillLevel={updateSkillLevel}
-                  addLanguage={addLanguage}
-                  removeLanguage={removeLanguage}
-                  updateLanguageLevel={updateLanguageLevel}
-                />
-              ) : null}
-
-              {currentStep === 5 ? (
-                <ProjectsAchievementsStep
-                  form={form}
-                  updateArrayItem={updateArrayItem}
-                  addArrayItem={addArrayItem}
-                  removeArrayItem={removeArrayItem}
-                  achievementInput={achievementInput}
-                  setAchievementInput={setAchievementInput}
-                  addSimpleItem={addSimpleItem}
-                  removeSimpleItem={removeSimpleItem}
-                />
-              ) : null}
-
-              {currentStep === 6 ? (
-                <CertificationsExtraStep
-                  form={form}
-                  updateField={updateField}
-                  updateArrayItem={updateArrayItem}
-                  addArrayItem={addArrayItem}
-                  removeArrayItem={removeArrayItem}
-                  hobbyInput={hobbyInput}
-                  setHobbyInput={setHobbyInput}
-                  addSimpleItem={addSimpleItem}
-                  removeSimpleItem={removeSimpleItem}
-                />
-              ) : null}
-            </div>
-
-            <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                type="button"
-                disabled={currentStep === 0 || saving}
-                onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
-                className="rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:border-qorliqGold hover:text-qorliqGold disabled:cursor-not-allowed disabled:opacity-40"
+          return (
+            <div key={item} className="flex items-center gap-2">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${
+                  active
+                    ? "bg-qorliqGold text-black"
+                    : "bg-white/10 text-white/40"
+                }`}
               >
-                Back
-              </button>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={clearForm}
-                  disabled={saving}
-                  className="rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:border-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Clear
-                </button>
-
-           {currentStep < steps.length - 1 ? (
-  <button
-    type="button"
-    onClick={() =>
-      setCurrentStep((prev) =>
-        Math.min(prev + 1, steps.length - 1)
-      )
-    }
-    disabled={saving}
-    className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    Next
-  </button>
-) : (
-  <button
-    type="button"
-    onClick={handlePreview}
-    disabled={saving}
-    className="rounded-full bg-qorliqGold px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    {saving
-      ? "Saving..."
-      : isEditMode
-      ? "Update CV"
-      : "Save & Preview"}
-  </button>
-)}
-              </div>
-            </div>
-          </form>
-
-          <aside
-            className={`min-w-0 rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-3 shadow-2xl backdrop-blur-xl sm:rounded-[2rem] sm:p-4 lg:sticky lg:top-6 lg:self-start ${
-              mobileMode === "preview" ? "block" : "hidden lg:block"
-            }`}
-          >
-            <div className="mb-4 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-qorliqGold">
-                  Live Preview
-                </p>
-                <p className="mt-1 text-xs text-white/45">
-                  {config.name} · ATS {livePreviewCV.atsScore}% · PDF-like layout
-                </p>
+                {index + 1}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setMobileMode("create")}
-                className="rounded-full border border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/55 transition hover:border-qorliqGold hover:text-qorliqGold lg:hidden"
+              <span
+                className={`text-xs font-bold ${
+                  active ? "text-white" : "text-white/40"
+                }`}
               >
-                Back to Create
-              </button>
+                {item}
+              </span>
+
+              {index < 2 && <div className="h-px w-10 bg-white/10" />}
             </div>
-
-            <div className="w-full overflow-visible rounded-2xl bg-white/5 p-2 sm:p-3">
-              <div className="flex justify-center">
-                <div className="origin-top [zoom:.43] sm:[zoom:.62] md:[zoom:.82] lg:[zoom:.72] xl:[zoom:.9] 2xl:[zoom:1]">
-                  <TemplateRenderer cv={livePreviewCV} config={config} />
-                </div>
-              </div>
-            </div>
-          </aside>        </div>
-      </section>
-
-      <div className="fixed inset-x-0 bottom-0 z-[80] border-t border-white/10 bg-[#17181D]/95 px-4 py-3 shadow-2xl backdrop-blur lg:hidden">
-      
-
-
-
-      
+          );
+        })}
       </div>
-    </main>
-  );
-}
-function MobileCreatePreviewSwitch({
-  mode,
-  setMode,
-  atsScore,
-  templateName,
-  fixed = false,
-}) {
-  return (
-    <div
-      className={`lg:hidden transition-all duration-300 ease-out ${
-        fixed
-          ? "fixed left-0 right-0 top-0 z-[9999] px-4 pt-3 translate-y-0 opacity-100"
-          : "relative mb-6 translate-y-0 opacity-100"
-      }`}
-    >
-      <div
-        className={`rounded-2xl border border-white/10 bg-[#17181D]/95 p-2 shadow-lg backdrop-blur-xl transition-all duration-300 ease-out ${
-          fixed ? "scale-[0.98]" : "scale-100"
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className="h-11 rounded-full bg-qorliqGold px-5 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+      >
+        {saving ? "Saving..." : "Save"}
+      </button>
+    </header>
+
+    <div className="sticky top-0 z-40 border-b border-white/10 bg-[#101116]/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="grid grid-cols-2 rounded-full bg-[#17181D] p-1">
+        <button
+          type="button"
+          onClick={() => setMobileMode("edit")}
+          className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${
+            mobileMode === "edit"
+              ? "bg-qorliqGold text-black shadow-sm"
+              : "text-white/50"
+          }`}
+        >
+          Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileMode("preview")}
+          className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${
+            mobileMode === "preview"
+              ? "bg-qorliqGold text-black shadow-sm"
+              : "text-white/50"
+          }`}
+        >
+          Preview
+        </button>
+      </div>
+    </div>
+
+   <section className="grid h-[calc(100dvh-72px-70px)] grid-cols-1 overflow-hidden lg:h-[calc(100dvh-72px)] lg:grid-cols-[46%_54%]">
+      <form
+        onSubmit={handleSave}
+     onKeyDown={(e) => {
+  if (e.key !== "Enter") return;
+
+  const target = e.target;
+
+  if (
+    target.tagName === "TEXTAREA" ||
+    target.isContentEditable ||
+    target.closest?.("[contenteditable='true']")
+  ) {
+    return;
+  }
+
+  e.preventDefault();
+}}
+        className={`h-full overflow-y-auto bg-[#101116] px-4 py-5 sm:px-6 lg:block lg:border-r lg:border-white/10 lg:px-8 ${
+          mobileMode === "edit" ? "block" : "hidden"
         }`}
       >
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMode("create")}
-            className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
-              mode === "create" ? "bg-qorliqGold text-black" : "text-white/55"
-            }`}
-          >
-            Create
-          </button>
+        <div className="mx-auto max-w-[680px]">
+          <div className="mb-5 rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-qorliqGold">
+                  Step {currentStep + 1} of {steps.length}
+                </p>
 
-          <button
-            type="button"
-            onClick={() => setMode("preview")}
-            className={`rounded-xl px-4 py-3 text-xs font-black uppercase tracking-[0.16em] transition ${
-              mode === "preview" ? "bg-qorliqGold text-black" : "text-white/55"
-            }`}
-          >
-            Preview
-          </button>
-        </div>
+                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">
+                  {steps[currentStep].title}
+                </h1>
 
-        <p className="mt-2 text-center text-[10px] font-semibold text-white/45">
-          ATS {atsScore}% · {templateName}
-        </p>
-      </div>
-    </div>
-  );
-}
-function ATSInlineCard({ score }) {
-  const label = score >= 85 ? "Strong" : score >= 70 ? "Good" : "Needs more details";
+                <p className="mt-1 text-sm leading-6 text-white/45">
+                  {steps[currentStep].desc}
+                </p>
+              </div>
 
-  return (
-    <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
-            Live ATS Score
-          </p>
-          <p className="mt-1 text-xs text-white/45">
-            Add clear job titles, dates, skills and measurable achievements to improve your score.
-          </p>
-        </div>
+              <div className="hidden rounded-xl bg-black/25 px-4 py-3 text-right sm:block">
+                <p className="text-[10px] font-black uppercase text-white/40">
+                  ATS
+                </p>
+                <p className="text-xl font-black text-qorliqGold">
+                  {livePreviewCV.atsScore}%
+                </p>
+              </div>
+            </div>
 
-        <div className="text-right">
-          <p className="text-3xl font-black text-white">{score}%</p>
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
-            {label}
-          </p>
-        </div>
-      </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-qorliqGold transition-all duration-300"
+                style={{
+                  width: `${((currentStep + 1) / steps.length) * 100}%`,
+                }}
+              />
+            </div>
 
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-qorliqGold transition-all"
-          style={{ width: `${Math.min(score, 100)}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              {steps.map((step, index) => (
+                <button
+                  key={step.title}
+                  type="button"
+                  onClick={() => setCurrentStep(index)}
+                  className={`h-9 min-w-9 shrink-0 rounded-full px-3 text-[10px] font-black transition ${
+                    currentStep === index
+                      ? "bg-qorliqGold text-black"
+                      : "bg-white/10 text-white/40 hover:bg-white/15"
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          </div>
 
-function BuilderHero({ isEditMode, atsScore }) {
-  return (
-    <div className="mb-8 pt-8 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-      <div>
-        <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
-          <span className="h-2 w-2 rounded-full bg-qorliqGold" />
-          <span className="text-xs font-black uppercase tracking-[0.22em] text-white/70">
-            Qorliq CV Builder
-          </span>
-        </div>
+          <div className="rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg sm:p-5">
+            {/* Yahan aapke existing steps same rahenge */}
+            {currentStep === 0 && (
+              <BasicInfoStep
+                form={form}
+                updateField={updateField}
+                cvTemplates={cvTemplates}
+                fileInputRef={fileInputRef}
+                templateSupportsPhoto={templateSupportsPhoto}
+                uploadingPhoto={uploadingPhoto}
+                handlePhotoUpload={handlePhotoUpload}
+                handleRemoveImage={handleRemoveImage}
+              />
+            )}
 
-        <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[0.95] tracking-[-0.05em] md:text-6xl">
-          {isEditMode ? "Edit your professional CV" : "Create your professional CV"}
-        </h1>
+            {currentStep === 1 && (
+              <PureSummaryStep form={form} updateField={updateField} />
+            )}
 
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
-          Build your CV step by step with smart suggestions, ATS score, photo
-          controls and live preview.
-        </p>
-      </div>
+            {currentStep === 2 && (
+              <ExperienceStep
+                form={form}
+                updateArrayItem={updateArrayItem}
+                addArrayItem={addArrayItem}
+                removeArrayItem={removeArrayItem}
+              />
+            )}
 
-      <div className="grid grid-cols-3 gap-3">
-        <StatBox value={`${atsScore}%`} label="ATS Score" />
-        <StatBox value="10k+" label="Happy Users" />
-        <StatBox value="PDF" label="Export Ready" />
-      </div>
-    </div>
-  );
-}
+            {currentStep === 3 && (
+              <EducationStep
+                form={form}
+                updateArrayItem={updateArrayItem}
+                addArrayItem={addArrayItem}
+                removeArrayItem={removeArrayItem}
+              />
+            )}
 
-function StatBox({ value, label }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
-      <p className="text-xl font-black text-qorliqGold">{value}</p>
-      <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-white/40">
-        {label}
-      </p>
-    </div>
-  );
-}
+            {currentStep === 4 && (
+              <SkillsStep
+                form={form}
+                skillInput={skillInput}
+                setSkillInput={setSkillInput}
+                languageInput={languageInput}
+                setLanguageInput={setLanguageInput}
+                strengthInput={strengthInput}
+                setStrengthInput={setStrengthInput}
+                addSimpleItem={addSimpleItem}
+                removeSimpleItem={removeSimpleItem}
+                addSkill={addSkill}
+                removeSkill={removeSkill}
+                updateSkillLevel={updateSkillLevel}
+                addLanguage={addLanguage}
+                removeLanguage={removeLanguage}
+                updateLanguageLevel={updateLanguageLevel}
+              />
+            )}
 
-function BetterCVStepper({ currentStep, setCurrentStep }) {
-  const miniSteps = ["Choose template", "Enter details", "Download CV"];
+            {currentStep === 5 && (
+              <ProjectsAchievementsStep
+                form={form}
+                updateArrayItem={updateArrayItem}
+                addArrayItem={addArrayItem}
+                removeArrayItem={removeArrayItem}
+                achievementInput={achievementInput}
+                setAchievementInput={setAchievementInput}
+                addSimpleItem={addSimpleItem}
+                removeSimpleItem={removeSimpleItem}
+              />
+            )}
 
-  return (
-    <div className="mb-7 grid rounded-2xl border border-white/10 bg-white/[0.045] p-2 shadow-sm backdrop-blur sm:grid-cols-3">
-      {miniSteps.map((label, index) => {
-        const active =
-          (currentStep <= 1 && index === 0) ||
-          (currentStep > 1 && currentStep < 6 && index === 1) ||
-          (currentStep === 6 && index === 2);
+            {currentStep === 6 && (
+              <CertificationsExtraStep
+                form={form}
+                updateField={updateField}
+                updateArrayItem={updateArrayItem}
+                addArrayItem={addArrayItem}
+                removeArrayItem={removeArrayItem}
+                hobbyInput={hobbyInput}
+                setHobbyInput={setHobbyInput}
+                addSimpleItem={addSimpleItem}
+                removeSimpleItem={removeSimpleItem}
+              />
+            )}
+          </div>
 
-        return (
-          <button
-            key={label}
-            type="button"
-            onClick={() => {
-              if (index === 0) setCurrentStep(0);
-              if (index === 1) setCurrentStep(1);
-              if (index === 2) setCurrentStep(6);
-            }}
-            className={`flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-bold transition ${
-              active ? "bg-qorliqGold text-black" : "text-white/45"
-            }`}
-          >
-            <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${
-                active ? "bg-black text-white" : "bg-white/10 text-white/50"
-              }`}
+          <div className="sticky bottom-0 mt-5 flex flex-col gap-3 border-t border-white/10 bg-[#101116] py-4 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              disabled={currentStep === 0 || saving}
+              onClick={goBack}
+              className="h-12 rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-qorliqGold hover:text-qorliqGold disabled:opacity-40"
             >
-              {index + 1}
-            </span>
-            <span>{label}</span>
-          </button>
-        );
-      })}
+              Back
+            </button>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={clearForm}
+                disabled={saving}
+                className="h-12 rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-red-300 hover:text-red-200 disabled:opacity-50"
+              >
+                Clear
+              </button>
+
+              {currentStep < steps.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={saving}
+                  className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                >
+                  Continue
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                >
+                  {saving
+                    ? "Saving..."
+                    : isEditMode
+                    ? "Update CV"
+                    : "Save & Preview"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </form>
+<aside
+  className={`h-full min-h-0 overflow-hidden bg-[#17181D] p-3 sm:p-5 lg:block ${
+    mobileMode === "preview" ? "block" : "hidden"
+  }`}
+>
+  <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#101116] shadow-inner">
+    <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-qorliqGold">
+          Preview
+        </p>
+
+        <p className="text-[11px] font-semibold text-white/40">
+          {config.name}
+        </p>
+      </div>
+
+      <span className="rounded-full bg-[#17181D] px-3 py-1.5 text-xs font-black text-white/70 shadow-sm">
+        {livePreviewCV.atsScore}%
+      </span>
     </div>
-  );
+
+    <div className="preview-viewport">
+      <div className="preview-page-holder">
+        <div className="preview-page-scale">
+          <TemplateRenderer cv={livePreviewCV} config={config} />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style jsx>{`
+    .preview-viewport {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      overflow-y: auto;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 18px 8px 42px;
+      scroll-padding-top: 18px;
+    }
+
+    .preview-page-holder {
+      --scale: 0.39;
+
+      width: calc(794px * var(--scale));
+      min-width: calc(794px * var(--scale));
+      height: calc(1123px * var(--scale));
+      min-height: calc(1123px * var(--scale));
+      flex: 0 0 auto;
+      position: relative;
+      overflow: visible;
+      margin: 0 auto;
+    }
+
+    .preview-page-scale {
+      width: 794px;
+      min-width: 794px;
+      height: 1123px;
+      min-height: 1123px;
+      transform: scale(var(--scale));
+      transform-origin: top left;
+      overflow: visible;
+    }
+
+    @media (min-width: 390px) {
+      .preview-page-holder {
+        --scale: 0.44;
+      }
+    }
+
+    @media (min-width: 480px) {
+      .preview-page-holder {
+        --scale: 0.52;
+      }
+    }
+
+    @media (min-width: 640px) {
+      .preview-page-holder {
+        --scale: 0.62;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .preview-page-holder {
+        --scale: 0.72;
+      }
+    }
+
+   @media (min-width: 1024px) {
+  .preview-viewport {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 16px 10px 42px;
+    overflow-y: auto;
+    overflow-x: auto;
+  }
+
+  .preview-page-holder {
+    --scale: 0.56;
+  }
 }
 
-function StepHeader({ steps, currentStep, setCurrentStep }) {
-  const progress = ((currentStep + 1) / steps.length) * 100;
+@media (min-width: 1280px) {
+  .preview-page-holder {
+    --scale: 0.66;
+  }
+}
 
+@media (min-width: 1536px) {
+  .preview-page-holder {
+    --scale: 0.78;
+  }
+}
+
+@media (min-width: 1800px) {
+  .preview-page-holder {
+    --scale: 0.9;
+  }
+}
+  `}</style>
+</aside>
+    </section>
+  </main>
+);
+}
+
+
+
+
+
+
+
+
+
+
+
+function PureSummaryStep({ form, updateField }) {
   return (
-    <div>
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-qorliqGold">
-        Step {String(currentStep + 1).padStart(2, "0")} of{" "}
-        {String(steps.length).padStart(2, "0")}
-      </p>
+    <div className="space-y-5">
+      <RichTextEditor
+        label="Professional Summary"
+        value={form.summary}
+        onChange={(value) => updateField("summary", value)}
+        placeholder="Write your professional summary..."
+        rows={8}
+      />
 
-      <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">
-        {steps[currentStep].title}
-      </h2>
+      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
+          Writing Tips
+        </p>
 
-      <p className="mt-2 text-sm leading-6 text-white/45">
-        {steps[currentStep].desc}
-      </p>
-
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-qorliqGold transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {steps.map((step, index) => (
-          <button
-            key={step.title}
-            type="button"
-            onClick={() => setCurrentStep(index)}
-            className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] transition ${
-              currentStep === index
-                ? "bg-qorliqGold text-black"
-                : "border border-white/10 text-white/45 hover:border-qorliqGold hover:text-qorliqGold"
-            }`}
-          >
-            {index + 1}
-          </button>
-        ))}
+        <ul className="mt-4 space-y-2 text-sm leading-6 text-white/55">
+          <li>• Keep the summary between 3 and 5 lines.</li>
+          <li>• Use bold only for important keywords.</li>
+          <li>• Avoid very long paragraphs so CV remains clean.</li>
+        </ul>
       </div>
     </div>
   );
 }
-
 function BasicInfoStep({
   form,
   updateField,
@@ -1272,16 +1307,8 @@ function BasicInfoStep({
   handlePhotoUpload,
   handleRemoveImage,
 }) {
-  const atsScore = calculateATSScore(form);
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 rounded-3xl border border-white/10 bg-black/25 p-4 sm:grid-cols-3">
-        <MiniStat value={`${atsScore}%`} label="ATS Score" />
-        <MiniStat value="10k+" label="Happy Customers" />
-        <MiniStat value="4.8★" label="User Rating" />
-      </div>
-
       <div className="grid gap-5 md:grid-cols-2">
         <Input
           label="Full Name"
@@ -1331,7 +1358,10 @@ function BasicInfoStep({
             value={form.template}
             onChange={(e) => {
               const nextTemplate = e.target.value;
-              const selected = cvTemplates.find((item) => item.id === nextTemplate);
+              const selected = cvTemplates.find(
+                (item) => item.id === nextTemplate
+              );
+
               updateField("template", nextTemplate);
               updateField("selectedColor", selected?.colors?.[0] || "#2563EB");
             }}
@@ -1430,7 +1460,9 @@ function BasicInfoStep({
                     max="2"
                     step="0.05"
                     value={form.photoZoom || 1}
-                    onChange={(value) => updateField("photoZoom", Number(value))}
+                    onChange={(value) =>
+                      updateField("photoZoom", Number(value))
+                    }
                   />
 
                   <RangeInput
@@ -1473,40 +1505,19 @@ function BasicInfoStep({
   );
 }
 
-function MiniStat({ value, label }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-2xl font-black text-qorliqGold">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/45">
-        {label}
-      </p>
-    </div>
-  );
-}
 
-function SummaryStep({ form, updateField }) {
-  return (
-    <div className="space-y-5">
-      <Textarea
-        label="Professional Summary"
-        value={form.summary}
-        onChange={(value) => updateField("summary", value)}
-        placeholder="Write a short professional summary..."
-        rows={8}
-      />
 
-      <SuggestionPanel title="Suggested Summaries">
-        {summarySuggestions.map((item) => (
-          <SuggestionButton
-            key={item}
-            text={item}
-            onClick={() => updateField("summary", item)}
-          />
-        ))}
-      </SuggestionPanel>
-    </div>
-  );
-}
+
+
+
+
+
+
+
+
+
+
+
 
 function ExperienceStep({
   form,
@@ -1954,16 +1965,16 @@ function ExperienceCard({ index, item, onChange, onRemove }) {
         </label>
 
         <div className="md:col-span-2">
-          <Textarea
-            label="Achievements / Responsibilities"
-            value={item.description}
-            onChange={(value) => onChange("description", value)}
-            placeholder={`Example:
+       <RichTextEditor
+  label="Achievements / Responsibilities"
+  value={item.description}
+  onChange={(value) => onChange("description", value)}
+  placeholder={`Example:
 • Improved reporting accuracy by 38%
 • Managed supplier communication and internal workflows
 • Reduced operational delays through process improvement`}
-            rows={6}
-          />
+  rows={6}
+/>
 
           <SuggestionPanel title="Suggested Descriptions">
             {experienceSuggestions.map((suggestion) => (
@@ -1971,9 +1982,11 @@ function ExperienceCard({ index, item, onChange, onRemove }) {
                 key={suggestion}
                 text={suggestion}
                 onClick={() => {
-                  const next = item.description
-                    ? `${item.description}\n• ${suggestion}`
-                    : `• ${suggestion}`;
+            const next = item.description
+  ? `${item.description}<ul><li>${suggestion}</li></ul>`
+  : `<ul><li>${suggestion}</li></ul>`;
+
+onChange("description", next);
                   onChange("description", next);
                 }}
               />
@@ -2139,7 +2152,6 @@ function CardTop({ title, onRemove }) {
     </div>
   );
 }
-
 function Input({
   label,
   value,
@@ -2157,34 +2169,301 @@ function Input({
 
       <input
         type={type}
-        value={value || ""}
+        value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-14 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold disabled:cursor-not-allowed disabled:opacity-40"
+        className="h-14 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:bg-black/55 focus:ring-4 focus:ring-qorliqGold/15 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/30"
       />
     </div>
   );
 }
 
-function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
+function Textarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 5,
+  required = false,
+  disabled = false,
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+        {label} {required ? <span className="text-qorliqGold">*</span> : null}
+      </label>
+
+      <textarea
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full resize-none rounded-2xl border border-white/10 bg-black/45 px-4 py-4 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:bg-black/55 focus:ring-4 focus:ring-qorliqGold/15 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/30"
+      />
+    </div>
+  );
+}
+function RichTextEditor({
+  label,
+  value,
+  onChange,
+  placeholder = "Write here...",
+  rows = 7,
+}) {
+  const editorRef = useRef(null);
+  const savedSelectionRef = useRef(null);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const nextValue = value || "";
+
+    if (document.activeElement !== editor && editor.innerHTML !== nextValue) {
+      editor.innerHTML = nextValue;
+    }
+  }, [value]);
+
+  const updateValue = () => {
+    onChange(editorRef.current?.innerHTML || "");
+  };
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    const editor = editorRef.current;
+
+    if (!selection || !editor || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+
+    if (editor.contains(range.commonAncestorContainer)) {
+      savedSelectionRef.current = range.cloneRange();
+    }
+  };
+
+  const restoreSelection = () => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection) return;
+
+    editor.focus();
+
+    if (savedSelectionRef.current) {
+      selection.removeAllRanges();
+      selection.addRange(savedSelectionRef.current);
+    }
+  };
+
+  const runCommand = (command, value = null) => {
+    restoreSelection();
+
+    setTimeout(() => {
+      document.execCommand(command, false, value);
+      updateValue();
+      saveSelection();
+    }, 0);
+  };
+
+  const addLink = () => {
+    restoreSelection();
+
+    const selection = window.getSelection();
+    const selectedText = selection?.toString()?.trim();
+
+    if (!selectedText) {
+      alert("Please select text first.");
+      return;
+    }
+
+    let url = window.prompt("Enter URL");
+
+    if (!url) return;
+
+    url = url.trim();
+
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+
+    runCommand("createLink", url);
+
+    setTimeout(() => {
+      editorRef.current?.querySelectorAll("a").forEach((link) => {
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      });
+
+      updateValue();
+    }, 10);
+  };
+
+  const toolbarBtn =
+    "flex h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-sm font-black text-slate-800 transition hover:bg-slate-100";
+
   return (
     <div>
       <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
         {label}
       </label>
 
-      <textarea
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        className="w-full resize-none rounded-2xl border border-white/10 bg-black/45 px-4 py-4 text-sm leading-7 text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
-      />
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("bold");
+            }}
+          >
+            <strong>B</strong>
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("italic");
+            }}
+          >
+            <em>I</em>
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("underline");
+            }}
+          >
+            <span className="underline">U</span>
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("strikeThrough");
+            }}
+          >
+            <span className="line-through">S</span>
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              addLink();
+            }}
+          >
+            🔗
+          </button>
+
+          <span className="mx-1 h-7 w-px bg-slate-300" />
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("insertOrderedList");
+            }}
+          >
+            1.
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("insertUnorderedList");
+            }}
+          >
+            •
+          </button>
+        </div>
+
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          data-placeholder={placeholder}
+          onInput={updateValue}
+          onBlur={updateValue}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+          }}
+          onKeyUp={() => {
+            saveSelection();
+            updateValue();
+          }}
+          onMouseUp={saveSelection}
+          onFocus={saveSelection}
+          className="rich-editor w-full bg-white px-4 py-4 text-sm font-medium leading-7 text-slate-900 outline-none"
+          style={{ minHeight: `${rows * 28}px` }}
+        />
+      </div>
+
+      <style jsx>{`
+        .rich-editor:empty::before {
+          content: attr(data-placeholder);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .rich-editor ul {
+          list-style-type: disc;
+          padding-left: 24px;
+          margin: 8px 0;
+        }
+
+        .rich-editor ol {
+          list-style-type: decimal;
+          padding-left: 24px;
+          margin: 8px 0;
+        }
+
+        .rich-editor li {
+          display: list-item;
+          margin: 4px 0;
+        }
+
+        .rich-editor strong,
+        .rich-editor b {
+          font-weight: 800;
+        }
+
+        .rich-editor em,
+        .rich-editor i {
+          font-style: italic;
+        }
+
+        .rich-editor u {
+          text-decoration: underline;
+        }
+
+        .rich-editor s,
+        .rich-editor strike {
+          text-decoration: line-through;
+        }
+
+        .rich-editor a {
+          color: #2563eb;
+          text-decoration: underline;
+          font-weight: 700;
+        }
+      `}</style>
     </div>
   );
 }
-
 function RangeInput({ label, value, onChange, min, max, step }) {
   return (
     <div>
@@ -2303,6 +2582,66 @@ function SuggestionButton({ text, onClick }) {
     >
       {text}
     </button>
+  );
+}
+function HtmlText({ html, className = "" }) {
+  if (!html) return null;
+
+  return (
+    <>
+      <div
+        className={`cv-html-text ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+
+      <style jsx global>{`
+        .cv-html-text p {
+          margin: 0 0 6px !important;
+        }
+
+        .cv-html-text ul {
+          list-style-type: disc !important;
+          padding-left: 20px !important;
+          margin: 6px 0 !important;
+        }
+
+        .cv-html-text ol {
+          list-style-type: decimal !important;
+          padding-left: 20px !important;
+          margin: 6px 0 !important;
+        }
+
+        .cv-html-text li {
+          display: list-item !important;
+          margin: 3px 0 !important;
+        }
+
+        .cv-html-text strong,
+        .cv-html-text b {
+          font-weight: 800 !important;
+        }
+
+        .cv-html-text em,
+        .cv-html-text i {
+          font-style: italic !important;
+        }
+
+        .cv-html-text u {
+          text-decoration: underline !important;
+        }
+
+        .cv-html-text s,
+        .cv-html-text strike {
+          text-decoration: line-through !important;
+        }
+
+        .cv-html-text a {
+          color: #2563eb !important;
+          text-decoration: underline !important;
+          font-weight: 700 !important;
+        }
+      `}</style>
+    </>
   );
 }
 
@@ -2470,25 +2809,77 @@ function EUPhotoDocumentCV({ cv, config }) {
       </header>
 
       <main className="grid grid-cols-[30%_70%] gap-8 items-start">
-        <aside className="space-y-6">
-          <div
-            className="text-[11px] eu-side-selected-color"
-            style={{ "--selected-accent": accent }}
-          >
-            <style jsx>{`
-              .eu-side-selected-color :global(h2),
-              .eu-side-selected-color :global(h3),
-              .eu-side-selected-color :global(h4),
-              .eu-side-selected-color :global(.font-black),
-              .eu-side-selected-color :global(.font-bold.uppercase),
-              .eu-side-selected-color :global([class*="uppercase"]) {
-                color: var(--selected-accent) !important;
-              }
-            `}</style>
+  <aside
+  className={`h-full min-h-0 overflow-hidden bg-[#17181D] p-3 sm:p-5 lg:block ${
+    mobileMode === "preview" ? "block" : "hidden"
+  }`}
+>
+  <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#101116] shadow-inner">
+    <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-qorliqGold">
+          Preview
+        </p>
+        <p className="text-[11px] font-semibold text-white/40">
+          {config.name}
+        </p>
+      </div>
 
-            <ExactSideBlock cv={cv} config={config} accent={accent} />
-          </div>
-        </aside>
+      <span className="rounded-full bg-[#17181D] px-3 py-1.5 text-xs font-black text-white/70 shadow-sm">
+        {livePreviewCV.atsScore}%
+      </span>
+    </div>
+
+    <div className="preview-viewport">
+      <div className="preview-fit-box">
+        <TemplateRenderer cv={livePreviewCV} config={config} />
+      </div>
+    </div>
+  </div>
+
+  <style jsx>{`
+    .preview-viewport {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      overflow: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .preview-fit-box {
+      width: 794px;
+      min-width: 794px;
+      min-height: 1123px;
+      transform-origin: top center;
+      transform: scale(
+        min(
+          calc((100vw - 48px) / 794),
+          calc((100dvh - 72px - 70px - 90px) / 1123)
+        )
+      );
+    }
+
+    @media (min-width: 1024px) {
+      .preview-viewport {
+        align-items: center;
+        overflow: hidden;
+        padding: 18px;
+      }
+
+      .preview-fit-box {
+        transform: scale(
+          min(
+            calc((54vw - 72px) / 794),
+            calc((100dvh - 72px - 110px) / 1123)
+          )
+        );
+      }
+    }
+  `}</style>
+</aside>
 
         <section className="space-y-6">
           {hasText(cv.summary) && (
@@ -3717,12 +4108,17 @@ function CVPage({ children, ivory = false }) {
   );
 }
 
-function MainCVSections({ cv, accent, skipSummary = false, skipExperience = false }) {
+function MainCVSections({
+  cv,
+  accent,
+  skipSummary = false,
+  skipExperience = false,
+}) {
   return (
     <>
       {!skipSummary && hasText(cv.summary) ? (
         <CVSection title="Professional Summary" accent={accent}>
-          <Paragraph text={cv.summary} />
+          <HtmlText html={cv.summary} />
         </CVSection>
       ) : null}
 
@@ -3906,7 +4302,10 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
           </div>
 
           {hasText(item.description) ? (
-            <Paragraph text={item.description} className="mt-3" />
+     <HtmlText
+  html={item.description}
+  className="mt-3 text-sm leading-6 text-slate-700"
+/>
           ) : null}
         </div>
       ))}

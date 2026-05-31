@@ -327,6 +327,77 @@ export default function CVPreviewPage() {
     </main>
   );
 }
+function hasHtmlText(value) {
+  if (!value) return false;
+
+  const clean = String(value)
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, "")
+    .trim();
+
+  return Boolean(clean);
+}
+
+function HtmlText({ html, className = "" }) {
+  if (!html) return null;
+
+  return (
+    <>
+      <div
+        className={`cv-html-text ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+
+      <style jsx global>{`
+        .cv-html-text p {
+          margin: 0 0 6px !important;
+        }
+
+        .cv-html-text ul {
+          list-style-type: disc !important;
+          padding-left: 20px !important;
+          margin: 6px 0 !important;
+        }
+
+        .cv-html-text ol {
+          list-style-type: decimal !important;
+          padding-left: 20px !important;
+          margin: 6px 0 !important;
+        }
+
+        .cv-html-text li {
+          display: list-item !important;
+          margin: 3px 0 !important;
+        }
+
+        .cv-html-text strong,
+        .cv-html-text b {
+          font-weight: 800 !important;
+        }
+
+        .cv-html-text em,
+        .cv-html-text i {
+          font-style: italic !important;
+        }
+
+        .cv-html-text u {
+          text-decoration: underline !important;
+        }
+
+        .cv-html-text s,
+        .cv-html-text strike {
+          text-decoration: line-through !important;
+        }
+
+        .cv-html-text a {
+          color: #2563eb !important;
+          text-decoration: underline !important;
+          font-weight: 700 !important;
+        }
+      `}</style>
+    </>
+  );
+}
 
 function TemplateRenderer({ cv, config }) {
   const layout = config.layout || config.id || "clean-ats";
@@ -437,15 +508,14 @@ function EUPhotoDocumentCV({ cv, config }) {
           </aside>
 
           <main className="space-y-6">
-            {hasText(cv.summary) && (
-              <div>
-           <SmallHeadingLine title="Profile" accent={accent} />
-
-                <p className="whitespace-pre-line text-[12px] leading-relaxed text-slate-700">
-                  {cv.summary}
-                </p>
-              </div>
-            )}
+      {hasHtmlText(cv.summary) ? (
+  <CVSection title="Professional Summary" accent={accent}>
+    <HtmlText
+      html={cv.summary}
+      className="text-[12px] leading-relaxed text-slate-700"
+    />
+  </CVSection>
+) : null}
 
             <div className="text-[12px] leading-relaxed text-slate-700">
               <MainCVSections cv={cv} accent={accent} skipSummary />
@@ -502,7 +572,10 @@ function BerlinSidePhotoCV({ cv, config }) {
           style={{ backgroundColor: `${accent}12` }}
         >
           <CVSection title="Profile" accent={accent}>
-            <Paragraph text={cv.summary} />
+        <HtmlText
+  html={cv.summary}
+  className="text-[12px] leading-relaxed text-slate-700"
+/>
           </CVSection>
         </section>
 
@@ -1544,12 +1617,20 @@ function CVPage({ children, ivory = false }) {
   );
 }
 
-function MainCVSections({ cv, accent, skipSummary = false, skipExperience = false }) {
+function MainCVSections({
+  cv,
+  accent,
+  skipSummary = false,
+  skipExperience = false,
+}) {
   return (
     <>
-      {!skipSummary && hasText(cv.summary) ? (
+      {!skipSummary && hasHtmlText(cv.summary) ? (
         <CVSection title="Professional Summary" accent={accent}>
-          <Paragraph text={cv.summary} />
+          <HtmlText
+            html={cv.summary}
+            className="text-[12px] leading-relaxed text-slate-700"
+          />
         </CVSection>
       ) : null}
 
@@ -1787,7 +1868,9 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
   const items = getValidExperience(cv);
 
   if (!items.length) {
-    return hasText(cv.experience) ? <Paragraph text={cv.experience} /> : null;
+    return hasHtmlText(cv.experience) ? (
+      <HtmlText html={cv.experience} />
+    ) : null;
   }
 
   return (
@@ -1795,13 +1878,18 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
       {items.map((item, index) => (
         <div key={index} className="relative">
           {timeline ? (
-            <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full" style={{ backgroundColor: accent }} />
+            <span
+              className="absolute -left-[31px] top-1 h-3 w-3 rounded-full"
+              style={{ backgroundColor: accent }}
+            />
           ) : null}
 
           <div className="flex items-start justify-between gap-4">
             <div>
               {hasText(item.jobTitle) ? (
-                <h3 className="text-[13px] font-black text-slate-950">{item.jobTitle}</h3>
+                <h3 className="text-[13px] font-black text-slate-950">
+                  {item.jobTitle}
+                </h3>
               ) : null}
 
               {[item.company, item.location].filter(hasText).length ? (
@@ -1811,15 +1899,22 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
               ) : null}
             </div>
 
-            {[item.startDate, item.current ? "Present" : item.endDate].filter(hasText).length ? (
+            {[item.startDate, item.current ? "Present" : item.endDate].filter(
+              hasText
+            ).length ? (
               <p className="whitespace-nowrap text-[11px] font-bold text-slate-400">
-                {[item.startDate, item.current ? "Present" : item.endDate].filter(hasText).join(" — ")}
+                {[item.startDate, item.current ? "Present" : item.endDate]
+                  .filter(hasText)
+                  .join(" — ")}
               </p>
             ) : null}
           </div>
 
-          {hasText(item.description) ? (
-            <Paragraph text={item.description} className="mt-2" />
+          {hasHtmlText(item.description) ? (
+            <HtmlText
+              html={item.description}
+              className="mt-2 text-[12px] leading-relaxed text-slate-700"
+            />
           ) : null}
         </div>
       ))}

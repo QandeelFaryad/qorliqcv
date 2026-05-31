@@ -4,25 +4,32 @@ import { useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-function GmailIcon() {
+function GoogleIcon() {
   return (
     <svg
-      width="22"
-      height="22"
+      version="1.1"
+      xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 48 48"
       aria-hidden="true"
-      className="shrink-0"
+      className="block h-5 w-5 shrink-0"
     >
       <path
         fill="#EA4335"
-        d="M24 27.5 6 14.2V38c0 2.2 1.8 4 4 4h4V22.8l10 7.4 10-7.4V42h4c2.2 0 4-1.8 4-4V14.2L24 27.5z"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
       />
       <path
-        fill="#FBBC04"
-        d="M6 14.2 24 27.5 42 14.2V10c0-2.2-1.8-4-4-4h-1.3L24 15.4 11.3 6H10c-2.2 0-4 1.8-4 4v4.2z"
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
       />
-      <path fill="#34A853" d="M34 42h4c2.2 0 4-1.8 4-4V14.2l-8 5.9V42z" />
-      <path fill="#4285F4" d="M6 14.2V38c0 2.2 1.8 4 4 4h4V20.1l-8-5.9z" />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+      <path fill="none" d="M0 0h48v48H0z" />
     </svg>
   );
 }
@@ -35,6 +42,7 @@ export default function LoginContent() {
   const [mode, setMode] = useState("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -116,13 +124,19 @@ const checkSubscriptionAndRedirect = async () => {
 };
 
 const handleGoogleLogin = async () => {
-  setError("");
+  try {
+    setGoogleLoading(true);
+    setError("");
 
-  await signIn("google", {
-    callbackUrl: template ? finalCallbackUrl : "/cv-builder",
-  });
+    await signIn("google", {
+      callbackUrl: template ? finalCallbackUrl : "/cv-builder",
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+    setError("Unable to continue with Google.");
+    setGoogleLoading(false);
+  }
 };
-
 const handleManualLogin = async (e) => {
   e.preventDefault();
 
@@ -256,7 +270,7 @@ const handleManualLogin = async (e) => {
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl md:p-8">
+        <div className="rounded-[2rem]  border border-white/10 bg-white/[0.05] p-5 shadow-2xl md:p-8">
           <div className="grid grid-cols-2 rounded-full bg-black/40 p-1">
             <button
               type="button"
@@ -288,14 +302,31 @@ const handleManualLogin = async (e) => {
               Register
             </button>
           </div>
-
-         <button
+<button
   type="button"
   onClick={handleGoogleLogin}
-  className="mt-6 flex w-full items-center justify-center gap-3 rounded-full bg-white px-5 py-4 text-sm font-black text-black transition hover:bg-qorliqGold"
+  disabled={googleLoading}
+  className="group relative mt-6 flex h-10 w-full max-w-[400px] select-none items-center justify-center overflow-hidden rounded-[20px] bg-[#f2f2f2] px-3 text-center font-['Roboto',Arial,sans-serif] text-sm font-medium tracking-[0.25px] text-[#1f1f1f] outline-none transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] focus:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] active:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] disabled:cursor-not-allowed disabled:bg-[#f2f2f2]/70 disabled:text-[#1f1f1f]/50"
 >
-  <GmailIcon />
-  Continue with Google / Gmail
+  <span className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:bg-[#001d35] group-hover:opacity-[0.08] group-focus:bg-[#001d35] group-focus:opacity-[0.12] group-active:bg-[#001d35] group-active:opacity-[0.12]" />
+
+  {googleLoading ? (
+    <span className="absolute inset-0 z-10 flex items-center justify-center bg-[#f2f2f2]/90">
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#1f1f1f]/25 border-t-[#1f1f1f]" />
+    </span>
+  ) : null}
+
+  <span className="relative flex h-full w-full flex-row items-center justify-between">
+    <span className="mr-[10px] flex h-5 w-5 min-w-5 items-center justify-center">
+      <GoogleIcon />
+    </span>
+
+    <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+      {googleLoading ? "Please wait..." : "Sign in with Google"}
+    </span>
+
+    <span className="hidden">Sign in with Google</span>
+  </span>
 </button>
 
           <div className="my-6 flex items-center gap-4">

@@ -16,6 +16,23 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 );
 
+const COUNTRIES = [
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧", dialCode: "+44" },
+  { code: "US", name: "United States", flag: "🇺🇸", dialCode: "+1" },
+  { code: "PK", name: "Pakistan", flag: "🇵🇰", dialCode: "+92" },
+  { code: "IN", name: "India", flag: "🇮🇳", dialCode: "+91" },
+  { code: "AE", name: "United Arab Emirates", flag: "🇦🇪", dialCode: "+971" },
+  { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", dialCode: "+966" },
+  { code: "CA", name: "Canada", flag: "🇨🇦", dialCode: "+1" },
+  { code: "AU", name: "Australia", flag: "🇦🇺", dialCode: "+61" },
+  { code: "DE", name: "Germany", flag: "🇩🇪", dialCode: "+49" },
+  { code: "FR", name: "France", flag: "🇫🇷", dialCode: "+33" },
+  { code: "IT", name: "Italy", flag: "🇮🇹", dialCode: "+39" },
+  { code: "ES", name: "Spain", flag: "🇪🇸", dialCode: "+34" },
+  { code: "IE", name: "Ireland", flag: "🇮🇪", dialCode: "+353" },
+  { code: "NL", name: "Netherlands", flag: "🇳🇱", dialCode: "+31" },
+];
+
 export default function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,7 +47,20 @@ export default function CheckoutContent() {
     firstName: "",
     lastName: "",
     email: "",
-    address: "",
+
+    mobileCountryCode: "+44",
+    mobileCountryFlag: "🇬🇧",
+    mobileNumber: "",
+
+    country: "GB",
+    countryName: "United Kingdom",
+    countryFlag: "🇬🇧",
+
+    postalCode: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    
   });
 
   const intentCreatedRef = useRef(false);
@@ -46,6 +76,21 @@ export default function CheckoutContent() {
     setCustomerForm((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  const updateCountry = (countryCode) => {
+    const selectedCountry = COUNTRIES.find((item) => item.code === countryCode);
+
+    if (!selectedCountry) return;
+
+    setCustomerForm((prev) => ({
+      ...prev,
+      country: selectedCountry.code,
+      countryName: selectedCountry.name,
+      countryFlag: selectedCountry.flag,
+      mobileCountryCode: selectedCountry.dialCode,
+      mobileCountryFlag: selectedCountry.flag,
     }));
   };
 
@@ -87,7 +132,7 @@ export default function CheckoutContent() {
             planId,
             cvId,
             template,
-            customerForm
+            customerForm,
           }),
         });
 
@@ -190,7 +235,7 @@ export default function CheckoutContent() {
           </h1>
 
           <p className="mt-4 max-w-2xl text-sm leading-7 text-white/55">
-            Enter your customer details and card details below. Your payment is
+            Enter your billing details and card details below. Your payment is
             processed securely by Stripe.
           </p>
 
@@ -217,12 +262,12 @@ export default function CheckoutContent() {
 
           <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-black/30 p-5">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-white/50">
-              Customer Details
+              Billing Details
             </p>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <CheckoutInput
-                label="First Name"
+                label="Name"
                 value={customerForm.firstName}
                 onChange={(value) => updateCustomerForm("firstName", value)}
                 placeholder="Enter first name"
@@ -246,13 +291,55 @@ export default function CheckoutContent() {
                 required
               />
 
-              <CheckoutInput
-                label="Address"
-                value={customerForm.address}
-                onChange={(value) => updateCustomerForm("address", value)}
-                placeholder="Enter billing address"
+              <PhoneInput
+                label="Mobile Number"
+                countryCode={customerForm.mobileCountryCode}
+                countryFlag={customerForm.mobileCountryFlag}
+                value={customerForm.mobileNumber}
+                onChange={(value) => updateCustomerForm("mobileNumber", value)}
+                placeholder="Enter mobile number"
                 required
               />
+
+              <CountrySelect
+                label="Country"
+                value={customerForm.country}
+                onChange={updateCountry}
+                required
+              />
+
+              <CheckoutInput
+                label="Postal Code"
+                value={customerForm.postalCode}
+                onChange={(value) => updateCustomerForm("postalCode", value)}
+                placeholder="Enter postal code"
+                required
+              />
+
+              <CheckoutInput
+                label="Address Line 1"
+                value={customerForm.addressLine1}
+                onChange={(value) => updateCustomerForm("addressLine1", value)}
+                placeholder="House / flat / street"
+                required
+              />
+
+              <CheckoutInput
+                label="Address Line 2"
+                value={customerForm.addressLine2}
+                onChange={(value) => updateCustomerForm("addressLine2", value)}
+                placeholder="Apartment / area / optional"
+              />
+
+              <CheckoutInput
+                label="City / Town"
+                value={customerForm.city}
+                onChange={(value) => updateCustomerForm("city", value)}
+                placeholder="Enter city or town"
+                required
+              />
+
+              
             </div>
           </div>
 
@@ -375,9 +462,14 @@ function StripePaymentForm({
       !customerForm?.firstName?.trim() ||
       !customerForm?.lastName?.trim() ||
       !customerForm?.email?.trim() ||
-      !customerForm?.address?.trim()
+      !customerForm?.mobileNumber?.trim() ||
+      !customerForm?.country?.trim() ||
+      !customerForm?.postalCode?.trim() ||
+      !customerForm?.addressLine1?.trim() ||
+      !customerForm?.city?.trim() 
+      
     ) {
-      setMessage("Please complete customer details first.");
+      setMessage("Please complete all required billing details first.");
       return;
     }
 
@@ -393,8 +485,14 @@ function StripePaymentForm({
             billing_details: {
               name: `${customerForm.firstName.trim()} ${customerForm.lastName.trim()}`,
               email: customerForm.email.trim(),
+              phone: `${customerForm.mobileCountryCode}${customerForm.mobileNumber.trim()}`,
               address: {
-                line1: customerForm.address.trim(),
+                line1: customerForm.addressLine1.trim(),
+                line2: customerForm.addressLine2?.trim() || "",
+                city: customerForm.city.trim(),
+                
+                postal_code: customerForm.postalCode.trim(),
+                country: customerForm.country,
               },
             },
           },
@@ -540,6 +638,67 @@ function CheckoutInput({
         required={required}
         className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15"
       />
+    </div>
+  );
+}
+
+function CountrySelect({ label, value, onChange, required = false }) {
+  return (
+    <div>
+      <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">
+        {label} {required ? <span className="text-qorliqGold">*</span> : null}
+      </label>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm font-semibold text-white outline-none transition focus:border-qorliqGold focus:ring-4 focus:ring-qorliqGold/15"
+      >
+        {COUNTRIES.map((country) => (
+          <option
+            key={country.code}
+            value={country.code}
+            className="bg-black text-white"
+          >
+            {country.flag} {country.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function PhoneInput({
+  label,
+  countryCode,
+  countryFlag,
+  value,
+  onChange,
+  placeholder,
+  required = false,
+}) {
+  return (
+    <div>
+      <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/50">
+        {label} {required ? <span className="text-qorliqGold">*</span> : null}
+      </label>
+
+      <div className="mt-2 flex overflow-hidden rounded-2xl border border-white/10 bg-black/40 transition focus-within:border-qorliqGold focus-within:ring-4 focus-within:ring-qorliqGold/15">
+        <div className="flex items-center gap-2 border-r border-white/10 px-4 text-sm font-black text-white">
+          <span>{countryFlag}</span>
+          <span>{countryCode}</span>
+        </div>
+
+        <input
+          type="tel"
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/[^\d\s-]/g, ""))}
+          placeholder={placeholder}
+          required={required}
+          className="w-full bg-transparent px-4 py-4 text-sm font-semibold text-white outline-none placeholder:text-white/25"
+        />
+      </div>
     </div>
   );
 }

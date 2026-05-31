@@ -14,6 +14,15 @@ function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function makePhone(countryCode, number) {
+  const code = cleanText(countryCode);
+  const mobile = cleanText(number);
+
+  if (!code && !mobile) return "";
+
+  return `${code}${mobile}`.replace(/\s+/g, "");
+}
+
 export async function POST(req) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -41,13 +50,29 @@ export async function POST(req) {
     await connectDB();
 
     const body = await req.json().catch(() => ({}));
-    const { subscriptionId, planId, customerForm } = body;
+    const { subscriptionId, planId, customerForm = {} } = body;
 
     const customerDetails = {
       firstName: cleanText(customerForm?.firstName),
       lastName: cleanText(customerForm?.lastName),
       email: cleanText(customerForm?.email).toLowerCase(),
-      address: cleanText(customerForm?.address),
+
+      mobileCountryCode: cleanText(customerForm?.mobileCountryCode),
+      mobileCountryFlag: cleanText(customerForm?.mobileCountryFlag),
+      mobileNumber: cleanText(customerForm?.mobileNumber),
+      phone: makePhone(
+        customerForm?.mobileCountryCode,
+        customerForm?.mobileNumber
+      ),
+
+      country: cleanText(customerForm?.country).toUpperCase(),
+      countryName: cleanText(customerForm?.countryName),
+      countryFlag: cleanText(customerForm?.countryFlag),
+
+      postalCode: cleanText(customerForm?.postalCode),
+      addressLine1: cleanText(customerForm?.addressLine1),
+      addressLine2: cleanText(customerForm?.addressLine2),
+      city: cleanText(customerForm?.city),
     };
 
     const user = await User.findOne({
@@ -196,7 +221,78 @@ export async function POST(req) {
 
     const stripeName = stripeCustomer?.name || "";
     const stripeEmail = stripeCustomer?.email || "";
-    const stripeAddress = stripeCustomer?.address?.line1 || "";
+    const stripeAddress = stripeCustomer?.address || {};
+
+    const billingDetails = {
+      firstName:
+        customerDetails.firstName || user.billingDetails?.firstName || "",
+
+      lastName:
+        customerDetails.lastName || user.billingDetails?.lastName || "",
+
+      email:
+        customerDetails.email ||
+        user.billingDetails?.email ||
+        stripeEmail ||
+        session.user.email.toLowerCase().trim(),
+
+      mobileCountryCode:
+        customerDetails.mobileCountryCode ||
+        user.billingDetails?.mobileCountryCode ||
+        "",
+
+      mobileCountryFlag:
+        customerDetails.mobileCountryFlag ||
+        user.billingDetails?.mobileCountryFlag ||
+        "",
+
+      mobileNumber:
+        customerDetails.mobileNumber || user.billingDetails?.mobileNumber || "",
+
+      phone:
+        customerDetails.phone ||
+        user.billingDetails?.phone ||
+        stripeCustomer?.phone ||
+        "",
+
+      country:
+        customerDetails.country ||
+        user.billingDetails?.country ||
+        stripeAddress?.country ||
+        "",
+
+      countryName:
+        customerDetails.countryName || user.billingDetails?.countryName || "",
+
+      countryFlag:
+        customerDetails.countryFlag || user.billingDetails?.countryFlag || "",
+
+      postalCode:
+        customerDetails.postalCode ||
+        user.billingDetails?.postalCode ||
+        stripeAddress?.postal_code ||
+        "",
+
+      addressLine1:
+        customerDetails.addressLine1 ||
+        user.billingDetails?.addressLine1 ||
+        stripeAddress?.line1 ||
+        "",
+
+      addressLine2:
+        customerDetails.addressLine2 ||
+        user.billingDetails?.addressLine2 ||
+        stripeAddress?.line2 ||
+        "",
+
+      city:
+        customerDetails.city ||
+        user.billingDetails?.city ||
+        stripeAddress?.city ||
+        "",
+
+      stripeName,
+    };
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
@@ -218,48 +314,16 @@ export async function POST(req) {
           subscriptionStartDate,
           subscriptionEndDate,
 
-          billingFirstName:
-            customerDetails.firstName || user.billingFirstName || "",
-          billingLastName:
-            customerDetails.lastName || user.billingLastName || "",
-          billingEmail:
-            customerDetails.email ||
-            user.billingEmail ||
-            stripeEmail ||
-            session.user.email.toLowerCase().trim(),
-          billingAddress:
-            customerDetails.address ||
-            user.billingAddress ||
-            stripeAddress ||
-            "",
-
-          billingDetails: {
-            firstName:
-              customerDetails.firstName ||
-              user.billingDetails?.firstName ||
-              user.billingFirstName ||
-              "",
-            lastName:
-              customerDetails.lastName ||
-              user.billingDetails?.lastName ||
-              user.billingLastName ||
-              "",
-            email:
-              customerDetails.email ||
-              user.billingDetails?.email ||
-              user.billingEmail ||
-              stripeEmail ||
-              session.user.email.toLowerCase().trim(),
-            address:
-              customerDetails.address ||
-              user.billingDetails?.address ||
-              user.billingAddress ||
-              stripeAddress ||
-              "",
-            stripeName,
-          },
+          billingDetails,
 
           updatedAt: new Date(),
+        },
+
+        $unset: {
+          billingFirstName: "",
+          billingLastName: "",
+          billingEmail: "",
+          billingAddress: "",
         },
       },
       { new: true }
@@ -271,6 +335,7 @@ export async function POST(req) {
       plan: updatedUser.plan,
       subscriptionStartDate: updatedUser.subscriptionStartDate,
       subscriptionEndDate: updatedUser.subscriptionEndDate,
+      billingDetails: updatedUser.billingDetails,
     });
 
     return NextResponse.json({

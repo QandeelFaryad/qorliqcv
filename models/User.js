@@ -105,51 +105,88 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    
-
-    billingFirstName: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    billingLastName: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    billingEmail: {
-      type: String,
-      default: "",
-      lowercase: true,
-      trim: true,
-    },
-
-    billingAddress: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
     billingDetails: {
       firstName: {
         type: String,
         default: "",
         trim: true,
       },
+
       lastName: {
         type: String,
         default: "",
         trim: true,
       },
+
       email: {
         type: String,
         default: "",
         lowercase: true,
         trim: true,
       },
-      address: {
+
+      mobileCountryCode: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      mobileCountryFlag: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      mobileNumber: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      phone: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      country: {
+        type: String,
+        default: "",
+        uppercase: true,
+        trim: true,
+      },
+
+      countryName: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      countryFlag: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      postalCode: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      addressLine1: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      addressLine2: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      city: {
         type: String,
         default: "",
         trim: true,

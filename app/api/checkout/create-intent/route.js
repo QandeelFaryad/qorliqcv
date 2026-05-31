@@ -15,6 +15,15 @@ function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function makePhone(countryCode, number) {
+  const code = cleanText(countryCode);
+  const mobile = cleanText(number);
+
+  if (!code && !mobile) return "";
+
+  return `${code}${mobile}`.replace(/\s+/g, "");
+}
+
 export async function POST(req) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -56,7 +65,7 @@ export async function POST(req) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { planId, cvId, template, customerForm } = body;
+    const { planId, cvId, template, customerForm = {} } = body;
 
     const customerDetails = {
       firstName: cleanText(customerForm?.firstName),
@@ -64,12 +73,48 @@ export async function POST(req) {
       email:
         cleanText(customerForm?.email).toLowerCase() ||
         user.email.toLowerCase().trim(),
-      address: cleanText(customerForm?.address),
+
+      mobileCountryCode: cleanText(customerForm?.mobileCountryCode),
+      mobileCountryFlag: cleanText(customerForm?.mobileCountryFlag),
+      mobileNumber: cleanText(customerForm?.mobileNumber),
+      phone: makePhone(
+        customerForm?.mobileCountryCode,
+        customerForm?.mobileNumber
+      ),
+
+      country: cleanText(customerForm?.country).toUpperCase() || "GB",
+      countryName: cleanText(customerForm?.countryName),
+      countryFlag: cleanText(customerForm?.countryFlag),
+
+      postalCode: cleanText(customerForm?.postalCode),
+      addressLine1: cleanText(customerForm?.addressLine1),
+      addressLine2: cleanText(customerForm?.addressLine2),
+      city: cleanText(customerForm?.city),
     };
 
     const fullName = `${customerDetails.firstName} ${customerDetails.lastName}`
       .trim()
       .replace(/\s+/g, " ");
+
+    const billingDetails = {
+      firstName: customerDetails.firstName,
+      lastName: customerDetails.lastName,
+      email: customerDetails.email,
+
+      mobileCountryCode: customerDetails.mobileCountryCode,
+      mobileCountryFlag: customerDetails.mobileCountryFlag,
+      mobileNumber: customerDetails.mobileNumber,
+      phone: customerDetails.phone,
+
+      country: customerDetails.country,
+      countryName: customerDetails.countryName,
+      countryFlag: customerDetails.countryFlag,
+
+      postalCode: customerDetails.postalCode,
+      addressLine1: customerDetails.addressLine1,
+      addressLine2: customerDetails.addressLine2,
+      city: customerDetails.city,
+    };
 
     if (!planId) {
       return NextResponse.json(
@@ -124,10 +169,16 @@ export async function POST(req) {
       planType: selectedPlan.type || "",
       cvId: cvId || "",
       template: template || "",
+
       billingFirstName: customerDetails.firstName || "",
       billingLastName: customerDetails.lastName || "",
       billingEmail: customerDetails.email || "",
-      billingAddress: customerDetails.address || "",
+      billingPhone: customerDetails.phone || "",
+      billingCountry: customerDetails.country || "",
+      billingPostalCode: customerDetails.postalCode || "",
+      billingAddressLine1: customerDetails.addressLine1 || "",
+      billingAddressLine2: customerDetails.addressLine2 || "",
+      billingCity: customerDetails.city || "",
     };
 
     let customerId = user.stripeCustomerId;
@@ -146,60 +197,68 @@ export async function POST(req) {
       }
     }
 
-  if (!customerId) {
-  const customer = await stripe.customers.create({
-    email: customerDetails.email || user.email,
-    name: fullName || user.name || undefined,
-    address: {
-      line1: customerDetails.address || undefined,
-      country: "GB",
-    },
-    metadata: {
-      userId: user._id.toString(),
-      email: user.email,
-    },
-  });
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: customerDetails.email || user.email,
+        name: fullName || user.name || undefined,
+        phone: customerDetails.phone || undefined,
+        address: {
+          line1: customerDetails.addressLine1 || undefined,
+          line2: customerDetails.addressLine2 || undefined,
+          city: customerDetails.city || undefined,
+          postal_code: customerDetails.postalCode || undefined,
+          country: customerDetails.country || "GB",
+        },
+        metadata: {
+          userId: user._id.toString(),
+          email: user.email,
+        },
+      });
 
-  customerId = customer.id;
-  user.stripeCustomerId = customerId;
-  await user.save();
-} else {
-  await stripe.customers.update(customerId, {
-    email: customerDetails.email || user.email,
-    name: fullName || user.name || undefined,
-    address: {
-      line1: customerDetails.address || undefined,
-      country: "GB",
-    },
-    metadata: {
-      userId: user._id.toString(),
-      email: user.email,
-    },
-  });
-}
+      customerId = customer.id;
+      user.stripeCustomerId = customerId;
+      await user.save();
+    } else {
+      await stripe.customers.update(customerId, {
+        email: customerDetails.email || user.email,
+        name: fullName || user.name || undefined,
+        phone: customerDetails.phone || undefined,
+        address: {
+          line1: customerDetails.addressLine1 || undefined,
+          line2: customerDetails.addressLine2 || undefined,
+          city: customerDetails.city || undefined,
+          postal_code: customerDetails.postalCode || undefined,
+          country: customerDetails.country || "GB",
+        },
+        metadata: {
+          userId: user._id.toString(),
+          email: user.email,
+        },
+      });
+    }
 
     if (selectedPlan.type === "subscription") {
-    const subscription = await stripe.subscriptions.create({
-  customer: customerId,
-  items: [
-    {
-      price: stripePriceId,
-      quantity: 1,
-    },
-  ],
-  automatic_tax: {
-    enabled: true,
-  },
-  payment_behavior: "default_incomplete",
-  payment_settings: {
-    save_default_payment_method: "on_subscription",
-  },
-  expand: [
-    "latest_invoice.confirmation_secret",
-    "latest_invoice.payment_intent",
-  ],
-  metadata,
-});
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [
+          {
+            price: stripePriceId,
+            quantity: 1,
+          },
+        ],
+        automatic_tax: {
+          enabled: true,
+        },
+        payment_behavior: "default_incomplete",
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+        },
+        expand: [
+          "latest_invoice.confirmation_secret",
+          "latest_invoice.payment_intent",
+        ],
+        metadata,
+      });
 
       const invoice = subscription.latest_invoice;
 
@@ -223,8 +282,10 @@ export async function POST(req) {
               stripePriceId,
               subscriptionId: subscription.id,
               subscriptionStatus: subscription.status,
-              latestInvoiceId: typeof invoice === "object" ? invoice.id : invoice,
-              invoiceStatus: typeof invoice === "object" ? invoice.status : null,
+              latestInvoiceId:
+                typeof invoice === "object" ? invoice.id : invoice,
+              invoiceStatus:
+                typeof invoice === "object" ? invoice.status : null,
               hasConfirmationSecret: Boolean(invoice?.confirmation_secret),
               hasPaymentIntent: Boolean(invoice?.payment_intent),
             },
@@ -249,19 +310,12 @@ export async function POST(req) {
             subscriptionStartDate: new Date(),
             subscriptionEndDate: null,
 
-            billingFirstName: customerDetails.firstName,
-            billingLastName: customerDetails.lastName,
-            billingEmail: customerDetails.email,
-            billingAddress: customerDetails.address,
-            billingDetails: {
-              firstName: customerDetails.firstName,
-              lastName: customerDetails.lastName,
-              email: customerDetails.email,
-              address: customerDetails.address,
-            },
+            billingDetails,
 
             updatedAt: new Date(),
           },
+
+       
         },
         { new: true }
       );
@@ -287,29 +341,29 @@ export async function POST(req) {
       );
     }
 
- const baseAmount = price.unit_amount;
-const taxAmount = Math.round(baseAmount * 0.2);
-const totalAmount = baseAmount + taxAmount;
+    const baseAmount = price.unit_amount;
+    const taxAmount = Math.round(baseAmount * 0.2);
+    const totalAmount = baseAmount + taxAmount;
 
-const paymentIntent = await stripe.paymentIntents.create({
-  amount: totalAmount,
-  currency: price.currency || "gbp",
-  customer: customerId,
-  receipt_email: customerDetails.email || user.email,
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalAmount,
+      currency: price.currency || "gbp",
+      customer: customerId,
+      receipt_email: customerDetails.email || user.email,
 
-  automatic_payment_methods: {
-    enabled: true,
-  },
+      automatic_payment_methods: {
+        enabled: true,
+      },
 
-  metadata: {
-    ...metadata,
-    baseAmount: String(baseAmount),
-    taxRate: "20",
-    taxAmount: String(taxAmount),
-    totalAmount: String(totalAmount),
-    taxCountry: "GB",
-  },
-});
+      metadata: {
+        ...metadata,
+        baseAmount: String(baseAmount),
+        taxRate: "20",
+        taxAmount: String(taxAmount),
+        totalAmount: String(totalAmount),
+        taxCountry: customerDetails.country || "GB",
+      },
+    });
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
@@ -329,19 +383,11 @@ const paymentIntent = await stripe.paymentIntents.create({
           stripeSubscriptionId: "",
           subscriptionEndDate: null,
 
-          billingFirstName: customerDetails.firstName,
-          billingLastName: customerDetails.lastName,
-          billingEmail: customerDetails.email,
-          billingAddress: customerDetails.address,
-          billingDetails: {
-            firstName: customerDetails.firstName,
-            lastName: customerDetails.lastName,
-            email: customerDetails.email,
-            address: customerDetails.address,
-          },
+          billingDetails,
 
           updatedAt: new Date(),
         },
+
       },
       { new: true }
     );

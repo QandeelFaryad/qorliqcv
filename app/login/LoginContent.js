@@ -306,7 +306,7 @@ const handleManualLogin = async (e) => {
   type="button"
   onClick={handleGoogleLogin}
   disabled={googleLoading}
-  className="group relative mt-6 flex h-10 w-full max-w-[400px] select-none items-center justify-center overflow-hidden rounded-[20px] bg-[#f2f2f2] px-3 text-center font-['Roboto',Arial,sans-serif] text-sm font-medium tracking-[0.25px] text-[#1f1f1f] outline-none transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] focus:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] active:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] disabled:cursor-not-allowed disabled:bg-[#f2f2f2]/70 disabled:text-[#1f1f1f]/50"
+  className="group relative mx-auto mt-6 flex h-10 w-full max-w-[400px] select-none items-center justify-center overflow-hidden rounded-[20px] bg-[#f2f2f2] px-3 text-center font-['Roboto',Arial,sans-serif] text-sm font-medium tracking-[0.25px] text-[#1f1f1f] outline-none transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] focus:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] active:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] disabled:cursor-not-allowed disabled:bg-[#f2f2f2]/70 disabled:text-[#1f1f1f]/50"
 >
   <span className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:bg-[#001d35] group-hover:opacity-[0.08] group-focus:bg-[#001d35] group-focus:opacity-[0.12] group-active:bg-[#001d35] group-active:opacity-[0.12]" />
 
@@ -316,16 +316,14 @@ const handleManualLogin = async (e) => {
     </span>
   ) : null}
 
-  <span className="relative flex h-full w-full flex-row items-center justify-between">
-    <span className="mr-[10px] flex h-5 w-5 min-w-5 items-center justify-center">
+  <span className="relative flex h-full w-full items-center justify-center gap-3">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
       <GoogleIcon />
     </span>
 
-    <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
       {googleLoading ? "Please wait..." : "Sign in with Google"}
     </span>
-
-    <span className="hidden">Sign in with Google</span>
   </span>
 </button>
 

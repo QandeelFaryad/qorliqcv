@@ -289,7 +289,7 @@ return (
     </div>
   </div>
 
-  <div className="mt-4 grid grid-cols-2 gap-2.5">
+  <div className="mt-4 grid grid-cols-2  gap-2.5">
     <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5">
       <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
         Payment
@@ -327,7 +327,7 @@ return (
           </div>
 
           {/* Mobile-friendly info row */}
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-5 flex gap-3 flex-col md:flex-row">
             <InfoCard
               title="Customer"
               value={customerForm.email || session?.user?.email || "Logged in"}
@@ -849,7 +849,7 @@ function PhoneInput({
 }
 function InfoCard({ title, value }) {
   return (
-    <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.075] to-black/30 p-4 shadow-lg shadow-black/10 sm:block">
+    <div className="flex  w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.075] to-black/30 p-4 shadow-lg shadow-black/10 sm:block">
       <p className="shrink-0 text-[10px] font-black uppercase tracking-[0.13em] text-qorliqGold/80 sm:text-[10px]">
         {title}
       </p>

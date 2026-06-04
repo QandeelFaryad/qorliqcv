@@ -238,6 +238,54 @@ export default function CreateCVPage() {
   );
 }
 
+
+function stripHtmlText(value) {
+  return String(value || "").replace(/<[^>]*>/g, "").trim();
+}
+
+function getPageCompletionScores(form) {
+  const exp = Array.isArray(form.experiences) ? form.experiences : [];
+  const edu = Array.isArray(form.educations) ? form.educations : [];
+
+  const groups = [
+    [form.fullName, form.jobTitle, form.email, form.phone, form.location],
+    [stripHtmlText(form.summary)],
+    exp.length ? exp.flatMap((item) => [item.jobTitle, item.company, item.startDate, item.endDate, stripHtmlText(item.description)]) : [],
+    edu.length ? edu.flatMap((item) => [item.degree, item.institution, item.startDate || item.endDate || item.description]) : [],
+    [Array.isArray(form.skills) && form.skills.length ? "skills" : "", Array.isArray(form.languages) && form.languages.length ? "languages" : ""],
+    [Array.isArray(form.projectsList) && form.projectsList.length ? "projects" : "", Array.isArray(form.achievements) && form.achievements.length ? "achievements" : ""],
+    [Array.isArray(form.certificationsList) && form.certificationsList.length ? "certifications" : "", form.references, Array.isArray(form.hobbies) && form.hobbies.length ? "hobbies" : ""],
+  ];
+
+  return groups.map((fields) => {
+    const total = fields.length || 1;
+    const filled = fields.filter((value) => String(value || "").trim()).length;
+    return Math.round((filled / total) * 100);
+  });
+}
+
+function getTotalCompletionScore(scores) {
+  if (!Array.isArray(scores) || !scores.length) return 0;
+  return Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length);
+}
+
+
+async function generateCvAiContent({ type, cv }) {
+  const response = await fetch("/api/ai/cv-generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, cv }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data?.success) {
+    throw new Error(data?.error || "Failed to generate AI content.");
+  }
+
+  return data.html;
+}
+
 function CreateCVContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -282,6 +330,9 @@ function CreateCVContent() {
   );
 
   const progressPercent = Math.round(((currentStep + 1) / steps.length) * 100);
+  const pageScores = useMemo(() => getPageCompletionScores(form), [form]);
+  const totalCvScore = useMemo(() => getTotalCompletionScore(pageScores), [pageScores]);
+  const currentPageScore = pageScores[currentStep] || 0;
 
   useEffect(() => {
     const template = searchParams.get("template") || "clean-ats";
@@ -982,6 +1033,14 @@ return (
               />
             </div>
 
+            <CVScoreCard
+              pageScores={pageScores}
+              totalCvScore={totalCvScore}
+              currentPageScore={currentPageScore}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+            />
+
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
               {steps.map((step, index) => (
                 <button
@@ -1275,13 +1334,23 @@ return (
 function PureSummaryStep({ form, updateField }) {
   return (
     <div className="space-y-5">
-      <RichTextEditor
-        label="Professional Summary"
-        value={form.summary}
-        onChange={(value) => updateField("summary", value)}
-        placeholder="Write your professional summary..."
-        rows={8}
-      />
+     <RichTextEditor
+  label="Professional Summary"
+  value={form.summary}
+  onChange={(value) => updateField("summary", value)}
+  placeholder="Write your professional summary..."
+  rows={8}
+  showAI
+  aiType="summary"
+  targetRole={form.jobTitle}
+  cvContext={{
+    ...form,
+    requestedSection: "summary",
+    professionalTitle: form.jobTitle,
+    targetTitle: form.jobTitle,
+    currentSummary: form.summary,
+  }}
+/>
 
       <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
@@ -1528,17 +1597,18 @@ function ExperienceStep({
   return (
     <div className="space-y-5">
       {form.experiences.map((item, index) => (
-        <ExperienceCard
-          key={index}
-          index={index}
-          item={item}
-          onChange={(field, value) =>
-            updateArrayItem("experiences", index, field, value)
-          }
-          onRemove={() =>
-            removeArrayItem("experiences", index, emptyExperience)
-          }
-        />
+       <ExperienceCard
+  key={index}
+  index={index}
+  item={item}
+  form={form}
+  onChange={(field, value) =>
+    updateArrayItem("experiences", index, field, value)
+  }
+  onRemove={() =>
+    removeArrayItem("experiences", index, emptyExperience)
+  }
+/>
       ))}
 
       <AddButton
@@ -1907,7 +1977,7 @@ function AdditionalSectionCard({ index, item, onChange, onRemove }) {
   );
 }
 
-function ExperienceCard({ index, item, onChange, onRemove }) {
+function ExperienceCard({ index, item, form, onChange, onRemove }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
       <CardTop title={`Experience ${index + 1}`} onRemove={onRemove} />
@@ -1965,7 +2035,7 @@ function ExperienceCard({ index, item, onChange, onRemove }) {
         </label>
 
         <div className="md:col-span-2">
-       <RichTextEditor
+    <RichTextEditor
   label="Achievements / Responsibilities"
   value={item.description}
   onChange={(value) => onChange("description", value)}
@@ -1974,22 +2044,32 @@ function ExperienceCard({ index, item, onChange, onRemove }) {
 • Managed supplier communication and internal workflows
 • Reduced operational delays through process improvement`}
   rows={6}
+  showAI
+  aiType="responsibilities"
+  targetRole={item.jobTitle || form?.jobTitle}
+  cvContext={{
+    ...form,
+    expTitle: item.jobTitle,
+    company: item.company,
+    startDate: item.startDate,
+    endDate: item.current ? "Present" : item.endDate,
+    responsibilities: item.description,
+  }}
 />
 
           <SuggestionPanel title="Suggested Descriptions">
             {experienceSuggestions.map((suggestion) => (
-              <SuggestionButton
-                key={suggestion}
-                text={suggestion}
-                onClick={() => {
-            const next = item.description
-  ? `${item.description}<ul><li>${suggestion}</li></ul>`
-  : `<ul><li>${suggestion}</li></ul>`;
+            <SuggestionButton
+  key={suggestion}
+  text={suggestion}
+  onClick={() => {
+    const next = item.description
+      ? `${item.description}<ul><li>${suggestion}</li></ul>`
+      : `<ul><li>${suggestion}</li></ul>`;
 
-onChange("description", next);
-                  onChange("description", next);
-                }}
-              />
+    onChange("description", next);
+  }}
+/>
             ))}
           </SuggestionPanel>
         </div>
@@ -2205,15 +2285,95 @@ function Textarea({
     </div>
   );
 }
+function ToolbarDivider({ dark = false }) {
+  return <span className={`mx-1.5 h-6 w-px ${dark ? "bg-white/10" : "bg-slate-300"}`} />;
+}
+
+function ToolbarButton({ title, onClick, children }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClick?.();
+      }}
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-950 active:bg-slate-200"
+    >
+      {children}
+    </button>
+  );
+}
+
+function AIStars() {
+  return (
+    <span className="relative flex h-5 w-5 items-center justify-center">
+      <span className="absolute left-[1px] top-[7px] text-[10px] leading-none">✦</span>
+      <span className="absolute left-[8px] top-[1px] text-[8px] leading-none">✦</span>
+      <span className="absolute left-[11px] top-[10px] text-[6px] leading-none">✦</span>
+    </span>
+  );
+}
+
+function CVScoreCard({ pageScores, totalCvScore, currentPageScore, currentStep, setCurrentStep }) {
+  const stepEmojis = ["👤", "📝", "💼", "🎓", "🛠️", "🏆", "📄"];
+  const moodEmoji = totalCvScore >= 90 ? "😍" : totalCvScore >= 75 ? "😊" : totalCvScore >= 50 ? "🙂" : totalCvScore >= 25 ? "😐" : "💧";
+
+  return (
+    <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-950/80 via-[#10283b] to-[#17181D] px-3 py-2 shadow-lg shadow-cyan-950/20">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-lg">{stepEmojis[currentStep] || "✨"}</span>
+        <p className="shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+          Your CV Score
+        </p>
+        <div className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10 shadow-inner">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400 transition-all duration-700 ease-out"
+            style={{ width: `${totalCvScore}%` }}
+          />
+        </div>
+        <span className="text-sm">{moodEmoji}</span>
+        <span className="text-sm font-black text-white">{totalCvScore}%</span>
+      </div>
+
+      <div className="mt-2 grid grid-cols-7 gap-1">
+        {pageScores.map((value, index) => (
+          <button
+            key={`score-step-${index}`}
+            type="button"
+            onClick={() => setCurrentStep(index)}
+            className={`h-1.5 rounded-full transition-all ${
+              currentStep === index
+                ? "bg-white"
+                : value >= 80
+                ? "bg-cyan-300"
+                : value > 0
+                ? "bg-cyan-300/45"
+                : "bg-white/15"
+            }`}
+            title={`Page ${index + 1}: ${value}% | Current page: ${currentPageScore}%`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RichTextEditor({
   label,
   value,
   onChange,
-  placeholder = "Write here...",
+  placeholder = "Write here.",
   rows = 7,
+  showAI = false,
+  aiType = "summary",
+  cvContext = {},
+  targetRole = "",
 }) {
   const editorRef = useRef(null);
   const savedSelectionRef = useRef(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -2231,6 +2391,8 @@ function RichTextEditor({
   };
 
   const saveSelection = () => {
+    if (typeof window === "undefined") return;
+
     const selection = window.getSelection();
     const editor = editorRef.current;
 
@@ -2244,6 +2406,8 @@ function RichTextEditor({
   };
 
   const restoreSelection = () => {
+    if (typeof window === "undefined") return;
+
     const editor = editorRef.current;
     const selection = window.getSelection();
 
@@ -2257,11 +2421,17 @@ function RichTextEditor({
     }
   };
 
-  const runCommand = (command, value = null) => {
+  const runCommand = (command, commandValue = null) => {
     restoreSelection();
 
     setTimeout(() => {
-      document.execCommand(command, false, value);
+      if (
+        typeof document !== "undefined" &&
+        typeof document.execCommand === "function"
+      ) {
+        document.execCommand(command, false, commandValue);
+      }
+
       updateValue();
       saveSelection();
     }, 0);
@@ -2270,16 +2440,7 @@ function RichTextEditor({
   const addLink = () => {
     restoreSelection();
 
-    const selection = window.getSelection();
-    const selectedText = selection?.toString()?.trim();
-
-    if (!selectedText) {
-      alert("Please select text first.");
-      return;
-    }
-
     let url = window.prompt("Enter URL");
-
     if (!url) return;
 
     url = url.trim();
@@ -2300,14 +2461,90 @@ function RichTextEditor({
     }, 10);
   };
 
+  const handleGenerateAI = async () => {
+  if (aiLoading) return;
+
+  try {
+    setAiLoading(true);
+
+    const role =
+      targetRole ||
+      cvContext?.professionalTitle ||
+      cvContext?.targetTitle ||
+      cvContext?.expTitle ||
+      cvContext?.jobTitle ||
+      "";
+
+    const safeCvContext = {
+      ...cvContext,
+
+      // important: API ko clear section batana
+      requestedSection: aiType,
+      aiType,
+
+      // role clear send karna
+      professionalTitle: role,
+      targetTitle: role,
+
+      // summary and experience ko mix hone se bachana
+      jobTitle:
+        aiType === "responsibilities"
+          ? cvContext?.jobTitle || role
+          : role,
+
+      expTitle:
+        aiType === "responsibilities"
+          ? role
+          : cvContext?.expTitle || "",
+
+      currentEditorValue: editorRef.current?.innerHTML || value || "",
+    };
+
+    console.log("AI TYPE SENT:", aiType);
+    console.log("AI ROLE SENT:", role);
+    console.log("AI CONTEXT SENT:", safeCvContext);
+
+    const html = await generateCvAiContent({
+      type: aiType,
+      cv: safeCvContext,
+    });
+
+    if (editorRef.current) {
+      editorRef.current.innerHTML = html;
+    }
+
+    onChange(html);
+    saveSelection();
+  } catch (error) {
+    console.error("Generate AI error:", error);
+    alert(error?.message || "AI generation failed.");
+  } finally {
+    setAiLoading(false);
+  }
+};
+
   const toolbarBtn =
     "flex h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-sm font-black text-slate-800 transition hover:bg-slate-100";
 
   return (
     <div>
-      <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
-        {label}
-      </label>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <label className="block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+          {label}
+        </label>
+
+        {showAI ? (
+          <button
+            type="button"
+            onClick={handleGenerateAI}
+            disabled={aiLoading}
+            className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8C7BFF] via-[#7EA8FF] to-[#58C6FF] px-4 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_8px_20px_rgba(88,198,255,0.28)] transition hover:shadow-[0_10px_24px_rgba(88,198,255,0.38)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+          >
+            <span>✦</span>
+            <span>{aiLoading ? "Generating..." : "Generate AI"}</span>
+          </button>
+        ) : null}
+      </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-white">
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
@@ -2341,7 +2578,7 @@ function RichTextEditor({
               runCommand("underline");
             }}
           >
-            <span className="underline">U</span>
+            <u>U</u>
           </button>
 
           <button
@@ -2352,31 +2589,7 @@ function RichTextEditor({
               runCommand("strikeThrough");
             }}
           >
-            <span className="line-through">S</span>
-          </button>
-
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              addLink();
-            }}
-          >
-            🔗
-          </button>
-
-          <span className="mx-1 h-7 w-px bg-slate-300" />
-
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("insertOrderedList");
-            }}
-          >
-            1.
+            <s>S</s>
           </button>
 
           <button
@@ -2387,7 +2600,62 @@ function RichTextEditor({
               runCommand("insertUnorderedList");
             }}
           >
-            •
+            • List
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("insertOrderedList");
+            }}
+          >
+            1. List
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              addLink();
+            }}
+          >
+            Link
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("justifyLeft");
+            }}
+          >
+            Left
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("justifyCenter");
+            }}
+          >
+            Center
+          </button>
+
+          <button
+            type="button"
+            className={toolbarBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              runCommand("justifyRight");
+            }}
+          >
+            Right
           </button>
         </div>
 
@@ -2395,70 +2663,57 @@ function RichTextEditor({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          data-placeholder={placeholder}
           onInput={updateValue}
-          onBlur={updateValue}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-          }}
-          onKeyUp={() => {
-            saveSelection();
-            updateValue();
-          }}
+          onKeyUp={saveSelection}
           onMouseUp={saveSelection}
-          onFocus={saveSelection}
-          className="rich-editor w-full bg-white px-4 py-4 text-sm font-medium leading-7 text-slate-900 outline-none"
+          onBlur={saveSelection}
+          className="rich-text-editor min-h-[180px] w-full bg-white px-4 py-4 text-sm leading-7 text-slate-900 outline-none"
           style={{ minHeight: `${rows * 28}px` }}
+          data-placeholder={placeholder}
         />
       </div>
 
-      <style jsx>{`
-        .rich-editor:empty::before {
+      <style jsx global>{`
+        .rich-text-editor:empty:before {
           content: attr(data-placeholder);
           color: #94a3b8;
-          pointer-events: none;
         }
 
-        .rich-editor ul {
-          list-style-type: disc;
-          padding-left: 24px;
-          margin: 8px 0;
+        .rich-text-editor ul {
+          list-style-type: disc !important;
+          padding-left: 22px !important;
+          margin: 6px 0 !important;
         }
 
-        .rich-editor ol {
-          list-style-type: decimal;
-          padding-left: 24px;
-          margin: 8px 0;
+        .rich-text-editor ol {
+          list-style-type: decimal !important;
+          padding-left: 22px !important;
+          margin: 6px 0 !important;
         }
 
-        .rich-editor li {
-          display: list-item;
-          margin: 4px 0;
+        .rich-text-editor li {
+          display: list-item !important;
+          margin: 3px 0 !important;
         }
 
-        .rich-editor strong,
-        .rich-editor b {
-          font-weight: 800;
+        .rich-text-editor b,
+        .rich-text-editor strong {
+          font-weight: 800 !important;
         }
 
-        .rich-editor em,
-        .rich-editor i {
-          font-style: italic;
+        .rich-text-editor i,
+        .rich-text-editor em {
+          font-style: italic !important;
         }
 
-        .rich-editor u {
-          text-decoration: underline;
+        .rich-text-editor u {
+          text-decoration: underline !important;
         }
 
-        .rich-editor s,
-        .rich-editor strike {
-          text-decoration: line-through;
-        }
-
-        .rich-editor a {
-          color: #2563eb;
-          text-decoration: underline;
-          font-weight: 700;
+        .rich-text-editor a {
+          color: #2563eb !important;
+          text-decoration: underline !important;
+          font-weight: 700 !important;
         }
       `}</style>
     </div>

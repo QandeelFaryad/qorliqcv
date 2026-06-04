@@ -8,11 +8,16 @@ export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
 async function getSubscriptionDates(subscription) {
   let subscriptionStartDate = null;
   let subscriptionEndDate = null;
 
-  // 1. Subscription direct fields
   if (subscription.current_period_start) {
     subscriptionStartDate = new Date(subscription.current_period_start * 1000);
   }
@@ -21,7 +26,6 @@ async function getSubscriptionDates(subscription) {
     subscriptionEndDate = new Date(subscription.current_period_end * 1000);
   }
 
-  // 2. Subscription item fallback
   const item = subscription.items?.data?.[0];
 
   if (!subscriptionStartDate && item?.current_period_start) {
@@ -32,8 +36,10 @@ async function getSubscriptionDates(subscription) {
     subscriptionEndDate = new Date(item.current_period_end * 1000);
   }
 
-  // 3. Latest invoice line fallback
-  if ((!subscriptionStartDate || !subscriptionEndDate) && subscription.latest_invoice) {
+  if (
+    (!subscriptionStartDate || !subscriptionEndDate) &&
+    subscription.latest_invoice
+  ) {
     const invoice =
       typeof subscription.latest_invoice === "string"
         ? await stripe.invoices.retrieve(subscription.latest_invoice)
@@ -50,7 +56,6 @@ async function getSubscriptionDates(subscription) {
     }
   }
 
-  // 4. Final fallback
   if (!subscriptionStartDate && subscription.status === "active") {
     subscriptionStartDate = new Date();
   }
@@ -83,6 +88,8 @@ async function updateUserSubscription({
 
   const updateData = {
     plan: isActive ? plan : "free",
+    planType: isActive ? "subscription" : "",
+    accessType: isActive ? "subscription" : "",
     subscriptionStatus: isActive
       ? "active"
       : isExpired
@@ -93,19 +100,18 @@ async function updateUserSubscription({
     subscriptionStartDate: subscriptionStartDate || null,
     subscriptionEndDate: subscriptionEndDate || null,
     hasActiveSubscription: isActive,
+    lastPaymentStatus: isActive ? "paid" : "",
     updatedAt: new Date(),
   };
 
   let updatedUser = null;
 
-  // 1. Try userId from Stripe metadata
   if (userId) {
     updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
     });
   }
 
-  // 2. Try Stripe customer ID
   if (!updatedUser && customerId) {
     updatedUser = await User.findOneAndUpdate(
       { stripeCustomerId: customerId },
@@ -114,7 +120,6 @@ async function updateUserSubscription({
     );
   }
 
-  // 3. Try email fallback
   if (!updatedUser && email) {
     updatedUser = await User.findOneAndUpdate(
       { email: email.toLowerCase().trim() },
@@ -149,9 +154,7 @@ async function syncSubscriptionById(subscriptionId) {
   const userId = subscription.metadata?.userId || "";
   const email = subscription.metadata?.email || "";
   const plan =
-    subscription.metadata?.planId ||
-    subscription.metadata?.plan ||
-    "paid";
+    subscription.metadata?.planId || subscription.metadata?.plan || "paid";
 
   const customerId =
     typeof subscription.customer === "string"
@@ -171,6 +174,219 @@ async function syncSubscriptionById(subscriptionId) {
     subscriptionStartDate,
     subscriptionEndDate,
   });
+}
+
+async function updateOneTimePayment(paymentIntent) {
+  const metadata = paymentIntent.metadata || {};
+
+  const userId = metadata.userId || "";
+  const email = metadata.email || "";
+  const serviceId = metadata.serviceId || "cv-builder";
+  const serviceName = metadata.serviceName || "CV Builder";
+  const planId = metadata.planId || metadata.plan || "";
+  const planName = metadata.planName || "";
+
+  const offerActive = metadata.offerActive === "true";
+
+  const offerStartedAt = metadata.offerStartedAt
+    ? new Date(metadata.offerStartedAt)
+    : null;
+
+  const offerExpiresAt = metadata.offerExpiresAt
+    ? new Date(metadata.offerExpiresAt)
+    : null;
+
+  const priceEnvUsed = metadata.priceEnvUsed || "";
+
+  const customerId =
+    typeof paymentIntent.customer === "string"
+      ? paymentIntent.customer
+      : paymentIntent.customer?.id || "";
+
+  const now = new Date();
+
+  let updatePayload = {
+    $set: {
+      stripeCustomerId: customerId,
+      lastPaymentStatus: "paid",
+      cvBuilderOfferStartedAt: offerStartedAt,
+      updatedAt: now,
+    },
+  };
+
+  if (serviceId === "cv-builder") {
+    const accessExpiresAt = addDays(now, 3);
+
+    updatePayload.$set = {
+      ...updatePayload.$set,
+      plan: planId,
+      planType: "one-time",
+      accessType: "one-time",
+
+      stripePaymentIntentId: paymentIntent.id,
+
+      paymentStatus: "paid",
+      oneTimeAccessStatus: "active",
+      accessExpiresAt,
+
+      subscriptionStatus: "inactive",
+      stripeSubscriptionId: "",
+      hasActiveSubscription: true,
+      subscriptionStartDate: now,
+      subscriptionEndDate: accessExpiresAt,
+    };
+  }
+
+  if (serviceId === "logo-design") {
+    updatePayload.$set = {
+      ...updatePayload.$set,
+      logoDesignStatus: "paid",
+      logoDesignPlan: planId,
+      logoDesignPaymentIntentId: paymentIntent.id,
+      logoDesignPurchasedAt: now,
+    };
+  }
+
+  if (serviceId === "ads") {
+    updatePayload.$set = {
+      ...updatePayload.$set,
+      adsServiceStatus: "paid",
+      adsServicePlan: planId,
+      adsServicePaymentIntentId: paymentIntent.id,
+      adsServicePurchasedAt: now,
+    };
+  }
+
+  updatePayload.$set["serviceOrders.$[order].paymentStatus"] = "paid";
+  updatePayload.$set["serviceOrders.$[order].updatedAt"] = now;
+  updatePayload.$set["serviceOrders.$[order].offerActive"] = offerActive;
+  updatePayload.$set["serviceOrders.$[order].offerStartedAt"] = offerStartedAt;
+  updatePayload.$set["serviceOrders.$[order].offerExpiresAt"] = offerExpiresAt;
+  updatePayload.$set["serviceOrders.$[order].priceEnvUsed"] = priceEnvUsed;
+
+  const options = {
+    new: true,
+    arrayFilters: [{ "order.stripePaymentIntentId": paymentIntent.id }],
+  };
+
+  let updatedUser = null;
+
+  if (userId) {
+    updatedUser = await User.findByIdAndUpdate(userId, updatePayload, options);
+  }
+
+  if (!updatedUser && customerId) {
+    updatedUser = await User.findOneAndUpdate(
+      { stripeCustomerId: customerId },
+      updatePayload,
+      options
+    );
+  }
+
+  if (!updatedUser && email) {
+    updatedUser = await User.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      updatePayload,
+      options
+    );
+  }
+
+  console.log("Stripe one-time payment sync:", {
+    foundUser: Boolean(updatedUser),
+    email: updatedUser?.email || email || "",
+    userId,
+    customerId,
+    serviceId,
+    serviceName,
+    planId,
+    planName,
+    paymentIntentId: paymentIntent.id,
+    offerActive,
+    offerStartedAt,
+    offerExpiresAt,
+    priceEnvUsed,
+  });
+
+  return updatedUser;
+}
+
+async function markOneTimePaymentFailed(paymentIntent) {
+  const metadata = paymentIntent.metadata || {};
+
+  const userId = metadata.userId || "";
+  const email = metadata.email || "";
+  const serviceId = metadata.serviceId || "cv-builder";
+  const planId = metadata.planId || metadata.plan || "";
+  const customerId =
+    typeof paymentIntent.customer === "string"
+      ? paymentIntent.customer
+      : paymentIntent.customer?.id || "";
+
+  const now = new Date();
+
+  let updatePayload = {
+    $set: {
+      lastPaymentStatus: "failed",
+      updatedAt: now,
+    },
+  };
+
+  if (serviceId === "cv-builder") {
+    updatePayload.$set = {
+      ...updatePayload.$set,
+      paymentStatus: "failed",
+      oneTimeAccessStatus: "failed",
+      hasActiveSubscription: false,
+    };
+  }
+
+  if (serviceId === "logo-design") {
+    updatePayload.$set = {
+      ...updatePayload.$set,
+      logoDesignStatus: "failed",
+      logoDesignPlan: planId,
+    };
+  }
+
+  if (serviceId === "ads") {
+    updatePayload.$set = {
+      ...updatePayload.$set,
+      adsServiceStatus: "failed",
+      adsServicePlan: planId,
+    };
+  }
+
+  updatePayload.$set["serviceOrders.$[order].paymentStatus"] = "failed";
+  updatePayload.$set["serviceOrders.$[order].updatedAt"] = now;
+
+  const options = {
+    new: true,
+    arrayFilters: [{ "order.stripePaymentIntentId": paymentIntent.id }],
+  };
+
+  let updatedUser = null;
+
+  if (userId) {
+    updatedUser = await User.findByIdAndUpdate(userId, updatePayload, options);
+  }
+
+  if (!updatedUser && customerId) {
+    updatedUser = await User.findOneAndUpdate(
+      { stripeCustomerId: customerId },
+      updatePayload,
+      options
+    );
+  }
+
+  if (!updatedUser && email) {
+    updatedUser = await User.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      updatePayload,
+      options
+    );
+  }
+
+  return updatedUser;
 }
 
 export async function POST(req) {
@@ -207,7 +423,6 @@ export async function POST(req) {
       event.type === "customer.subscription.updated"
     ) {
       const eventSubscription = event.data.object;
-
       await syncSubscriptionById(eventSubscription.id);
     }
 
@@ -224,24 +439,6 @@ export async function POST(req) {
 
       if (subscriptionId) {
         await syncSubscriptionById(subscriptionId);
-      } else {
-        const customerId =
-          typeof invoice.customer === "string"
-            ? invoice.customer
-            : invoice.customer?.id || "";
-
-        if (customerId) {
-          await User.findOneAndUpdate(
-            { stripeCustomerId: customerId },
-            {
-              subscriptionStatus: "active",
-              hasActiveSubscription: true,
-              lastPaymentStatus: "paid",
-              updatedAt: new Date(),
-            },
-            { new: true }
-          );
-        }
       }
     }
 
@@ -267,6 +464,8 @@ export async function POST(req) {
         },
         {
           plan: "free",
+          planType: "",
+          accessType: "",
           subscriptionStatus: "past_due",
           hasActiveSubscription: false,
           lastPaymentStatus: "failed",
@@ -293,6 +492,8 @@ export async function POST(req) {
         },
         {
           plan: "free",
+          planType: "",
+          accessType: "",
           subscriptionStatus: "inactive",
           stripeSubscriptionId: "",
           subscriptionEndDate: new Date(),
@@ -301,6 +502,16 @@ export async function POST(req) {
         },
         { new: true }
       );
+    }
+
+    if (event.type === "payment_intent.succeeded") {
+      const paymentIntent = event.data.object;
+      await updateOneTimePayment(paymentIntent);
+    }
+
+    if (event.type === "payment_intent.payment_failed") {
+      const paymentIntent = event.data.object;
+      await markOneTimePaymentFailed(paymentIntent);
     }
 
     return NextResponse.json({

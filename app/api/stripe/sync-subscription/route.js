@@ -124,6 +124,7 @@ export async function POST(req) {
         accessType: "one-time",
         paymentStatus: "paid",
         billingDetails: user.billingDetails || null,
+        cvBuilderOfferStartedAt: user.cvBuilderOfferStartedAt || null,
       });
     }
 
@@ -314,6 +315,8 @@ export async function POST(req) {
           subscriptionStartDate,
           subscriptionEndDate,
 
+          cvBuilderOfferStartedAt: user.cvBuilderOfferStartedAt || null,
+
           billingDetails,
 
           updatedAt: new Date(),
@@ -336,6 +339,7 @@ export async function POST(req) {
       subscriptionStartDate: updatedUser.subscriptionStartDate,
       subscriptionEndDate: updatedUser.subscriptionEndDate,
       billingDetails: updatedUser.billingDetails,
+      cvBuilderOfferStartedAt: updatedUser.cvBuilderOfferStartedAt,
     });
 
     return NextResponse.json({
@@ -350,6 +354,7 @@ export async function POST(req) {
       hasOneTimeAccess: false,
       accessType: updatedUser.accessType || "subscription",
       billingDetails: updatedUser.billingDetails || null,
+      cvBuilderOfferStartedAt: updatedUser.cvBuilderOfferStartedAt || null,
     });
   } catch (error) {
     console.error("Verify subscription error:", error);

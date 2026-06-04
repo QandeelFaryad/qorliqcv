@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+
 function GoogleIcon() {
   return (
     <svg
@@ -51,34 +52,43 @@ export default function LoginContent() {
     confirmPassword: "",
   });
 
-  const callbackUrl = searchParams.get("callbackUrl") || "/pricing";
   const cvId = searchParams.get("cvId") || "";
   const template = searchParams.get("template") || "";
   const plan = searchParams.get("plan") || "";
 
-  const finalCallbackUrl = useMemo(() => {
-    const url = new URL(callbackUrl, "http://localhost");
+  const selectedService =
+    searchParams.get("service") ||
+    searchParams.get("serviceId") ||
+    (template || cvId ? "cv-builder" : "");
 
-    if (cvId && !url.searchParams.get("cvId")) {
+  const finalCallbackUrl = useMemo(() => {
+    if (!selectedService) {
+      return "/";
+    }
+
+    const url = new URL("/pricing", "http://localhost");
+    url.searchParams.set("service", selectedService);
+
+    if (cvId) {
       url.searchParams.set("cvId", cvId);
     }
 
-    if (template && !url.searchParams.get("template")) {
+    if (template) {
       url.searchParams.set("template", template);
     }
 
-    if (plan && !url.searchParams.get("plan")) {
+    if (plan) {
       url.searchParams.set("plan", plan);
     }
 
     return `${url.pathname}${url.search}`;
-  }, [callbackUrl, cvId, template, plan]);
+  }, [selectedService, cvId, template, plan]);
 
-useEffect(() => {
-  if (status === "authenticated") {
-    checkSubscriptionAndRedirect();
-  }
-}, [status, template]);
+  useEffect(() => {
+    if (status === "authenticated") {
+      redirectAfterLogin();
+    }
+  }, [status, finalCallbackUrl]);
 
   const updateForm = (field, value) => {
     setForm((prev) => ({
@@ -86,83 +96,52 @@ useEffect(() => {
       [field]: value,
     }));
   };
-const checkSubscriptionAndRedirect = async () => {
-  try {
-    // ✅ If template is not selected, go to CV builder page
-    if (!template) {
-      router.push("/cv-builder");
-      return;
-    }
 
-    const res = await fetch("/api/auth/register", {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    if (data?.success && data?.active) {
-      router.push(
-        `/cv-builder/success?cvId=${cvId || ""}&template=${
-          template || ""
-        }&plan=${data.user?.plan || plan || ""}`
-      );
-      return;
-    }
-
+  const redirectAfterLogin = () => {
     router.push(finalCallbackUrl);
-  } catch (error) {
-    console.error("Subscription redirect check error:", error);
+  };
 
-    if (!template) {
-      router.push("/cv-builder");
-      return;
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      setError("");
+
+      await signIn("google", {
+        callbackUrl: finalCallbackUrl,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError("Unable to continue with Google.");
+      setGoogleLoading(false);
     }
+  };
 
-    router.push(finalCallbackUrl);
-  }
-};
+  const handleManualLogin = async (e) => {
+    e.preventDefault();
 
-const handleGoogleLogin = async () => {
-  try {
-    setGoogleLoading(true);
-    setError("");
+    try {
+      setLoading(true);
+      setError("");
 
-    await signIn("google", {
-      callbackUrl: template ? finalCallbackUrl : "/cv-builder",
-    });
-  } catch (error) {
-    console.error("Google login error:", error);
-    setError("Unable to continue with Google.");
-    setGoogleLoading(false);
-  }
-};
-const handleManualLogin = async (e) => {
-  e.preventDefault();
+      const res = await signIn("credentials", {
+        email: form.email,
+        password: form.password,
+        redirect: false,
+      });
 
-  try {
-    setLoading(true);
-    setError("");
+      if (res?.error) {
+        setError("Invalid email or password.");
+        return;
+      }
 
-    const res = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
-      redirect: false,
-    });
-
-    if (res?.error) {
-      setError("Invalid email or password.");
-      return;
+      redirectAfterLogin();
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Unable to login.");
+    } finally {
+      setLoading(false);
     }
-
-    await checkSubscriptionAndRedirect();
-  } catch (error) {
-    console.error("Login error:", error);
-    setError("Unable to login.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -233,14 +212,15 @@ const handleManualLogin = async (e) => {
   return (
     <main className="min-h-screen bg-[#050505] px-4 py-12 text-white">
       <div className="mx-auto mb-8 flex max-w-6xl items-center justify-between">
-  <Link
-    href="/cv-builder"
-    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:border-qorliqGold hover:bg-qorliqGold hover:text-black"
-  >
-    <span className="text-lg leading-none">←</span>
-    Back to CV Builder
-  </Link>
-</div>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:border-qorliqGold hover:bg-qorliqGold hover:text-black"
+        >
+          <span className="text-lg leading-none">←</span>
+          Back to Home
+        </Link>
+      </div>
+
       <section className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
@@ -248,29 +228,28 @@ const handleManualLogin = async (e) => {
           </p>
 
           <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] md:text-6xl">
-            Login to continue your CV download.
+            Login to continue.
           </h1>
 
           <p className="mt-5 max-w-xl text-sm leading-7 text-white/55">
-            Create your account to save your CV, choose your package, complete
-            checkout and download your final PDF or MS Word file.
+            Create your account to continue with your selected service, choose
+            your package, complete checkout and access your order.
           </p>
 
           <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
             <p className="text-sm font-bold text-white">Your current flow:</p>
 
             <div className="mt-4 space-y-3 text-sm text-white/60">
-              <p>1. Template selected</p>
-              <p>2. CV details completed</p>
-              <p>3. Login / create account</p>
-              <p>4. Choose package</p>
-              <p>5. Checkout</p>
-              <p>6. Download PDF / Word</p>
+              <p>1. Select service</p>
+              <p>2. Login / create account</p>
+              <p>3. Choose package</p>
+              <p>4. Checkout</p>
+              <p>5. Access your service</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[2rem]  border border-white/10 bg-white/[0.05] p-5 shadow-2xl md:p-8">
+        <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 shadow-2xl md:p-8">
           <div className="grid grid-cols-2 rounded-full bg-black/40 p-1">
             <button
               type="button"
@@ -302,30 +281,31 @@ const handleManualLogin = async (e) => {
               Register
             </button>
           </div>
-<button
-  type="button"
-  onClick={handleGoogleLogin}
-  disabled={googleLoading}
-  className="group relative mx-auto mt-6 flex h-10 w-full max-w-[400px] select-none items-center justify-center overflow-hidden rounded-[20px] bg-[#f2f2f2] px-3 text-center font-['Roboto',Arial,sans-serif] text-sm font-medium tracking-[0.25px] text-[#1f1f1f] outline-none transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] focus:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] active:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] disabled:cursor-not-allowed disabled:bg-[#f2f2f2]/70 disabled:text-[#1f1f1f]/50"
->
-  <span className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:bg-[#001d35] group-hover:opacity-[0.08] group-focus:bg-[#001d35] group-focus:opacity-[0.12] group-active:bg-[#001d35] group-active:opacity-[0.12]" />
 
-  {googleLoading ? (
-    <span className="absolute inset-0 z-10 flex items-center justify-center bg-[#f2f2f2]/90">
-      <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#1f1f1f]/25 border-t-[#1f1f1f]" />
-    </span>
-  ) : null}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            className="group relative mx-auto mt-6 flex h-10 w-full max-w-[400px] select-none items-center justify-center overflow-hidden rounded-[20px] bg-[#f2f2f2] px-3 text-center font-['Roboto',Arial,sans-serif] text-sm font-medium tracking-[0.25px] text-[#1f1f1f] outline-none transition-[background-color,border-color,box-shadow] duration-200 hover:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] focus:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] active:shadow-[0_1px_2px_0_rgba(60,64,67,.30),0_1px_3px_1px_rgba(60,64,67,.15)] disabled:cursor-not-allowed disabled:bg-[#f2f2f2]/70 disabled:text-[#1f1f1f]/50"
+          >
+            <span className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:bg-[#001d35] group-hover:opacity-[0.08] group-focus:bg-[#001d35] group-focus:opacity-[0.12] group-active:bg-[#001d35] group-active:opacity-[0.12]" />
 
-  <span className="relative flex h-full w-full items-center justify-center gap-3">
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-      <GoogleIcon />
-    </span>
+            {googleLoading ? (
+              <span className="absolute inset-0 z-10 flex items-center justify-center bg-[#f2f2f2]/90">
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#1f1f1f]/25 border-t-[#1f1f1f]" />
+              </span>
+            ) : null}
 
-    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-      {googleLoading ? "Please wait..." : "Sign in with Google"}
-    </span>
-  </span>
-</button>
+            <span className="relative flex h-full w-full items-center justify-center gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                <GoogleIcon />
+              </span>
+
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                {googleLoading ? "Please wait..." : "Sign in with Google"}
+              </span>
+            </span>
+          </button>
 
           <div className="my-6 flex items-center gap-4">
             <div className="h-px flex-1 bg-white/10" />

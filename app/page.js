@@ -22,12 +22,17 @@ function getServiceCategory(service) {
   if (service.id === "application-development") return "Build";
   if (service.id === "cv-builder") return "Product";
   if (service.id === "lead-generation") return "Grow";
+
   if (service.id === "brand-identity") return "Creative";
+  if (service.id === "logo-design") return "Creative";
+
+  if (service.id === "ads") return "Grow";
+  if (service.id === "paid-advertisement") return "Grow";
+
   if (service.id === "microsoft-reseller") return "Automate";
 
   return "Build";
 }
-
 function getServicePrice(service) {
   if (service.price) return service.price;
 
@@ -35,7 +40,13 @@ function getServicePrice(service) {
   if (service.id === "application-development") return "Custom";
   if (service.id === "cv-builder") return "From £1.99";
   if (service.id === "lead-generation") return "From £199";
-  if (service.id === "brand-identity") return "From £60";
+
+  if (service.id === "brand-identity") return "From £30";
+  if (service.id === "logo-design") return "From £30";
+
+  if (service.id === "ads") return "From £30";
+  if (service.id === "paid-advertisement") return "From £30";
+
   if (service.id === "microsoft-reseller") return "Quote";
 
   return "Quote";
@@ -562,7 +573,7 @@ export default function HomePage() {
 
       {/* SERVICE MODAL */}
       {activeService ? (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm">
+     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-sm">
           <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] border border-qorliqGold/30 bg-white text-black shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-black/10 bg-white/95 p-6 backdrop-blur-xl">
               <div>
@@ -636,40 +647,79 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
+<div className="mt-6 grid gap-3 sm:grid-cols-2">
+  {activeService.id === "cv-builder" ? (
+    <Link
+      href="/cv-builder"
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      Open CV Builder
+    </Link>
+  ) : activeService.id === "brand-identity" ||
+    activeService.id === "logo-design" ? (
+    <Link
+      href="/pricing?service=logo-design"
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      View Logo Packages
+    </Link>
+  ) : activeService.id === "ads" ||
+    activeService.id === "paid-advertisement" ? (
+    <Link
+      href="/pricing?service=ads"
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      View Ads Packages
+    </Link>
+  ) : activeService.id === "website-development" ? (
+    <Link
+      href="/pricing?service=website-development"
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      View Website Packages
+    </Link>
+  ) : activeService.id === "application-development" ? (
+    <button
+      type="button"
+      onClick={handleRequestService}
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      Request App Development
+    </button>
+  ) : activeService.id === "lead-generation" ? (
+    <button
+      type="button"
+      onClick={handleRequestService}
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      Request Lead Generation
+    </button>
+  ) : activeService.id === "microsoft-reseller" ? (
+    <button
+      type="button"
+      onClick={handleRequestService}
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      Request Microsoft Support
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={handleRequestService}
+      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
+    >
+      Request This Service
+    </button>
+  )}
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {activeService.id === "cv-builder" ? (
-                    <Link
-                      href="/cv-builder"
-                      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
-                    >
-                      Open CV Builder
-                    </Link>
-                  ) : activeService.id === "brand-identity" ? (
-                    <Link
-                      href="/brand-identity"
-                      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
-                    >
-                      View Brand Packages
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleRequestService}
-                      className="rounded-full bg-black px-5 py-4 text-center text-sm font-black text-white hover:bg-qorliqGold hover:text-black"
-                    >
-                      Request This Service
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setOpenService(null)}
-                    className="rounded-full border border-black/10 px-5 py-4 text-sm font-black text-black hover:border-qorliqGold"
-                  >
-                    Continue Browsing
-                  </button>
-                </div>
+  <button
+    type="button"
+    onClick={() => setOpenService(null)}
+    className="rounded-full border border-black/10 px-5 py-4 text-sm font-black text-black hover:border-qorliqGold"
+  >
+    Continue Browsing
+  </button>
+</div>
               </section>
             </div>
           </div>

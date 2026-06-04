@@ -33,6 +33,17 @@ const COUNTRIES = [
   { code: "NL", name: "Netherlands", flag: "🇳🇱", dialCode: "+31" },
 ];
 
+function formatCountdown(seconds) {
+  const safeSeconds = Math.max(Number(seconds || 0), 0);
+  const minutes = Math.floor(safeSeconds / 60);
+  const secs = safeSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(
+    2,
+    "0"
+  )}`;
+}
+
 export default function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,7 +71,6 @@ export default function CheckoutContent() {
     addressLine1: "",
     addressLine2: "",
     city: "",
-    
   });
 
   const intentCreatedRef = useRef(false);
@@ -71,6 +81,74 @@ export default function CheckoutContent() {
 
   const selectedPlan = pricingPlans.find((plan) => plan.id === planId);
   const isSubscription = selectedPlan?.type === "subscription";
+
+  const [checkoutRemainingSeconds, setCheckoutRemainingSeconds] = useState(
+    10 * 60
+  );
+
+  useEffect(() => {
+    if (!selectedPlan) return;
+
+    const isCvBuilder = (selectedPlan.serviceId || "cv-builder") === "cv-builder";
+    const hasCountdownOffer = Boolean(
+      selectedPlan.offerDurationMinutes && selectedPlan.oldPrice
+    );
+
+    if (!isCvBuilder || !hasCountdownOffer) return;
+
+    const userKey =
+      session?.user?.email?.toLowerCase()?.trim() || "guest";
+
+    const storageKey = `cvBuilderOfferStartedAt:${userKey}`;
+    const now = Date.now();
+
+    let startedAt = Number(window.localStorage.getItem(storageKey));
+
+    if (!startedAt || Number.isNaN(startedAt)) {
+      startedAt = now;
+      window.localStorage.setItem(storageKey, String(startedAt));
+    }
+
+    const updateCountdown = () => {
+      const durationSeconds =
+        Number(selectedPlan.offerDurationMinutes || 10) * 60;
+
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      const left = Math.max(durationSeconds - elapsedSeconds, 0);
+
+      setCheckoutRemainingSeconds(left);
+    };
+
+    updateCountdown();
+
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedPlan, session?.user?.email]);
+
+  const getCheckoutDisplayPrice = (plan) => {
+    const isCvBuilder = (plan.serviceId || "cv-builder") === "cv-builder";
+    const hasCountdownOffer = Boolean(plan.offerDurationMinutes && plan.oldPrice);
+
+    if (!isCvBuilder || !hasCountdownOffer) {
+      return plan.price;
+    }
+
+    return checkoutRemainingSeconds > 0 ? plan.price : plan.oldPrice;
+  };
+
+  const getCheckoutPriceLabel = (plan) => {
+    const isCvBuilder = (plan.serviceId || "cv-builder") === "cv-builder";
+    const hasCountdownOffer = Boolean(plan.offerDurationMinutes && plan.oldPrice);
+
+    if (!isCvBuilder || !hasCountdownOffer) {
+      return "";
+    }
+
+    return checkoutRemainingSeconds > 0
+      ? `Offer price ends in ${formatCountdown(checkoutRemainingSeconds)}`
+      : "Standard price after offer expired";
+  };
 
   const updateCustomerForm = (field, value) => {
     setCustomerForm((prev) => ({
@@ -94,12 +172,18 @@ export default function CheckoutContent() {
     }));
   };
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      const callbackUrl = `/checkout?plan=${planId}&cvId=${cvId}&template=${template}`;
-      router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-    }
-  }, [status, router, planId, cvId, template]);
+useEffect(() => {
+  if (status !== "unauthenticated") return;
+  if (!selectedPlan) return;
+
+  const serviceId = selectedPlan.serviceId || "cv-builder";
+
+  // Login required only for CV Builder
+  if (serviceId === "cv-builder") {
+    const callbackUrl = `/checkout?plan=${planId}&cvId=${cvId}&template=${template}`;
+    router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  }
+}, [status, router, planId, cvId, template, selectedPlan]);
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -162,50 +246,50 @@ export default function CheckoutContent() {
   }, [status, selectedPlan, planId, cvId, template, clientSecret]);
 
   const elementsOptions = useMemo(() => {
-  if (!clientSecret) return null;
+    if (!clientSecret) return null;
 
-  return {
-    clientSecret,
-    appearance: {
-      theme: "stripe",
-      variables: {
-        colorPrimary: "#d6b25e",
-        colorBackground: "#ffffff",
-        colorText: "#111827",
-        colorDanger: "#dc2626",
-        borderRadius: "14px",
-        fontFamily: "Inter, system-ui, sans-serif",
-        spacingUnit: "4px",
-      },
-      rules: {
-        ".Input": {
-          border: "1px solid #e5e7eb",
-          boxShadow: "none",
-          fontSize: "15px",
-          padding: "14px",
-        },
-        ".Input:focus": {
-          border: "1px solid #d6b25e",
-          boxShadow: "0 0 0 4px rgba(214,178,94,0.16)",
-        },
-        ".Label": {
-          fontSize: "12px",
-          fontWeight: "700",
-          color: "#4b5563",
-        },
-        ".Tab": {
-          border: "1px solid #e5e7eb",
+    return {
+      clientSecret,
+      appearance: {
+        theme: "stripe",
+        variables: {
+          colorPrimary: "#d6b25e",
+          colorBackground: "#ffffff",
+          colorText: "#111827",
+          colorDanger: "#dc2626",
           borderRadius: "14px",
-          padding: "12px",
+          fontFamily: "Inter, system-ui, sans-serif",
+          spacingUnit: "4px",
         },
-        ".Tab--selected": {
-          borderColor: "#d6b25e",
-          boxShadow: "0 0 0 3px rgba(214,178,94,0.16)",
+        rules: {
+          ".Input": {
+            border: "1px solid #e5e7eb",
+            boxShadow: "none",
+            fontSize: "15px",
+            padding: "14px",
+          },
+          ".Input:focus": {
+            border: "1px solid #d6b25e",
+            boxShadow: "0 0 0 4px rgba(214,178,94,0.16)",
+          },
+          ".Label": {
+            fontSize: "12px",
+            fontWeight: "700",
+            color: "#4b5563",
+          },
+          ".Tab": {
+            border: "1px solid #e5e7eb",
+            borderRadius: "14px",
+            padding: "12px",
+          },
+          ".Tab--selected": {
+            borderColor: "#d6b25e",
+            boxShadow: "0 0 0 3px rgba(214,178,94,0.16)",
+          },
         },
       },
-    },
-  };
-}, [clientSecret]);
+    };
+  }, [clientSecret]);
 
   if (status === "loading") {
     return (
@@ -215,15 +299,18 @@ export default function CheckoutContent() {
     );
   }
 
-  if (status === "unauthenticated") {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
-        <p className="text-sm font-bold text-white/60">
-          Redirecting to login...
-        </p>
-      </main>
-    );
-  }
+if (
+  status === "unauthenticated" &&
+  (selectedPlan?.serviceId || "cv-builder") === "cv-builder"
+) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
+      <p className="text-sm font-bold text-white/60">
+        Redirecting to login...
+      </p>
+    </main>
+  );
+}
 
   if (!selectedPlan) {
     return (
@@ -249,309 +336,356 @@ export default function CheckoutContent() {
     );
   }
 
-return (
-  <main className="min-h-screen w-full overflow-x-hidden bg-[#050505] text-white">
-    <section className="w-full px-0 py-0 sm:px-5 sm:py-5 lg:px-8 lg:py-10">
-      <div className="w-full min-w-0 lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8">
-      
-{/* Mobile Order Summary */}
-<div className="w-full border-b border-qorliqGold/25 bg-gradient-to-br from-qorliqGold/20 via-white/[0.06] to-black px-4 py-10 shadow-2xl lg:hidden">
-  <div className="flex items-center justify-between gap-3">
-    <div className="min-w-0 flex-1">
-      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-qorliqGold">
-        Order Summary
-      </p>
+  const priceLabel = getCheckoutPriceLabel(selectedPlan);
 
-      <h2 className="mt-1 truncate text-lg font-black leading-tight text-white">
-        {selectedPlan.name}
-      </h2>
-
-      <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-white/55">
-        {selectedPlan.smallText ||
-          (isSubscription ? "Recurring subscription" : "One-time payment")}
-      </p>
-    </div>
-
-    <div className="shrink-0 text-right">
-      <p className="text-xl font-black leading-none tracking-[-0.04em] text-white">
-        {selectedPlan.price}
-      </p>
-
-      <button
-        type="button"
-        onClick={() =>
-          router.push(`/pricing?cvId=${cvId}&template=${template}`)
-        }
-        className="mt-2 rounded-full border border-white/15 bg-black/30 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.1em] text-white/75"
-      >
-        Change
-      </button>
-    </div>
-  </div>
-
-  <div className="mt-4 grid grid-cols-2  gap-2.5">
-    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5">
-      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
-        Payment
-      </p>
-      <p className="mt-0.5 text-[11px] font-bold text-white/80">
-        {isSubscription ? "Subscription" : "One-time"}
-      </p>
-    </div>
-
-    <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5">
-      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
-        Access
-      </p>
-      <p className="mt-0.5 text-[11px] font-bold text-white/80">
-        PDF + Word
-      </p>
-    </div>
-  </div>
-</div>
-
-        {/* Main Checkout Card */}
-       <div className="w-full min-w-0 rounded-none border-0 bg-white/[0.055] p-4 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-[26px] sm:border sm:border-white/10 sm:p-6 lg:p-8">
-          <div className="max-w-3xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-qorliqGold sm:text-xs">
-              Secure Checkout
-            </p>
-
-            <h1 className="mt-3 text-[28px] font-black leading-[1.05] tracking-[-0.05em] sm:text-4xl lg:text-5xl">
-              Complete your CV order.
-            </h1>
-
-            <p className="mt-3 text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
-              Enter your billing details and complete payment securely through Stripe.
-            </p>
-          </div>
-
-          {/* Mobile-friendly info row */}
-          <div className="mt-5 flex gap-3 flex-col md:flex-row">
-            <InfoCard
-              title="Customer"
-              value={customerForm.email || session?.user?.email || "Logged in"}
-            />
-
-            <InfoCard
-              title="Template"
-              value={template || "Selected"}
-            />
-
-            <InfoCard
-              title="Payment"
-              value={isSubscription ? "Subscription" : "One-time"}
-            />
-
-            <InfoCard
-              title="Access"
-              value="PDF + Word"
-            />
-          </div>
-
-          {/* Billing Details */}
-          <div className="mt-5 rounded-[22px] border border-white/10 bg-black/35 p-4 sm:mt-7 sm:p-5 lg:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/55">
-                  Billing Details
+  return (
+    <main className="min-h-screen w-full overflow-x-hidden bg-[#050505] text-white">
+      <section className="w-full px-0 py-0 sm:px-5 sm:py-5 lg:px-8 lg:py-10">
+        <div className="w-full min-w-0 lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8">
+          {/* Mobile Order Summary */}
+          <div className="w-full border-b border-qorliqGold/25 bg-gradient-to-br from-qorliqGold/20 via-white/[0.06] to-black px-4 py-6 shadow-2xl lg:hidden">
+            <div className="flex flex-col gap-4">
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-qorliqGold">
+                  Order Summary
                 </p>
 
-                <p className="mt-1 text-xs leading-5 text-white/35">
-                  Required for payment confirmation and receipt.
+                <h2 className="mt-1 break-words text-xl font-black leading-tight text-white">
+                  {selectedPlan.name}
+                </h2>
+
+                <p className="mt-2 text-[12px] leading-5 text-white/60">
+                  {selectedPlan.smallText ||
+                    (isSubscription
+                      ? "Recurring subscription"
+                      : "One-time payment")}
                 </p>
               </div>
 
-              <span className="shrink-0 rounded-full bg-qorliqGold/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-qorliqGold">
-                Required
-              </span>
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/35">
+                    Total Price
+                  </p>
+
+                  <p className="mt-1 text-2xl font-black leading-none tracking-[-0.04em] text-white">
+                    {getCheckoutDisplayPrice(selectedPlan)}
+                  </p>
+
+                  {priceLabel ? (
+                    <p className="mt-1 text-[10px] font-bold leading-4 text-qorliqGold">
+                      {priceLabel}
+                    </p>
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/pricing?cvId=${cvId}&template=${template}`)
+                  }
+                  className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-white transition hover:bg-qorliqGold hover:text-black"
+                >
+                  Change
+                </button>
+              </div>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <CheckoutInput
-                label="First Name"
-                value={customerForm.firstName}
-                onChange={(value) => updateCustomerForm("firstName", value)}
-                placeholder="First name"
-                required
-              />
+            <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
+                  Payment
+                </p>
 
-              <CheckoutInput
-                label="Last Name"
-                value={customerForm.lastName}
-                onChange={(value) => updateCustomerForm("lastName", value)}
-                placeholder="Last name"
-                required
-              />
-
-              <div className="sm:col-span-2">
-                <CheckoutInput
-                  label="Email Address"
-                  type="email"
-                  value={customerForm.email}
-                  onChange={(value) => updateCustomerForm("email", value)}
-                  placeholder="you@example.com"
-                  required
-                />
+                <p className="mt-1 text-[12px] font-bold text-white/80">
+                  {isSubscription ? "Subscription" : "One-time"}
+                </p>
               </div>
 
-              <PhoneInput
-                label="Mobile Number"
-                countryCode={customerForm.mobileCountryCode}
-                countryFlag={customerForm.mobileCountryFlag}
-                value={customerForm.mobileNumber}
-                onChange={(value) => updateCustomerForm("mobileNumber", value)}
-                placeholder="Mobile number"
-                required
-              />
+              <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
+                  Access
+                </p>
 
-              <CountrySelect
-                label="Country"
-                value={customerForm.country}
-                onChange={updateCountry}
-                required
-              />
-
-              <CheckoutInput
-                label="Postal Code"
-                value={customerForm.postalCode}
-                onChange={(value) => updateCustomerForm("postalCode", value)}
-                placeholder="Postal code"
-                required
-              />
-
-              <CheckoutInput
-                label="City / Town"
-                value={customerForm.city}
-                onChange={(value) => updateCustomerForm("city", value)}
-                placeholder="City or town"
-                required
-              />
-
-              <div className="sm:col-span-2">
-                <CheckoutInput
-                  label="Address Line 1"
-                  value={customerForm.addressLine1}
-                  onChange={(value) => updateCustomerForm("addressLine1", value)}
-                  placeholder="House / flat / street"
-                  required
-                />
+                <p className="mt-1 text-[12px] font-bold text-white/80">
+                  {selectedPlan.serviceId === "logo-design"
+                    ? "Logo Design Service"
+                    : selectedPlan.serviceId === "ads"
+                    ? "Ads Service"
+                    : "PDF + Word"}
+                </p>
               </div>
 
-              <div className="sm:col-span-2">
-                <CheckoutInput
-                  label="Address Line 2"
-                  value={customerForm.addressLine2}
-                  onChange={(value) => updateCustomerForm("addressLine2", value)}
-                  placeholder="Apartment / area / optional"
-                />
-              </div>
+              {selectedPlan.features?.length ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 sm:col-span-2">
+                  <p className="text-[9px] font-black uppercase tracking-[0.12em] text-white/35">
+                    Included
+                  </p>
+
+                  <div className="mt-3 space-y-2">
+                    {selectedPlan.features.slice(0, 5).map((feature) => (
+                      <div
+                        key={feature}
+                        className="flex gap-2 text-[12px] leading-5 text-white/75"
+                      >
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-qorliqGold" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
-     {/* Payment Details */}
-{/* Payment Details */}
-<div className="relative z-30 mt-5 rounded-[24px] border border-white/10 bg-[#0b0b0b] p-4 shadow-2xl shadow-black/25 sm:mt-7 sm:p-5 lg:p-6">
-  <div className="relative z-10 border-b border-white/10 pb-4">
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">
-          Payment Details
-        </p>
+          {/* Main Checkout Card */}
+          <div className="w-full min-w-0 rounded-none border-0 bg-white/[0.055] p-4 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-[26px] sm:border sm:border-white/10 sm:p-6 lg:p-8">
+            <div className="max-w-3xl">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-qorliqGold sm:text-xs">
+                Secure Checkout
+              </p>
 
-        <p className="mt-1 text-xs leading-5 text-white/40">
-          Secure encrypted payment powered by Stripe.
-        </p>
-      </div>
+              <h1 className="mt-3 text-[28px] font-black leading-[1.05] tracking-[-0.05em] sm:text-4xl lg:text-5xl">
+                Complete your CV order.
+              </h1>
 
-      <span className="shrink-0 rounded-full border border-green-400/20 bg-green-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-green-300">
-        Secure
-      </span>
-    </div>
-  </div>
+              <p className="mt-3 text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+                Enter your billing details and complete payment securely through
+                Stripe.
+              </p>
+            </div>
 
-  <div className="relative z-40 mt-5 w-full min-w-0">
-    {intentLoading ? (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
-        Loading secure payment form...
-      </div>
-    ) : clientSecret && elementsOptions ? (
-      <Elements stripe={stripePromise} options={elementsOptions}>
-        <StripePaymentForm
-          selectedPlan={selectedPlan}
-          cvId={cvId}
-          template={template}
-          planId={planId}
-          subscriptionId={subscriptionId}
-          customerForm={customerForm}
-        />
-      </Elements>
-    ) : (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
-        Payment form not loaded.
-      </div>
-    )}
-  </div>
-</div>
+            <div className="mt-5 flex flex-col gap-3 md:flex-row">
+              <InfoCard
+                title="Customer"
+                value={customerForm.email || session?.user?.email || "Logged in"}
+              />
 
-          {error ? (
-            <p className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
-              {error}
+              <InfoCard title="Template" value={template || "Selected"} />
+
+              <InfoCard
+                title="Payment"
+                value={isSubscription ? "Subscription" : "One-time"}
+              />
+
+              <InfoCard title="Access" value="PDF + Word" />
+            </div>
+
+            {/* Billing Details */}
+            <div className="mt-5 rounded-[22px] border border-white/10 bg-black/35 p-4 sm:mt-7 sm:p-5 lg:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/55">
+                    Billing Details
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-white/35">
+                    Required for payment confirmation and receipt.
+                  </p>
+                </div>
+
+                <span className="shrink-0 rounded-full bg-qorliqGold/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-qorliqGold">
+                  Required
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <CheckoutInput
+                  label="First Name"
+                  value={customerForm.firstName}
+                  onChange={(value) => updateCustomerForm("firstName", value)}
+                  placeholder="First name"
+                  required
+                />
+
+                <CheckoutInput
+                  label="Last Name"
+                  value={customerForm.lastName}
+                  onChange={(value) => updateCustomerForm("lastName", value)}
+                  placeholder="Last name"
+                  required
+                />
+
+                <div className="sm:col-span-2">
+                  <CheckoutInput
+                    label="Email Address"
+                    type="email"
+                    value={customerForm.email}
+                    onChange={(value) => updateCustomerForm("email", value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
+
+                <PhoneInput
+                  label="Mobile Number"
+                  countryCode={customerForm.mobileCountryCode}
+                  countryFlag={customerForm.mobileCountryFlag}
+                  value={customerForm.mobileNumber}
+                  onChange={(value) => updateCustomerForm("mobileNumber", value)}
+                  placeholder="Mobile number"
+                  required
+                />
+
+                <CountrySelect
+                  label="Country"
+                  value={customerForm.country}
+                  onChange={updateCountry}
+                  required
+                />
+
+                <CheckoutInput
+                  label="Postal Code"
+                  value={customerForm.postalCode}
+                  onChange={(value) => updateCustomerForm("postalCode", value)}
+                  placeholder="Postal code"
+                  required
+                />
+
+                <CheckoutInput
+                  label="City / Town"
+                  value={customerForm.city}
+                  onChange={(value) => updateCustomerForm("city", value)}
+                  placeholder="City or town"
+                  required
+                />
+
+                <div className="sm:col-span-2">
+                  <CheckoutInput
+                    label="Address Line 1"
+                    value={customerForm.addressLine1}
+                    onChange={(value) =>
+                      updateCustomerForm("addressLine1", value)
+                    }
+                    placeholder="House / flat / street"
+                    required
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <CheckoutInput
+                    label="Address Line 2"
+                    value={customerForm.addressLine2}
+                    onChange={(value) =>
+                      updateCustomerForm("addressLine2", value)
+                    }
+                    placeholder="Apartment / area / optional"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="relative z-30 mt-5 rounded-[24px] border border-white/10 bg-[#0b0b0b] p-4 shadow-2xl shadow-black/25 sm:mt-7 sm:p-5 lg:p-6">
+              <div className="relative z-10 border-b border-white/10 pb-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">
+                      Payment Details
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-white/40">
+                      Secure encrypted payment powered by Stripe.
+                    </p>
+                  </div>
+
+                  <span className="shrink-0 rounded-full border border-green-400/20 bg-green-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-green-300">
+                    Secure
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative z-40 mt-5 w-full min-w-0">
+                {intentLoading ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
+                    Loading secure payment form...
+                  </div>
+                ) : clientSecret && elementsOptions ? (
+                  <Elements stripe={stripePromise} options={elementsOptions}>
+                    <StripePaymentForm
+                      selectedPlan={selectedPlan}
+                      cvId={cvId}
+                      template={template}
+                      planId={planId}
+                      subscriptionId={subscriptionId}
+                      customerForm={customerForm}
+                    />
+                  </Elements>
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm font-bold text-white/60">
+                    Payment form not loaded.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {error ? (
+              <p className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          {/* Desktop Order Summary */}
+          <aside className="hidden h-fit rounded-[28px] border border-qorliqGold/30 bg-qorliqGold/10 p-6 shadow-2xl lg:block">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
+              Order Summary
             </p>
-          ) : null}
+
+            <h2 className="mt-4 text-3xl font-black leading-tight">
+              {selectedPlan.name}
+            </h2>
+
+            <p className="mt-3 text-5xl font-black tracking-[-0.05em]">
+              {getCheckoutDisplayPrice(selectedPlan)}
+            </p>
+
+            {priceLabel ? (
+              <p className="mt-2 rounded-full border border-qorliqGold/20 bg-black/20 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-qorliqGold">
+                {priceLabel}
+              </p>
+            ) : null}
+
+            <p className="mt-2 text-sm leading-6 text-white/50">
+              {selectedPlan.smallText}
+            </p>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+                Billing
+              </p>
+
+              <p className="mt-1 text-sm font-bold text-white/80">
+                {isSubscription ? "Recurring subscription" : "One-time payment"}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {selectedPlan.features?.map((feature) => (
+                <div
+                  key={feature}
+                  className="flex gap-3 text-sm leading-6 text-white/70"
+                >
+                  <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-qorliqGold" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push(`/pricing?cvId=${cvId}&template=${template}`)
+              }
+              className="mt-7 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10"
+            >
+              Change Plan
+            </button>
+          </aside>
         </div>
-
-        {/* Desktop Order Summary */}
-        <aside className="hidden h-fit rounded-[28px] border border-qorliqGold/30 bg-qorliqGold/10 p-6 shadow-2xl lg:block">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-qorliqGold">
-            Order Summary
-          </p>
-
-          <h2 className="mt-4 text-3xl font-black leading-tight">
-            {selectedPlan.name}
-          </h2>
-
-          <p className="mt-3 text-5xl font-black tracking-[-0.05em]">
-            {selectedPlan.price}
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-white/50">
-            {selectedPlan.smallText}
-          </p>
-
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-              Billing
-            </p>
-
-            <p className="mt-1 text-sm font-bold text-white/80">
-              {isSubscription ? "Recurring subscription" : "One-time payment"}
-            </p>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            {selectedPlan.features?.map((feature) => (
-              <div key={feature} className="flex gap-3 text-sm leading-6 text-white/70">
-                <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-qorliqGold" />
-                <span>{feature}</span>
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push(`/pricing?cvId=${cvId}&template=${template}`)
-            }
-            className="mt-7 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10"
-          >
-            Change Plan
-          </button>
-        </aside>
-      </div>
-    </section>
-  </main>
-);
+      </section>
+    </main>
+  );
 }
 
 function StripePaymentForm({
@@ -588,8 +722,7 @@ function StripePaymentForm({
       !customerForm?.country?.trim() ||
       !customerForm?.postalCode?.trim() ||
       !customerForm?.addressLine1?.trim() ||
-      !customerForm?.city?.trim() 
-      
+      !customerForm?.city?.trim()
     ) {
       setMessage("Please complete all required billing details first.");
       return;
@@ -598,6 +731,15 @@ function StripePaymentForm({
     try {
       setIsProcessing(true);
       setMessage("");
+
+      const currentServiceId = selectedPlan?.serviceId || "cv-builder";
+
+      const successPath =
+        currentServiceId === "logo-design"
+          ? "/logo-design/success"
+          : currentServiceId === "ads"
+          ? "/ads/success"
+          : "/cv-builder/success";
 
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
@@ -612,13 +754,12 @@ function StripePaymentForm({
                 line1: customerForm.addressLine1.trim(),
                 line2: customerForm.addressLine2?.trim() || "",
                 city: customerForm.city.trim(),
-                
                 postal_code: customerForm.postalCode.trim(),
                 country: customerForm.country,
               },
             },
           },
-          return_url: `${window.location.origin}/cv-builder/success?cvId=${
+          return_url: `${window.location.origin}${successPath}?cvId=${
             cvId || ""
           }&template=${template || ""}&plan=${planId || ""}`,
         },
@@ -629,62 +770,40 @@ function StripePaymentForm({
         return;
       }
 
-      if (paymentIntent?.status === "succeeded") {
-        if (isSubscription) {
-          const verifyRes = await fetch("/api/stripe/sync-subscription", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              subscriptionId,
-              planId,
-              customerForm,
-            }),
-          });
+      if (paymentIntent?.status === "processing") {
+        setMessage(
+          "Payment is processing. Please wait and refresh after a moment."
+        );
+        return;
+      }
 
-          const verifyData = await verifyRes.json();
+      if (paymentIntent?.status !== "succeeded") {
+        setMessage("Payment is not completed yet. Please try again.");
+        return;
+      }
 
-          console.log("Subscription verify response:", verifyData);
+      if (isSubscription) {
+        const verifyRes = await fetch("/api/stripe/sync-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            subscriptionId,
+            planId,
+            customerForm,
+          }),
+        });
 
-          if (!verifyRes.ok || !verifyData.success) {
-            setMessage(
-              verifyData.error ||
-                "Payment completed, but subscription verification failed."
-            );
-            return;
-          }
-        }
+        const verifyData = await verifyRes.json();
 
-        if (!isSubscription) {
-          const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              paymentIntentId: paymentIntent.id,
-              planId,
-              cvId,
-              customerForm,
-            }),
-          });
+        console.log("Subscription verify response:", verifyData);
 
-          const oneTimeData = await oneTimeRes.json();
-
-          console.log("One-time verify response:", oneTimeData);
-
-          if (
-            !oneTimeRes.ok ||
-            !oneTimeData.success ||
-            oneTimeData.hasAccess !== true
-          ) {
-            setMessage(
-              oneTimeData.error ||
-                "Payment completed, but one-time access could not be activated."
-            );
-            return;
-          }
+        if (!verifyRes.ok || !verifyData?.success) {
+          setMessage(
+            verifyData?.error || "Payment completed, but verification failed."
+          );
+          return;
         }
 
         router.push(
@@ -695,14 +814,64 @@ function StripePaymentForm({
         return;
       }
 
-      if (paymentIntent?.status === "processing") {
+      const oneTimeRes = await fetch("/api/stripe/verify-one-time", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentIntentId: paymentIntent.id,
+          planId,
+          cvId,
+          customerForm,
+        }),
+      });
+
+      const oneTimeData = await oneTimeRes.json();
+
+      console.log("One-time verify response:", oneTimeData);
+
+      if (!oneTimeRes.ok || !oneTimeData?.success) {
         setMessage(
-          "Payment is processing. Please wait and refresh after a moment."
+          oneTimeData?.error || "Payment completed, but verification failed."
         );
         return;
       }
 
-      setMessage("Payment is not completed yet. Please try again.");
+      const serviceId =
+        oneTimeData?.serviceId || selectedPlan?.serviceId || "cv-builder";
+
+      if (serviceId === "cv-builder" && oneTimeData.hasAccess !== true) {
+        setMessage(
+          "Payment completed, but CV Builder access could not be activated."
+        );
+        return;
+      }
+
+      if (serviceId === "logo-design") {
+        router.push(
+          `/logo-design/success?plan=${planId || ""}&payment_intent=${
+            paymentIntent.id
+          }`
+        );
+        return;
+      }
+
+      if (serviceId === "ads") {
+        router.push(
+          `/ads/success?plan=${planId || ""}&payment_intent=${
+            paymentIntent.id
+          }`
+        );
+        return;
+      }
+
+      router.push(
+        `/cv-builder/success?cvId=${cvId || ""}&template=${
+          template || ""
+        }&plan=${planId || ""}&payment_intent=${paymentIntent.id}`
+      );
+      return;
     } catch (error) {
       console.error("Payment confirm error:", error);
       setMessage("Payment failed. Please try again.");
@@ -711,50 +880,50 @@ function StripePaymentForm({
     }
   };
 
-return (
-  <form
-    onSubmit={handleSubmit}
-    className="relative z-50 w-full min-w-0"
-    style={{
-      touchAction: "manipulation",
-      WebkitTapHighlightColor: "transparent",
-    }}
-  >
-    <div className="relative z-50 w-full min-w-0 rounded-[22px] border border-slate-200 bg-white p-3 shadow-xl sm:p-4">
-      <PaymentElement
-        onReady={() => setIsReady(true)}
-        options={{
-          layout: {
-            type: "tabs",
-            defaultCollapsed: false,
-          },
-        }}
-      />
-    </div>
-
-    {message ? (
-      <p className="relative z-50 mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
-        {message}
-      </p>
-    ) : null}
-
-    <button
-      type="submit"
-      disabled={!stripe || !elements || !isReady || isProcessing}
-      className="relative z-50 mt-5 flex min-h-[58px] w-full items-center justify-center rounded-2xl bg-qorliqGold px-5 py-4 text-center text-[12px] font-black uppercase tracking-[0.12em] text-black shadow-xl shadow-qorliqGold/20 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-full"
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="relative z-50 w-full min-w-0"
+      style={{
+        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
+      }}
     >
-      {isProcessing
-        ? "Processing Securely..."
-        : isSubscription
-        ? "Confirm & Start Subscription"
-        : "Confirm Payment"}
-    </button>
+      <div className="relative z-50 w-full min-w-0 rounded-[22px] border border-slate-200 bg-white p-3 shadow-xl sm:p-4">
+        <PaymentElement
+          onReady={() => setIsReady(true)}
+          options={{
+            layout: {
+              type: "tabs",
+              defaultCollapsed: false,
+            },
+          }}
+        />
+      </div>
 
-    <p className="relative z-50 mt-4 text-center text-[11px] leading-5 text-white/40 sm:text-xs">
-      Your payment details are encrypted and processed securely.
-    </p>
-  </form>
-);
+      {message ? (
+        <p className="relative z-50 mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
+          {message}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={!stripe || !elements || !isReady || isProcessing}
+        className="relative z-50 mt-5 flex min-h-[58px] w-full items-center justify-center rounded-2xl bg-qorliqGold px-5 py-4 text-center text-[12px] font-black uppercase tracking-[0.12em] text-black shadow-xl shadow-qorliqGold/20 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-full"
+      >
+        {isProcessing
+          ? "Processing Securely..."
+          : isSubscription
+          ? "Confirm & Start Subscription"
+          : "Confirm Payment"}
+      </button>
+
+      <p className="relative z-50 mt-4 text-center text-[11px] leading-5 text-white/40 sm:text-xs">
+        Your payment details are encrypted and processed securely.
+      </p>
+    </form>
+  );
 }
 
 function CheckoutInput({
@@ -782,6 +951,7 @@ function CheckoutInput({
     </div>
   );
 }
+
 function CountrySelect({ label, value, onChange, required = false }) {
   return (
     <div className="w-full min-w-0">
@@ -814,6 +984,7 @@ function CountrySelect({ label, value, onChange, required = false }) {
     </div>
   );
 }
+
 function PhoneInput({
   label,
   countryCode,
@@ -847,9 +1018,10 @@ function PhoneInput({
     </div>
   );
 }
+
 function InfoCard({ title, value }) {
   return (
-    <div className="flex  w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.075] to-black/30 p-4 shadow-lg shadow-black/10 sm:block">
+    <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.075] to-black/30 p-4 shadow-lg shadow-black/10 sm:block">
       <p className="shrink-0 text-[10px] font-black uppercase tracking-[0.13em] text-qorliqGold/80 sm:text-[10px]">
         {title}
       </p>

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServerSession } from "next-auth";
+
 import { pricingPlans } from "@/lib/pricingPlans";
 import { authOptions } from "@/lib/authOptions";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import ServiceOrder from "@/models/ServiceOrder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,52 +26,84 @@ function makePhone(countryCode, number) {
   return `${code}${mobile}`.replace(/\s+/g, "");
 }
 
-function getNumericAmountFromPrice(priceText) {
-  const numeric = Number(String(priceText || "").replace(/[^\d.]/g, ""));
-  return Number.isFinite(numeric) ? numeric : 0;
+function getAmountInPence(plan) {
+  if (typeof plan.amount === "number") return plan.amount;
+  if (typeof plan.amountPence === "number") return plan.amountPence;
+  if (typeof plan.priceInPence === "number") return plan.priceInPence;
+
+  const priceText = cleanText(plan.price);
+  const numericPrice = Number(priceText.replace(/[^\d.]/g, ""));
+
+  if (!numericPrice || Number.isNaN(numericPrice)) return 0;
+
+  return Math.round(numericPrice * 100);
 }
 
-function getCvBuilderOfferInfo(user, selectedPlan) {
-  const isCvBuilder = selectedPlan.serviceId === "cv-builder";
+function getStripePriceId(plan, useOfferPrice = false) {
+  const directPriceId =
+    cleanText(plan.stripePriceId) ||
+    cleanText(plan.priceId) ||
+    cleanText(plan.stripe_price_id);
 
-  const hasOffer =
-    Boolean(selectedPlan.stripeOfferPriceEnv) &&
-    Boolean(selectedPlan.stripeStandardPriceEnv) &&
-    Boolean(selectedPlan.offerDurationMinutes);
+  if (directPriceId) return directPriceId;
 
-  if (!isCvBuilder || !hasOffer) {
-    return {
-      isOfferPlan: false,
-      offerActive: false,
-      priceEnv: selectedPlan.stripePriceEnv,
-      startedAt: null,
-      expiresAt: null,
-    };
-  }
+  const envKey =
+    useOfferPrice && cleanText(plan.stripeOfferPriceEnv)
+      ? cleanText(plan.stripeOfferPriceEnv)
+      : cleanText(plan.stripeStandardPriceEnv) ||
+        cleanText(plan.stripePriceEnv);
 
-  const now = new Date();
+  if (!envKey) return "";
 
-  let startedAt = user.cvBuilderOfferStartedAt;
+  return cleanText(process.env[envKey]);
+}
 
-  if (!startedAt) {
-    startedAt = now;
-    user.cvBuilderOfferStartedAt = startedAt;
-  }
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanText(email));
+}
 
-  const durationMs = Number(selectedPlan.offerDurationMinutes || 10) * 60 * 1000;
-  const expiresAt = new Date(new Date(startedAt).getTime() + durationMs);
-
-  const offerActive = now.getTime() <= expiresAt.getTime();
-
+function buildAddress(customerDetails) {
   return {
-    isOfferPlan: true,
-    offerActive,
-    priceEnv: offerActive
-      ? selectedPlan.stripeOfferPriceEnv
-      : selectedPlan.stripeStandardPriceEnv,
-    startedAt,
-    expiresAt,
+    line1: customerDetails.addressLine1,
+    line2: customerDetails.addressLine2 || undefined,
+    city: customerDetails.city,
+    postal_code: customerDetails.postalCode,
+    country: customerDetails.country,
   };
+}
+
+function buildCustomerDetails(customerForm = {}) {
+  return {
+    firstName: cleanText(customerForm.firstName),
+    lastName: cleanText(customerForm.lastName),
+    email: cleanText(customerForm.email).toLowerCase(),
+
+    mobileCountryCode: cleanText(customerForm.mobileCountryCode),
+    mobileCountryFlag: cleanText(customerForm.mobileCountryFlag),
+    mobileNumber: cleanText(customerForm.mobileNumber),
+
+    country: cleanText(customerForm.country).toUpperCase(),
+    countryName: cleanText(customerForm.countryName),
+    countryFlag: cleanText(customerForm.countryFlag),
+
+    postalCode: cleanText(customerForm.postalCode),
+    addressLine1: cleanText(customerForm.addressLine1),
+    addressLine2: cleanText(customerForm.addressLine2),
+    city: cleanText(customerForm.city),
+  };
+}
+
+function hasMissingBillingDetails(customerDetails) {
+  return (
+    !customerDetails.firstName ||
+    !customerDetails.lastName ||
+    !customerDetails.email ||
+    !customerDetails.mobileNumber ||
+    !customerDetails.country ||
+    !customerDetails.postalCode ||
+    !customerDetails.addressLine1 ||
+    !customerDetails.city
+  );
 }
 
 export async function POST(req) {
@@ -84,42 +118,19 @@ export async function POST(req) {
       );
     }
 
-    const sessionUser = await getServerSession(authOptions);
-
-    if (!sessionUser?.user?.email) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Please login first.",
-        },
-        { status: 401 }
-      );
-    }
-
     await connectDB();
 
-    const user = await User.findOne({
-      email: sessionUser.user.email.toLowerCase().trim(),
-    });
+    const body = await req.json();
 
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "User not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const { planId, cvId, template, customerForm = {} } = body;
+    const planId = cleanText(body.planId);
+    const cvId = cleanText(body.cvId);
+    const template = cleanText(body.template);
 
     if (!planId) {
       return NextResponse.json(
         {
           success: false,
-          error: "Plan ID is missing.",
+          error: "Package is required.",
         },
         { status: 400 }
       );
@@ -131,334 +142,355 @@ export async function POST(req) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid plan selected.",
+          error: "Invalid package selected.",
         },
         { status: 400 }
       );
     }
 
-    const serviceId = selectedPlan.serviceId || "cv-builder";
-    const serviceName = selectedPlan.serviceName || "CV Builder";
+    const serviceId = cleanText(selectedPlan.serviceId) || "cv-builder";
 
-    if (selectedPlan.type === "subscription" && serviceId !== "cv-builder") {
+    const isCvBuilderPlan = serviceId === "cv-builder";
+    const isLogoPlan = serviceId === "logo-design";
+    const isAdsPlan = serviceId === "ads";
+    const isGuestServicePlan = isLogoPlan || isAdsPlan;
+    const isSubscription = selectedPlan.type === "subscription";
+
+    const customerDetails = buildCustomerDetails(body.customerForm || {});
+
+    if (hasMissingBillingDetails(customerDetails)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Only CV Builder plans can be subscription plans.",
+          error: "Please complete all required billing details.",
         },
         { status: 400 }
       );
     }
 
-    const offerInfo = getCvBuilderOfferInfo(user, selectedPlan);
+    if (!isValidEmail(customerDetails.email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Please enter a valid email address.",
+        },
+        { status: 400 }
+      );
+    }
 
-    if (offerInfo.isOfferPlan && !user.cvBuilderOfferStartedAt) {
+    const session = await getServerSession(authOptions);
+
+    if (isCvBuilderPlan && !session?.user?.email) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Login required for CV Builder.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const customerEmail = isCvBuilderPlan
+      ? cleanText(session.user.email).toLowerCase()
+      : customerDetails.email;
+
+    if (!customerEmail || !isValidEmail(customerEmail)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Customer email is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    let user = null;
+    let stripeCustomerId = "";
+
+    if (isCvBuilderPlan) {
+      user = await User.findOne({ email: customerEmail });
+
+      if (!user) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "User not found.",
+          },
+          { status: 404 }
+        );
+      }
+
+      stripeCustomerId = cleanText(user.stripeCustomerId);
+    }
+
+    const fullName = `${customerDetails.firstName} ${customerDetails.lastName}`.trim();
+
+    const phone = makePhone(
+      customerDetails.mobileCountryCode,
+      customerDetails.mobileNumber
+    );
+
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: customerEmail,
+        name: fullName,
+        phone,
+        address: buildAddress(customerDetails),
+        metadata: {
+          serviceId,
+          planId,
+          cvId,
+          template,
+          checkoutType: isGuestServicePlan ? "guest" : "logged-in",
+        },
+      });
+
+      stripeCustomerId = customer.id;
+
+      if (isCvBuilderPlan && user) {
+        user.stripeCustomerId = stripeCustomerId;
+        await user.save();
+      }
+    } else {
+      await stripe.customers.update(stripeCustomerId, {
+        email: customerEmail,
+        name: fullName,
+        phone,
+        address: buildAddress(customerDetails),
+      });
+    }
+
+    if (isCvBuilderPlan && user) {
+      user.billingDetails = {
+        firstName: customerDetails.firstName,
+        lastName: customerDetails.lastName,
+        email: customerDetails.email,
+
+        mobileCountryCode: customerDetails.mobileCountryCode,
+        mobileCountryFlag: customerDetails.mobileCountryFlag,
+        mobileNumber: customerDetails.mobileNumber,
+        phone,
+
+        country: customerDetails.country,
+        countryName: customerDetails.countryName,
+        countryFlag: customerDetails.countryFlag,
+
+        postalCode: customerDetails.postalCode,
+        addressLine1: customerDetails.addressLine1,
+        addressLine2: customerDetails.addressLine2,
+        city: customerDetails.city,
+      };
+
       await user.save();
     }
-
-    const activeStripePriceEnv = offerInfo.priceEnv || selectedPlan.stripePriceEnv;
-    const stripePriceId = process.env[activeStripePriceEnv];
-
-    if (!stripePriceId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `${activeStripePriceEnv} is missing in .env.local.`,
-        },
-        { status: 500 }
-      );
-    }
-
-    if (!stripePriceId.startsWith("price_")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `${activeStripePriceEnv} must be a Stripe Price ID starting with price_. You used ${stripePriceId}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    const customerDetails = {
-      firstName: cleanText(customerForm?.firstName),
-      lastName: cleanText(customerForm?.lastName),
-      email:
-        cleanText(customerForm?.email).toLowerCase() ||
-        user.email.toLowerCase().trim(),
-
-      mobileCountryCode: cleanText(customerForm?.mobileCountryCode),
-      mobileCountryFlag: cleanText(customerForm?.mobileCountryFlag),
-      mobileNumber: cleanText(customerForm?.mobileNumber),
-      phone: makePhone(
-        customerForm?.mobileCountryCode,
-        customerForm?.mobileNumber
-      ),
-
-      country: cleanText(customerForm?.country).toUpperCase() || "GB",
-      countryName: cleanText(customerForm?.countryName),
-      countryFlag: cleanText(customerForm?.countryFlag),
-
-      postalCode: cleanText(customerForm?.postalCode),
-      addressLine1: cleanText(customerForm?.addressLine1),
-      addressLine2: cleanText(customerForm?.addressLine2),
-      city: cleanText(customerForm?.city),
-    };
-
-    const fullName = `${customerDetails.firstName} ${customerDetails.lastName}`
-      .trim()
-      .replace(/\s+/g, " ");
-
-    const billingDetails = {
-      firstName: customerDetails.firstName,
-      lastName: customerDetails.lastName,
-      email: customerDetails.email,
-
-      mobileCountryCode: customerDetails.mobileCountryCode,
-      mobileCountryFlag: customerDetails.mobileCountryFlag,
-      mobileNumber: customerDetails.mobileNumber,
-      phone: customerDetails.phone,
-
-      country: customerDetails.country,
-      countryName: customerDetails.countryName,
-      countryFlag: customerDetails.countryFlag,
-
-      postalCode: customerDetails.postalCode,
-      addressLine1: customerDetails.addressLine1,
-      addressLine2: customerDetails.addressLine2,
-      city: customerDetails.city,
-    };
 
     const metadata = {
-      userId: user._id.toString(),
-      email: user.email,
+      userId: user?._id?.toString() || "",
+      email: customerEmail,
 
       serviceId,
-      serviceName,
-
-      plan: planId,
       planId,
-      planName: selectedPlan.name || "",
-      planType: selectedPlan.type || "",
+      plan: planId,
+      planName: cleanText(selectedPlan.name),
+      planType: cleanText(selectedPlan.type),
 
-      priceEnvUsed: activeStripePriceEnv,
-      offerActive: String(offerInfo.offerActive),
-      offerStartedAt: offerInfo.startedAt
-        ? new Date(offerInfo.startedAt).toISOString()
-        : "",
-      offerExpiresAt: offerInfo.expiresAt
-        ? new Date(offerInfo.expiresAt).toISOString()
-        : "",
+      cvId,
+      template,
 
-      cvId: cvId || "",
-      template: template || "",
+      billingFirstName: customerDetails.firstName,
+      billingLastName: customerDetails.lastName,
+      billingEmail: customerDetails.email,
+      billingMobileCountryCode: customerDetails.mobileCountryCode,
+      billingMobileNumber: customerDetails.mobileNumber,
+      billingCountry: customerDetails.country,
+      billingCountryName: customerDetails.countryName,
+      billingPostalCode: customerDetails.postalCode,
+      billingAddressLine1: customerDetails.addressLine1,
+      billingAddressLine2: customerDetails.addressLine2,
+      billingCity: customerDetails.city,
 
-      billingFirstName: customerDetails.firstName || "",
-      billingLastName: customerDetails.lastName || "",
-      billingEmail: customerDetails.email || "",
-      billingPhone: customerDetails.phone || "",
-      billingCountry: customerDetails.country || "",
-      billingPostalCode: customerDetails.postalCode || "",
-      billingAddressLine1: customerDetails.addressLine1 || "",
-      billingAddressLine2: customerDetails.addressLine2 || "",
-      billingCity: customerDetails.city || "",
+      checkoutType: isGuestServicePlan ? "guest" : "logged-in",
     };
 
-    let customerId = user.stripeCustomerId;
-
-    if (customerId) {
-      try {
-        await stripe.customers.retrieve(customerId);
-      } catch (error) {
-        if (error.code === "resource_missing") {
-          customerId = "";
-          user.stripeCustomerId = "";
-          await user.save();
-        } else {
-          throw error;
-        }
+    /*
+      Subscription:
+      - Only CV Builder subscription allowed
+      - Stripe price ID required
+    */
+    if (isSubscription) {
+      if (!isCvBuilderPlan) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Subscriptions are only allowed for CV Builder.",
+          },
+          { status: 400 }
+        );
       }
-    }
 
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: customerDetails.email || user.email,
-        name: fullName || user.name || undefined,
-        phone: customerDetails.phone || undefined,
-        address: {
-          line1: customerDetails.addressLine1 || undefined,
-          line2: customerDetails.addressLine2 || undefined,
-          city: customerDetails.city || undefined,
-          postal_code: customerDetails.postalCode || undefined,
-          country: customerDetails.country || "GB",
-        },
-        metadata: {
-          userId: user._id.toString(),
-          email: user.email,
-        },
-      });
+      const stripePriceId = getStripePriceId(selectedPlan);
 
-      customerId = customer.id;
-      user.stripeCustomerId = customerId;
-      await user.save();
-    } else {
-      await stripe.customers.update(customerId, {
-        email: customerDetails.email || user.email,
-        name: fullName || user.name || undefined,
-        phone: customerDetails.phone || undefined,
-        address: {
-          line1: customerDetails.addressLine1 || undefined,
-          line2: customerDetails.addressLine2 || undefined,
-          city: customerDetails.city || undefined,
-          postal_code: customerDetails.postalCode || undefined,
-          country: customerDetails.country || "GB",
-        },
-        metadata: {
-          userId: user._id.toString(),
-          email: user.email,
-        },
-      });
-    }
+      if (!stripePriceId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Stripe subscription price ID is missing. Add stripePriceId in pricingPlans for this subscription package.",
+          },
+          { status: 500 }
+        );
+      }
 
-    // =========================
-    // SUBSCRIPTION: CV BUILDER ONLY
-    // =========================
-    if (selectedPlan.type === "subscription") {
       const subscription = await stripe.subscriptions.create({
-        customer: customerId,
+        customer: stripeCustomerId,
         items: [
           {
             price: stripePriceId,
             quantity: 1,
           },
         ],
+
         automatic_tax: {
           enabled: true,
         },
+
         payment_behavior: "default_incomplete",
+
         payment_settings: {
           save_default_payment_method: "on_subscription",
         },
+
+        metadata,
+
         expand: [
           "latest_invoice.confirmation_secret",
           "latest_invoice.payment_intent",
+          "pending_setup_intent",
         ],
-        metadata,
       });
 
-      const invoice = subscription.latest_invoice;
+      const latestInvoice = subscription.latest_invoice;
+
+      const paymentIntent =
+        latestInvoice && typeof latestInvoice !== "string"
+          ? latestInvoice.payment_intent
+          : null;
+
+      const confirmationSecret =
+        latestInvoice && typeof latestInvoice !== "string"
+          ? latestInvoice.confirmation_secret
+          : null;
+
+      const pendingSetupIntent = subscription.pending_setup_intent;
 
       const clientSecret =
-        invoice?.confirmation_secret?.client_secret ||
-        invoice?.payment_intent?.client_secret ||
-        null;
+        paymentIntent?.client_secret ||
+        confirmationSecret?.client_secret ||
+        pendingSetupIntent?.client_secret ||
+        "";
+
+      const secretType = paymentIntent?.client_secret
+        ? "payment_intent"
+        : confirmationSecret?.client_secret
+          ? "confirmation_secret"
+          : pendingSetupIntent?.client_secret
+            ? "setup_intent"
+            : "";
 
       if (!clientSecret) {
+        console.error("Stripe subscription created but no client secret found:", {
+          subscriptionId: subscription.id,
+          status: subscription.status,
+          latestInvoice,
+          pendingSetupIntent,
+        });
+
         return NextResponse.json(
           {
             success: false,
-            error: "Unable to create subscription payment.",
-            debug: {
-              planId,
-              serviceId,
-              selectedPlanType: selectedPlan.type,
-              stripePriceEnv: activeStripePriceEnv,
-              stripePriceId,
-              subscriptionId: subscription.id,
-              subscriptionStatus: subscription.status,
-              latestInvoiceId: typeof invoice === "object" ? invoice.id : invoice,
-              invoiceStatus: typeof invoice === "object" ? invoice.status : null,
-              hasConfirmationSecret: Boolean(invoice?.confirmation_secret),
-              hasPaymentIntent: Boolean(invoice?.payment_intent),
-            },
+            error:
+              "Unable to create subscription payment. Please check Stripe recurring price, tax settings, and invoice status.",
           },
           { status: 500 }
         );
       }
 
-      const updatedUser = await User.findByIdAndUpdate(
-        user._id,
-        {
-          $set: {
-            plan: planId,
-            planType: "subscription",
-            accessType: "subscription",
-
-            stripeCustomerId: customerId,
-            stripeSubscriptionId: subscription.id,
-
-            subscriptionStatus: subscription.status || "incomplete",
-            hasActiveSubscription: false,
-            subscriptionStartDate: new Date(),
-            subscriptionEndDate: null,
-
-            cvBuilderOfferStartedAt: user.cvBuilderOfferStartedAt || null,
-
-            billingDetails,
-
-            updatedAt: new Date(),
-          },
-          $push: {
-            serviceOrders: {
-              serviceId,
-              serviceName,
-              planId,
-              planName: selectedPlan.name || "",
-              planType: selectedPlan.type || "subscription",
-              stripeSubscriptionId: subscription.id,
-              paymentStatus: subscription.status || "incomplete",
-              amount: offerInfo.offerActive
-                ? getNumericAmountFromPrice(selectedPlan.price)
-                : getNumericAmountFromPrice(
-                    selectedPlan.oldPrice || selectedPlan.price
-                  ),
-              currency: "gbp",
-              createdAt: new Date(),
-            },
-          },
-        },
-        { new: true }
-      );
-
       return NextResponse.json({
         success: true,
         type: "subscription",
-        serviceId,
-        serviceName,
-        planId,
         clientSecret,
+        secretType,
         subscriptionId: subscription.id,
-        dbUpdated: Boolean(updatedUser),
-        offerActive: offerInfo.offerActive,
-        offerExpiresAt: offerInfo.expiresAt,
-        priceEnvUsed: activeStripePriceEnv,
+        paymentIntentId: paymentIntent?.id || "",
+        serviceId,
+        planId,
       });
     }
 
-    // =========================
-    // ONE-TIME PAYMENT: CV / LOGO / ADS
-    // =========================
-    const price = await stripe.prices.retrieve(stripePriceId);
+    /*
+      One-time payment:
+      - CV Builder one-time allowed
+      - Logo Design guest checkout allowed
+      - Ads guest checkout allowed
+    */
+    const amount = getAmountInPence(selectedPlan);
 
-    if (!price.unit_amount) {
+    if (!amount || amount < 50) {
       return NextResponse.json(
         {
           success: false,
-          error: "Stripe price amount is missing.",
+          error: "Invalid payment amount.",
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
 
-    const baseAmount = price.unit_amount;
-    const isUkCustomer = customerDetails.country === "GB";
-    const taxAmount = isUkCustomer ? Math.round(baseAmount * 0.2) : 0;
-    const totalAmount = baseAmount + taxAmount;
+    let serviceOrderId = "";
+
+    if (isGuestServicePlan) {
+      const serviceOrder = await ServiceOrder.create({
+        serviceId,
+        serviceName:
+          cleanText(selectedPlan.serviceName) ||
+          cleanText(selectedPlan.name) ||
+          serviceId,
+
+        planId,
+        planName: cleanText(selectedPlan.name),
+        planType: cleanText(selectedPlan.type) || "payment",
+
+        baseAmount: amount,
+        taxAmount: 0,
+        totalAmount: amount,
+        currency: "gbp",
+
+        orderStatus: "new",
+        paymentStatus: "pending",
+
+        stripeCustomerId,
+        stripePaymentIntentId: "",
+
+        customer: {
+          ...customerDetails,
+          fullName,
+          phone,
+        },
+
+        metadata: {
+          cvId,
+          template,
+          checkoutType: "guest",
+        },
+      });
+
+      serviceOrderId = serviceOrder._id.toString();
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalAmount,
-      currency: price.currency || "gbp",
-      customer: customerId,
-      receipt_email: customerDetails.email || user.email,
+      amount,
+      currency: "gbp",
+      customer: stripeCustomerId,
+      receipt_email: customerEmail,
 
       automatic_payment_methods: {
         enabled: true,
@@ -466,102 +498,56 @@ export async function POST(req) {
 
       metadata: {
         ...metadata,
-        baseAmount: String(baseAmount),
-        taxRate: isUkCustomer ? "20" : "0",
-        taxAmount: String(taxAmount),
-        totalAmount: String(totalAmount),
-        taxCountry: customerDetails.country || "GB",
+        serviceOrderId,
+      },
+
+      description: `${cleanText(selectedPlan.name) || "Service"} - ${serviceId}`,
+
+      shipping: {
+        name: fullName,
+        phone,
+        address: buildAddress(customerDetails),
       },
     });
 
-    let updatePayload = {
-      $set: {
-        stripeCustomerId: customerId,
-        cvBuilderOfferStartedAt: user.cvBuilderOfferStartedAt || null,
-        billingDetails,
-        updatedAt: new Date(),
-      },
-      $push: {
-        serviceOrders: {
-          serviceId,
-          serviceName,
-          planId,
-          planName: selectedPlan.name || "",
-          planType: selectedPlan.type || "payment",
-          stripePaymentIntentId: paymentIntent.id,
-          paymentStatus: "pending",
-          amount: totalAmount,
-          baseAmount,
-          taxAmount,
-          currency: price.currency || "gbp",
-          createdAt: new Date(),
+    if (!paymentIntent.client_secret) {
+      if (serviceOrderId) {
+        await ServiceOrder.findByIdAndUpdate(serviceOrderId, {
+          paymentStatus: "failed",
+        });
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unable to create payment intent.",
         },
-      },
-    };
+        { status: 500 }
+      );
+    }
 
-    if (serviceId === "cv-builder") {
-      updatePayload.$set = {
-        ...updatePayload.$set,
-
-        plan: planId,
-        planType: "one-time",
-        accessType: "one-time",
-
+    if (serviceOrderId) {
+      await ServiceOrder.findByIdAndUpdate(serviceOrderId, {
         stripePaymentIntentId: paymentIntent.id,
-
-        paymentStatus: "pending",
-        oneTimeAccessStatus: "pending",
-
-        subscriptionStatus: "inactive",
-        stripeSubscriptionId: "",
-        subscriptionEndDate: null,
-      };
+      });
     }
-
-    if (serviceId === "logo-design") {
-      updatePayload.$set = {
-        ...updatePayload.$set,
-
-        logoDesignStatus: "pending",
-        logoDesignPlan: planId,
-        logoDesignPaymentIntentId: paymentIntent.id,
-      };
-    }
-
-    if (serviceId === "ads") {
-      updatePayload.$set = {
-        ...updatePayload.$set,
-
-        adsServiceStatus: "pending",
-        adsServicePlan: planId,
-        adsServicePaymentIntentId: paymentIntent.id,
-      };
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(user._id, updatePayload, {
-      new: true,
-    });
 
     return NextResponse.json({
       success: true,
-      type: "payment",
-      serviceId,
-      serviceName,
-      planId,
+      type: "one-time",
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
-      dbUpdated: Boolean(updatedUser),
-      offerActive: offerInfo.offerActive,
-      offerExpiresAt: offerInfo.expiresAt,
-      priceEnvUsed: activeStripePriceEnv,
+      serviceOrderId,
+      serviceId,
+      planId,
     });
   } catch (error) {
-    console.error("Stripe create intent error:", error);
+    console.error("Create checkout intent error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Unable to create payment.",
+        error: error?.message || "Unable to load payment form.",
       },
       { status: 500 }
     );

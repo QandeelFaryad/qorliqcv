@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { getOfferStartedAt, getOfferState } from "@/lib/cvOfferCountdown";
 
 const navItems = [
   { label: "Home", href: "/#home" },
@@ -14,10 +16,43 @@ const navItems = [
 ];
 
 export default function Header() {
+  const pathname = usePathname();
+
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isOfferVisible, setIsOfferVisible] = useState(false);
 
   const { data: session, status } = useSession();
+
+  const isSuccessPage =
+    pathname?.includes("/success") ||
+    pathname?.includes("/payment-success") ||
+    pathname?.includes("/order-success");
+
+  useEffect(() => {
+    if (isSuccessPage) {
+      setIsOfferVisible(false);
+      return;
+    }
+
+    const startedAt = getOfferStartedAt();
+
+    const checkOffer = () => {
+      const state = getOfferState(startedAt);
+      setIsOfferVisible(state.isActive && !state.isExpired);
+    };
+
+    checkOffer();
+
+    const interval = setInterval(checkOffer, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSuccessPage]);
+
+  useEffect(() => {
+    setOpen(false);
+    setProfileOpen(false);
+  }, [pathname]);
 
   const userName = session?.user?.name || session?.user?.email || "User";
   const userInitial = userName?.charAt(0)?.toUpperCase() || "U";
@@ -33,9 +68,12 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed left-0 right-0 top-0 z-[9999] border-b border-white/10 bg-[#050505]/95 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl">
+      <header
+        className={`fixed left-0 right-0 z-[9998] border-b border-white/10 bg-[#050505]/95 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 ${
+          isOfferVisible ? "top-[36px]" : "top-0"
+        }`}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          {/* Logo */}
           <Link
             href="/#home"
             onClick={() => setOpen(false)}
@@ -57,7 +95,6 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Desktop Nav */}
           <nav className="hidden items-center rounded-full border border-white/10 bg-white/[0.04] px-2 py-2 text-sm font-semibold text-white/65 lg:flex">
             {navItems.map((item) => (
               <Link
@@ -70,7 +107,6 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Desktop Actions */}
           <div className="hidden items-center gap-3 lg:flex">
             <Link
               href="/cv-builder"
@@ -93,9 +129,7 @@ export default function Header() {
                 {profileOpen ? (
                   <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-white/10 bg-[#101010] p-3 shadow-2xl shadow-black/40">
                     <div className="mb-3 border-b border-white/10 pb-3">
-                      <p className="text-sm font-bold text-white">
-                        {userName}
-                      </p>
+                      <p className="text-sm font-bold text-white">{userName}</p>
                       <p className="mt-1 truncate text-xs text-white/50">
                         {session?.user?.email}
                       </p>
@@ -121,7 +155,6 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile Button */}
           <button
             type="button"
             onClick={() => setOpen((prev) => !prev)}
@@ -148,7 +181,6 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {open ? (
           <div className="border-t border-white/10 bg-[#050505]/98 px-5 py-5 lg:hidden">
             <nav className="mx-auto grid max-w-7xl gap-2">
@@ -210,8 +242,7 @@ export default function Header() {
         ) : null}
       </header>
 
-      {/* This spacer prevents page content from hiding behind fixed header */}
-      <div className="h-[60px]" />
+      <div className={isOfferVisible ? "h-[110px]" : "h-[74px]"} />
     </>
   );
 }

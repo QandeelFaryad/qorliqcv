@@ -296,37 +296,41 @@ export default function SuccessPage() {
         setError("");
         setAccessError("");
 
-        const verifyRes = await fetch("/api/stripe/sync-subscription", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+ const verifyRes = await fetch("/api/user/access?service=cv-builder", {
+  method: "GET",
+  cache: "no-store",
+});
 
-        const verifyData = await verifyRes.json();
+const verifyData = await verifyRes.json();
 
-        if (!verifyRes.ok || !verifyData.success) {
-          setHasAccess(false);
-          setAccessError(
-            verifyData.error || "Please complete payment to download your CV."
-          );
-          setLoading(false);
-          return;
-        }
+if (!verifyRes.ok || !verifyData.success) {
+  setHasAccess(false);
+  setAccessError(
+    verifyData.error || "Please complete payment to download your CV."
+  );
+  setLoading(false);
+  return;
+}
 
-        const active =
-          verifyData.databaseStatus === "active" ||
-          verifyData.hasActiveSubscription === true ||
-          verifyData.hasAccess === true;
+const now = new Date();
 
-        if (!active) {
-          setHasAccess(false);
-          setAccessError("Your subscription is inactive or expired.");
-          setLoading(false);
-          return;
-        }
+const active =
+  verifyData.hasAccess === true ||
+  verifyData.hasActiveSubscription === true ||
+  verifyData.subscriptionStatus === "active" ||
+  verifyData.databaseStatus === "active";
 
-        setHasAccess(true);
+const notExpired =
+  !verifyData.accessExpiresAt || new Date(verifyData.accessExpiresAt) > now;
+
+if (!active || !notExpired) {
+  setHasAccess(false);
+  setAccessError("Your subscription is inactive or expired.");
+  setLoading(false);
+  return;
+}
+
+setHasAccess(true);
 
         const params = new URLSearchParams(window.location.search);
         const cvId = params.get("cvId");
@@ -1135,14 +1139,48 @@ function hasHtmlText(value) {
   return Boolean(clean);
 }
 
+function decodeAllowedHtmlTags(value = "") {
+  return String(value)
+    .replace(/&lt;(b|strong)&gt;/gi, "<strong>")
+    .replace(/&lt;(i|em)&gt;/gi, "<em>")
+    .replace(/&lt;u&gt;/gi, "<u>")
+    .replace(/&lt;(s|strike|del)&gt;/gi, "<s>")
+    .replace(/&lt;p&gt;/gi, "<p>")
+    .replace(/&lt;br\s*\/?&gt;/gi, "<br>")
+    .replace(/&lt;ul&gt;/gi, "<ul>")
+    .replace(/&lt;ol&gt;/gi, "<ol>")
+    .replace(/&lt;li&gt;/gi, "<li>")
+    .replace(/&lt;blockquote&gt;/gi, "<blockquote>")
+    .replace(/&lt;\/(b|strong)&gt;/gi, "</strong>")
+    .replace(/&lt;\/(i|em)&gt;/gi, "</em>")
+    .replace(/&lt;\/u&gt;/gi, "</u>")
+    .replace(/&lt;\/(s|strike|del)&gt;/gi, "</s>")
+    .replace(/&lt;\/p&gt;/gi, "</p>")
+    .replace(/&lt;\/ul&gt;/gi, "</ul>")
+    .replace(/&lt;\/ol&gt;/gi, "</ol>")
+    .replace(/&lt;\/li&gt;/gi, "</li>")
+    .replace(/&lt;\/blockquote&gt;/gi, "</blockquote>");
+}
+
+function sanitizeHtml(value = "") {
+  return String(value)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "")
+    .replace(/\sjavascript:/gi, "");
+}
+
 function HtmlText({ html, className = "" }) {
   if (!html) return null;
+
+  const safeHtml = sanitizeHtml(decodeAllowedHtmlTags(html));
 
   return (
     <>
       <div
         className={`cv-html-text ${className}`}
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
 
       <style jsx global>{`
@@ -1182,7 +1220,8 @@ function HtmlText({ html, className = "" }) {
         }
 
         .cv-html-text s,
-        .cv-html-text strike {
+        .cv-html-text strike,
+        .cv-html-text del {
           text-decoration: line-through !important;
         }
 
@@ -1191,6 +1230,24 @@ function HtmlText({ html, className = "" }) {
           text-decoration: underline !important;
           font-weight: 700 !important;
         }
+          .cv-html-text blockquote {
+  margin: 8px 0 !important;
+  border-left: 4px solid #18227c !important;
+  background: #f8fafc !important;
+  padding: 8px 12px !important;
+  color: #334155 !important;
+  border-radius: 10px !important;
+  font-style: italic !important;
+}
+  .cv-html-text blockquote {
+  margin: 8px 0 !important;
+  border-left: 4px solid #18227c !important;
+  background: #f8fafc !important;
+  padding: 8px 12px !important;
+  color: #334155 !important;
+  border-radius: 10px !important;
+  font-style: italic !important;
+}
       `}</style>
     </>
   );
@@ -1530,7 +1587,6 @@ function LuxuryOvalPhotoCV({ cv, config }) {
 
 function LondonExecutiveCV({ cv, config }) {
   const accent = config.accent || "#B88A2C";
-  const dark = exactDark(config) || "#111827";
 
   return (
     <div
@@ -1545,7 +1601,7 @@ function LondonExecutiveCV({ cv, config }) {
       <header
         className="px-10 py-12 text-white"
         style={{
-          background: `linear-gradient(135deg, ${dark} 0%, #020617 100%)`,
+          background: `linear-gradient(135deg, #6B3F18 0%, #3A2412 60%, #020617 100%)`,
         }}
       >
         <p
@@ -1571,8 +1627,8 @@ function LondonExecutiveCV({ cv, config }) {
         />
       </header>
 
-      <main className="grid grid-cols-[250px_1fr] gap-9 p-10">
-        <aside>
+      <main className="grid gap-10 px-10 py-10 grid-cols-[0.36fr_0.64fr]">
+        <aside className="space-y-8">
           <SideCVSections cv={cv} accent={accent} />
         </aside>
 
@@ -2895,13 +2951,12 @@ function Paragraph({ text, dark = false, className = "" }) {
   if (!hasText(text)) return null;
 
   return (
-    <p
-      className={`whitespace-pre-line text-[12px] leading-6 ${
-        dark ? "text-white/75" : "text-slate-600"
+    <HtmlText
+      html={text}
+      className={`text-sm leading-8 ${
+        dark ? "text-white/75" : "text-black/70"
       } ${className}`}
-    >
-      {text}
-    </p>
+    />
   );
 }
 

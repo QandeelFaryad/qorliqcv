@@ -78,9 +78,71 @@ export default function CheckoutContent() {
   const planId = searchParams.get("plan") || "";
   const cvId = searchParams.get("cvId") || "";
   const template = searchParams.get("template") || "";
+const selectedPlan = pricingPlans.find((plan) => plan.id === planId);
 
-  const selectedPlan = pricingPlans.find((plan) => plan.id === planId);
-  const isSubscription = selectedPlan?.type === "subscription";
+const serviceId = selectedPlan?.serviceId || "cv-builder";
+const isSubscription = selectedPlan?.type === "subscription";
+const isCvBuilderPlan = serviceId === "cv-builder";
+const isGuestServicePlan = serviceId === "logo-design" || serviceId === "ads";
+
+const hasRequiredBillingDetails = Boolean(
+  customerForm.firstName?.trim() &&
+    customerForm.lastName?.trim() &&
+    customerForm.email?.trim() &&
+    customerForm.mobileNumber?.trim() &&
+    customerForm.country?.trim() &&
+    customerForm.postalCode?.trim() &&
+    customerForm.addressLine1?.trim() &&
+    customerForm.city?.trim()
+);
+
+const checkoutCopy = useMemo(() => {
+  if (serviceId === "logo-design") {
+    return {
+      badge: "Logo Design Checkout",
+      title: "Complete your logo design order.",
+      description:
+        "Enter your billing details and complete payment securely. After payment, our team will start your logo design request.",
+      accessTitle: "Service",
+      accessValue: "Logo Design",
+      itemTitle: "Logo Package",
+      customerValue: customerForm.email || session?.user?.email || "Guest checkout",
+      orderButton: "Place Logo Order",
+      successPath: "/logo-design/success",
+      pricingPath: "/pricing?service=logo-design",
+    };
+  }
+
+  if (serviceId === "ads") {
+    return {
+      badge: "Ads Service Checkout",
+      title: "Complete your ads service order.",
+      description:
+        "Enter your billing details and complete payment securely. After payment, our team will review your campaign requirement.",
+      accessTitle: "Service",
+      accessValue: "Ads Service",
+      itemTitle: "Ads Package",
+      customerValue: customerForm.email || session?.user?.email || "Guest checkout",
+      orderButton: "Place Ads Order",
+      successPath: "/ads/success",
+      pricingPath: "/pricing?service=ads",
+    };
+  }
+
+  return {
+    badge: "Secure Checkout",
+    title: "Complete your CV order.",
+    description:
+      "Enter your billing details and complete payment securely through Stripe.",
+    accessTitle: "Access",
+    accessValue: "PDF + Word",
+    itemTitle: "CV Package",
+    customerValue: customerForm.email || session?.user?.email || "Logged in",
+    orderButton: "Continue Order",
+    successPath: "/cv-builder/success",
+    pricingPath: `/pricing?cvId=${cvId}&template=${template}`,
+  };
+}, [serviceId, customerForm.email, session?.user?.email, cvId, template]);
 
   const [checkoutRemainingSeconds, setCheckoutRemainingSeconds] = useState(
     10 * 60
@@ -173,77 +235,146 @@ export default function CheckoutContent() {
   };
 
 useEffect(() => {
-  if (status !== "unauthenticated") return;
   if (!selectedPlan) return;
-
-  const serviceId = selectedPlan.serviceId || "cv-builder";
+  if (status !== "unauthenticated") return;
 
   // Login required only for CV Builder
-  if (serviceId === "cv-builder") {
+  if (isCvBuilderPlan) {
     const callbackUrl = `/checkout?plan=${planId}&cvId=${cvId}&template=${template}`;
     router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
-}, [status, router, planId, cvId, template, selectedPlan]);
+}, [
+  status,
+  router,
+  planId,
+  cvId,
+  template,
+  selectedPlan,
+  isCvBuilderPlan,
+]);
 
   useEffect(() => {
-    if (session?.user?.email) {
-      setCustomerForm((prev) => ({
-        ...prev,
-        email: prev.email || session.user.email,
-      }));
-    }
-  }, [session?.user?.email]);
+    if (!session?.user?.email) return;
 
-  useEffect(() => {
-    const createIntent = async () => {
+    setCustomerForm((prev) => ({
+      ...prev,
+      email: prev.email || session.user.email,
+    }));
+
+    const fetchBillingDetails = async () => {
       try {
-        if (status !== "authenticated") return;
-        if (!selectedPlan) return;
-        if (clientSecret) return;
-        if (intentCreatedRef.current) return;
-
-        intentCreatedRef.current = true;
-
-        setIntentLoading(true);
-        setError("");
-
-        const res = await fetch("/api/checkout/create-intent", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            planId,
-            cvId,
-            template,
-            customerForm,
-          }),
-        });
-
+        const res = await fetch("/api/user/access");
         const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          intentCreatedRef.current = false;
-          setError(data.error || "Unable to load payment form.");
-          return;
+        if (data.success && data.billingDetails) {
+          const bd = data.billingDetails;
+          setCustomerForm((prev) => ({
+            ...prev,
+            firstName: prev.firstName || bd.firstName || "",
+            lastName: prev.lastName || bd.lastName || "",
+            email: prev.email || bd.email || session.user.email || "",
+            mobileCountryCode: bd.mobileCountryCode || prev.mobileCountryCode || "+44",
+            mobileCountryFlag: bd.mobileCountryFlag || prev.mobileCountryFlag || "🇬🇧",
+            mobileNumber: prev.mobileNumber || bd.mobileNumber || "",
+            country: bd.country || prev.country || "GB",
+            countryName: bd.countryName || prev.countryName || "United Kingdom",
+            countryFlag: bd.countryFlag || prev.countryFlag || "🇬🇧",
+            postalCode: prev.postalCode || bd.postalCode || "",
+            addressLine1: prev.addressLine1 || bd.addressLine1 || "",
+            addressLine2: prev.addressLine2 || bd.addressLine2 || "",
+            city: prev.city || bd.city || "",
+          }));
         }
-
-        setClientSecret(data.clientSecret);
-
-        if (data.subscriptionId) {
-          setSubscriptionId(data.subscriptionId);
-        }
-      } catch (error) {
-        intentCreatedRef.current = false;
-        console.error("Create intent error:", error);
-        setError("Unable to load payment form.");
-      } finally {
-        setIntentLoading(false);
+      } catch (err) {
+        console.error("Error fetching billing details:", err);
       }
     };
 
-    createIntent();
-  }, [status, selectedPlan, planId, cvId, template, clientSecret]);
+    fetchBillingDetails();
+  }, [status, session?.user?.email]);
+
+useEffect(() => {
+  const createIntent = async () => {
+    try {
+      if (!selectedPlan) return;
+      if (clientSecret) return;
+      if (intentCreatedRef.current) return;
+
+      const currentServiceId = selectedPlan?.serviceId || "cv-builder";
+      const isCvBuilder = currentServiceId === "cv-builder";
+      const isGuestService =
+        currentServiceId === "logo-design" || currentServiceId === "ads";
+
+      if (isCvBuilder && status !== "authenticated") return;
+      if (isGuestService && status === "loading") return;
+
+      if (isGuestService && !hasRequiredBillingDetails) {
+        setError("");
+        return;
+      }
+
+      if (isCvBuilder && !hasRequiredBillingDetails) {
+        setError("");
+        return;
+      }
+
+      intentCreatedRef.current = true;
+
+      setIntentLoading(true);
+      setError("");
+
+      const res = await fetch("/api/checkout/create-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planId,
+          cvId,
+          template,
+          customerForm,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        intentCreatedRef.current = false;
+        setError(data.error || "Unable to load payment form.");
+        return;
+      }
+
+      setClientSecret(data.clientSecret);
+
+      if (data.subscriptionId) {
+        setSubscriptionId(data.subscriptionId);
+      }
+    } catch (error) {
+      intentCreatedRef.current = false;
+      console.error("Create intent error:", error);
+      setError("Unable to load payment form.");
+    } finally {
+      setIntentLoading(false);
+    }
+  };
+
+  createIntent();
+}, [
+  status,
+  selectedPlan,
+  planId,
+  cvId,
+  template,
+  clientSecret,
+  hasRequiredBillingDetails,
+  customerForm.firstName,
+  customerForm.lastName,
+  customerForm.email,
+  customerForm.mobileNumber,
+  customerForm.country,
+  customerForm.postalCode,
+  customerForm.addressLine1,
+  customerForm.city,
+]);
 
   const elementsOptions = useMemo(() => {
     if (!clientSecret) return null;
@@ -291,18 +422,15 @@ useEffect(() => {
     };
   }, [clientSecret]);
 
-  if (status === "loading") {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
-        <p className="text-sm font-bold text-white/60">Checking login...</p>
-      </main>
-    );
-  }
+if (status === "loading" && isCvBuilderPlan) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
+      <p className="text-sm font-bold text-white/60">Checking login...</p>
+    </main>
+  );
+}
 
-if (
-  status === "unauthenticated" &&
-  (selectedPlan?.serviceId || "cv-builder") === "cv-builder"
-) {
+if (status === "unauthenticated" && isCvBuilderPlan) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
       <p className="text-sm font-bold text-white/60">
@@ -310,6 +438,7 @@ if (
       </p>
     </main>
   );
+
 }
 
   if (!selectedPlan) {
@@ -379,15 +508,16 @@ if (
                   ) : null}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push(`/pricing?cvId=${cvId}&template=${template}`)
-                  }
-                  className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-white transition hover:bg-qorliqGold hover:text-black"
-                >
-                  Change
-                </button>
+               <button
+  type="button"
+  onClick={() => {
+    const paymentBox = document.getElementById("payment-section");
+    paymentBox?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }}
+  className="rounded-full border border-qorliqGold/30 bg-qorliqGold px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-black transition hover:bg-white"
+>
+  Order
+</button>
               </div>
             </div>
 
@@ -408,11 +538,7 @@ if (
                 </p>
 
                 <p className="mt-1 text-[12px] font-bold text-white/80">
-                  {selectedPlan.serviceId === "logo-design"
-                    ? "Logo Design Service"
-                    : selectedPlan.serviceId === "ads"
-                    ? "Ads Service"
-                    : "PDF + Word"}
+                 {checkoutCopy.accessValue}
                 </p>
               </div>
 
@@ -441,34 +567,30 @@ if (
           {/* Main Checkout Card */}
           <div className="w-full min-w-0 rounded-none border-0 bg-white/[0.055] p-4 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-[26px] sm:border sm:border-white/10 sm:p-6 lg:p-8">
             <div className="max-w-3xl">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-qorliqGold sm:text-xs">
-                Secure Checkout
-              </p>
+             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-qorliqGold sm:text-xs">
+  {checkoutCopy.badge}
+</p>
 
-              <h1 className="mt-3 text-[28px] font-black leading-[1.05] tracking-[-0.05em] sm:text-4xl lg:text-5xl">
-                Complete your CV order.
-              </h1>
+<h1 className="mt-3 text-[28px] font-black leading-[1.05] tracking-[-0.05em] sm:text-4xl lg:text-5xl">
+  {checkoutCopy.title}
+</h1>
 
-              <p className="mt-3 text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
-                Enter your billing details and complete payment securely through
-                Stripe.
-              </p>
+<p className="mt-3 text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+  {checkoutCopy.description}
+</p>
             </div>
 
             <div className="mt-5 flex flex-col gap-3 md:flex-row">
-              <InfoCard
-                title="Customer"
-                value={customerForm.email || session?.user?.email || "Logged in"}
-              />
+            <InfoCard title="Customer" value={checkoutCopy.customerValue} />
 
-              <InfoCard title="Template" value={template || "Selected"} />
+<InfoCard title={checkoutCopy.itemTitle} value={selectedPlan.name} />
 
-              <InfoCard
-                title="Payment"
-                value={isSubscription ? "Subscription" : "One-time"}
-              />
+<InfoCard
+  title="Payment"
+  value={isSubscription ? "Subscription" : "One-time"}
+/>
 
-              <InfoCard title="Access" value="PDF + Word" />
+<InfoCard title={checkoutCopy.accessTitle} value={checkoutCopy.accessValue} />
             </div>
 
             {/* Billing Details */}
@@ -672,15 +794,16 @@ if (
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                router.push(`/pricing?cvId=${cvId}&template=${template}`)
-              }
-              className="mt-7 w-full rounded-full border border-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white/75 transition hover:bg-white/10"
-            >
-              Change Plan
-            </button>
+          <button
+  type="button"
+  onClick={() => {
+    const paymentBox = document.getElementById("payment-section");
+    paymentBox?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }}
+  className="mt-7 w-full rounded-full bg-qorliqGold px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
+>
+  Order Now
+</button>
           </aside>
         </div>
       </section>
@@ -705,6 +828,18 @@ function StripePaymentForm({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isSubscription = selectedPlan?.type === "subscription";
+const serviceId = selectedPlan?.serviceId;
+const isCvBuilderPlan = serviceId === "cv-builder";
+const isGuestCheckoutPlan = serviceId === "logo-design" || serviceId === "ads";
+
+const paymentButtonText =
+  serviceId === "logo-design"
+    ? "Confirm Logo Order"
+    : serviceId === "ads"
+    ? "Confirm Ads Order"
+    : isSubscription
+    ? "Confirm & Start Subscription"
+    : "Confirm Payment";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -912,11 +1047,7 @@ function StripePaymentForm({
         disabled={!stripe || !elements || !isReady || isProcessing}
         className="relative z-50 mt-5 flex min-h-[58px] w-full items-center justify-center rounded-2xl bg-qorliqGold px-5 py-4 text-center text-[12px] font-black uppercase tracking-[0.12em] text-black shadow-xl shadow-qorliqGold/20 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-full"
       >
-        {isProcessing
-          ? "Processing Securely..."
-          : isSubscription
-          ? "Confirm & Start Subscription"
-          : "Confirm Payment"}
+        {isProcessing ? "Processing Securely..." : paymentButtonText}
       </button>
 
       <p className="relative z-50 mt-4 text-center text-[11px] leading-5 text-white/40 sm:text-xs">

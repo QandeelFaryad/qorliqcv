@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pricingPlans } from "@/lib/pricingPlans";
+import {
+  getOfferStartedAt,
+  getOfferState,
+} from "@/lib/cvOfferCountdown";
 
 const SERVICE_TABS = [
   {
@@ -14,6 +18,7 @@ const SERVICE_TABS = [
       "Download your professional CV in PDF and MS Word, edit it when your job search changes, and keep your application ready.",
     startText: "Start today from only",
     startPrice: "£1.99",
+    standardStartPrice: "£4.99",
     recommendation:
       "Most customers choose the 6 Months plan because it gives enough time to edit, improve, and download CV versions for different job applications.",
     tags: ["PDF Download", "MS Word Download", "Print-Ready CV", "Edit Anytime"],
@@ -110,14 +115,10 @@ export default function PricingContent() {
   const template = searchParams.get("template") || "";
   const requestedService = searchParams.get("service") || "cv-builder";
 
+  const [offerState, setOfferState] = useState(null);
+
   const [activeService, setActiveService] = useState(() =>
     getInitialService(requestedService)
-  );
-
-  const OFFER_DURATION_SECONDS = 10 * 60;
-
-  const [remainingSeconds, setRemainingSeconds] = useState(
-    OFFER_DURATION_SECONDS
   );
 
   useEffect(() => {
@@ -125,31 +126,24 @@ export default function PricingContent() {
   }, [activeService]);
 
   useEffect(() => {
-    if (activeService !== "cv-builder") return;
-
-    const userKey = session?.user?.email?.toLowerCase()?.trim() || "guest";
-    const storageKey = `cvBuilderOfferStartedAt:${userKey}`;
-    const now = Date.now();
-
-    let startedAt = Number(window.localStorage.getItem(storageKey));
-
-    if (!startedAt || Number.isNaN(startedAt)) {
-      startedAt = now;
-      window.localStorage.setItem(storageKey, String(startedAt));
+    if (activeService !== "cv-builder") {
+      setOfferState(null);
+      return;
     }
 
-    const updateCountdown = () => {
-      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
-      const left = Math.max(OFFER_DURATION_SECONDS - elapsedSeconds, 0);
-      setRemainingSeconds(left);
+    const startedAt = getOfferStartedAt();
+
+    const updateOfferState = () => {
+      const nextState = getOfferState(startedAt);
+      setOfferState(nextState);
     };
 
-    updateCountdown();
+    updateOfferState();
 
-    const interval = setInterval(updateCountdown, 1000);
+    const interval = setInterval(updateOfferState, 1000);
 
     return () => clearInterval(interval);
-  }, [activeService, session?.user?.email]);
+  }, [activeService]);
 
   const activeTab =
     SERVICE_TABS.find((item) => item.id === activeService) || SERVICE_TABS[0];
@@ -161,81 +155,105 @@ export default function PricingContent() {
     });
   }, [activeService]);
 
-  const isCvOfferActive = activeService === "cv-builder" && remainingSeconds > 0;
+  const isCvOfferActive =
+    activeService === "cv-builder" && offerState?.isActive === true;
 
-  const formatCountdown = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-
-    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(
-      2,
-      "0"
-    )}`;
-  };
+  const isCvOfferExpired =
+    activeService === "cv-builder" && offerState?.isExpired === true;
 
   const isCvBuilderPlan = (plan) =>
     (plan.serviceId || "cv-builder") === "cv-builder";
 
+  const hasOldPrice = (plan) =>
+    Boolean(plan.oldPrice) && !plan.contactOnly && plan.type !== "contact";
+
+  const shouldShowOldPrice = (plan) => {
+    if (!hasOldPrice(plan)) return false;
+
+    if (isCvBuilderPlan(plan)) {
+      return isCvOfferActive;
+    }
+
+    return true;
+  };
+
   const shouldShowOfferBadges = (plan) => {
-    if (!isCvBuilderPlan(plan)) return true;
+    if (!isCvBuilderPlan(plan)) {
+      return Boolean(plan.discount);
+    }
+
     return isCvOfferActive;
   };
 
   const getDisplayPrice = (plan) => {
-    if (!isCvBuilderPlan(plan)) return plan.price;
+    if (!isCvBuilderPlan(plan)) {
+      return plan.price;
+    }
 
-    if (isCvOfferActive) return plan.price;
-
-    return plan.oldPrice || plan.price;
+    return isCvOfferActive ? plan.price : plan.oldPrice || plan.price;
   };
 
   const getPriceLabel = (plan) => {
     if (!isCvBuilderPlan(plan)) {
-      return plan.oldPrice ? "Discounted price" : "Service price";
+      return hasOldPrice(plan) ? "Discounted price" : "Service price";
     }
 
-    return isCvOfferActive
-      ? "Limited-time offer price"
-      : "Standard price after offer expired";
+    return isCvOfferActive ? "Limited-time offer price" : "Standard price";
   };
 
   const getStartPrice = () => {
-    if (activeService !== "cv-builder") return activeTab.startPrice;
+    if (activeService !== "cv-builder") {
+      return activeTab.startPrice;
+    }
 
-    if (isCvOfferActive) return activeTab.startPrice;
-
-    return "£4.99";
+    return isCvOfferActive
+      ? activeTab.startPrice
+      : activeTab.standardStartPrice || "£4.99";
   };
 
-const goToCheckout = (plan) => {
-  if (plan.contactOnly || plan.type === "contact") {
-    router.push("/#contact");
-    return;
-  }
+  const getPriceBadgeText = (plan) => {
+    if (plan.contactOnly) return "Contact for pricing";
 
-  if (status === "loading") return;
+    if (plan.discount) return plan.discount;
 
-  const params = new URLSearchParams();
+    if (isCvBuilderPlan(plan) && isCvOfferActive) {
+      return "Limited Offer";
+    }
 
-  params.set("plan", plan.id);
-  params.set("service", activeService);
+    if (!isCvBuilderPlan(plan) && hasOldPrice(plan)) {
+      return "Special Price";
+    }
 
-  if (cvId) params.set("cvId", cvId);
-  if (template) params.set("template", template);
+    return "";
+  };
 
-  const checkoutUrl = `/checkout?${params.toString()}`;
+  const goToCheckout = (plan) => {
+    if (plan.contactOnly || plan.type === "contact") {
+      router.push("/#contact");
+      return;
+    }
 
-  const serviceId = plan.serviceId || activeService || "cv-builder";
+    if (status === "loading") return;
 
-  // Login required only for CV Builder
-  if (serviceId === "cv-builder" && status !== "authenticated") {
-    router.push(`/login?callbackUrl=${encodeURIComponent(checkoutUrl)}`);
-    return;
-  }
+    const params = new URLSearchParams();
 
-  // Logo Design and Ads can go directly to checkout without login
-  router.push(checkoutUrl);
-};
+    params.set("plan", plan.id);
+    params.set("service", activeService);
+
+    if (cvId) params.set("cvId", cvId);
+    if (template) params.set("template", template);
+
+    const checkoutUrl = `/checkout?${params.toString()}`;
+
+    const serviceId = plan.serviceId || activeService || "cv-builder";
+
+    if (serviceId === "cv-builder" && status !== "authenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent(checkoutUrl)}`);
+      return;
+    }
+
+    router.push(checkoutUrl);
+  };
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(255,255,255,0.10),transparent_28%),linear-gradient(135deg,#070707_0%,#111111_42%,#18130a_100%)] px-4 py-12 text-white">
@@ -266,19 +284,6 @@ const goToCheckout = (plan) => {
               );
             })}
           </div>
-
-          {activeService === "cv-builder" && isCvOfferActive ? (
-            <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-red-400">
-              <span className="text-base leading-none">🔥</span>
-              <span>
-                Limited-Time Discount Ends In {formatCountdown(remainingSeconds)}
-              </span>
-            </div>
-          ) : activeService === "cv-builder" ? (
-            <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/45">
-              <span>Standard Price Active</span>
-            </div>
-          ) : null}
 
           <div className="mx-auto mt-5 max-w-2xl rounded-[1.5rem] border border-white/10 bg-white/[0.05] p-4 text-left">
             <div className="flex items-start gap-3">
@@ -331,8 +336,12 @@ const goToCheckout = (plan) => {
         >
           {filteredPlans.map((plan) => {
             const isPopular = Boolean(plan.highlight);
-            const buttonLabel = plan.contactOnly ? "Contact Us" : "Select Package";
+            const buttonLabel = plan.contactOnly
+              ? "Contact Us"
+              : "Select Package";
             const showOfferBadges = shouldShowOfferBadges(plan);
+            const oldPriceVisible = shouldShowOldPrice(plan);
+            const badgeText = getPriceBadgeText(plan);
 
             return (
               <article
@@ -408,8 +417,8 @@ const goToCheckout = (plan) => {
                 </div>
 
                 <div className="relative mt-3 rounded-3xl border border-white/10 bg-black/25 p-5 transition duration-500 group-hover:border-qorliqGold/25 group-hover:bg-black/35">
-                  <div className="flex items-end gap-3">
-                    {plan.oldPrice && showOfferBadges ? (
+                  <div className="flex flex-wrap items-end gap-3">
+                    {oldPriceVisible ? (
                       <span className="text-sm font-bold text-white/35 line-through">
                         {plan.oldPrice}
                       </span>
@@ -433,16 +442,14 @@ const goToCheckout = (plan) => {
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {showOfferBadges ? (
+                    {badgeText ? (
                       <span className="rounded-full bg-qorliqGold px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-black">
-                        {plan.contactOnly ? "Contact for pricing" : plan.discount}
+                        {badgeText}
                       </span>
                     ) : null}
 
                     <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/60">
-                      {showOfferBadges && plan.oldPrice
-                        ? "Discounted price"
-                        : "Standard price"}
+                      {oldPriceVisible ? "Discounted price" : "Standard price"}
                     </span>
                   </div>
 
@@ -475,8 +482,7 @@ const goToCheckout = (plan) => {
                   </p>
 
                   <p className="mt-3 text-xs leading-6 text-white/60">
-                    {plan.why ||
-                      "Choose this package based on your project needs."}
+                    {plan.why || "Choose this package based on your project needs."}
                   </p>
                 </div>
 

@@ -45,6 +45,7 @@ export async function GET() {
       hasAccess,
       plan: user.plan || "",
       subscriptionStatus: user.subscriptionStatus || "inactive",
+      billingDetails: user.billingDetails || null,
     });
   } catch (error) {
     console.error("Access check error:", error);

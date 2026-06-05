@@ -700,22 +700,18 @@ export default function MicrosoftPartnerPage() {
           </PartnerGroup>
 
           <PartnerGroup title="Technology & Distribution Partners">
-   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+ <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
   {logos.map(([src, title], index) => (
     <div
       key={`${title}-${index}`}
-      className="flex min-h-[145px] items-center justify-center rounded-3xl border border-white/10 bg-white/[0.055] p-5 text-center transition duration-200 hover:-translate-y-1 hover:border-[#f5b938]/40 hover:bg-white/[0.08]"
+      className="flex aspect-[1.35/1] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-center transition duration-200 hover:-translate-y-1 hover:border-[#f5b938]/40 hover:bg-white/[0.08] sm:aspect-auto sm:min-h-[125px] sm:rounded-3xl sm:p-4 lg:min-h-[145px] lg:p-5"
     >
-      <div className="flex flex-col items-center justify-center gap-3">
-        <img
-          src={src}
-          alt={`${title} logo`}
-          className="h-16 max-w-[190px] object-contain"
-          loading="lazy"
-        />
-
-     
-      </div>
+      <img
+        src={src}
+        alt={`${title} logo`}
+        className="h-auto max-h-10 w-full max-w-[120px] object-contain sm:max-h-12 sm:max-w-[150px] lg:max-h-16 lg:max-w-[190px]"
+        loading="lazy"
+      />
     </div>
   ))}
 </div>
@@ -784,94 +780,173 @@ export default function MicrosoftPartnerPage() {
             />
           </div>
 
-          <form onSubmit={handleSubmit} className="grid gap-4 rounded-[28px] border border-white/10 bg-black/20 p-4 sm:grid-cols-2 sm:p-5">
-            <Field label="Full Name" placeholder="Enter your full name" value={form.fullName} onChange={(value) => updateForm("fullName", value)} />
-            <Field label="Company Name" placeholder="Enter company name" value={form.companyName} onChange={(value) => updateForm("companyName", value)} />
+         <form
+  onSubmit={handleSubmit}
+  className="grid gap-4 rounded-[22px]  md:border md:border-white/10 md:bg-black/20  sm:rounded-[28px] md:p-5 md:grid-cols-2"
+>
+  <Field
+    label="Full Name"
+    placeholder="Enter your full name"
+    value={form.fullName}
+    onChange={(value) => updateForm("fullName", value)}
+  />
 
-            <div className="flex flex-col gap-2">
-              <label className="pl-1 text-[11px] font-black uppercase tracking-[0.12em] text-white/75">Mobile Number</label>
-              <div className="flex min-h-14 overflow-hidden rounded-2xl border border-white/15 bg-black/25 focus-within:border-[#f5b938]/70 focus-within:ring-4 focus-within:ring-[#f5b938]/10">
-                <span className="flex min-w-[96px] items-center justify-center border-r border-white/10 bg-white/[0.055] px-3 text-sm font-black">
-                  {phonePrefix}
-                </span>
-                <input
-                  value={form.phone}
-                  onChange={(e) => updateForm("phone", e.target.value)}
-                  placeholder="Mobile number"
-                  className="min-w-0 flex-1 bg-transparent px-4 text-sm font-bold text-white outline-none placeholder:text-white/35"
-                />
-              </div>
-              <small className="text-xs font-bold leading-5 text-white/40">Select your country first. The dialing code updates automatically.</small>
-            </div>
+  <Field
+    label="Company Name"
+    placeholder="Enter company name"
+    value={form.companyName}
+    onChange={(value) => updateForm("companyName", value)}
+  />
 
-            <Field label="Business Email" placeholder="name@company.com" type="email" value={form.email} onChange={(value) => updateForm("email", value)} />
+  <div className="flex min-w-0 flex-col gap-2">
+    <label className="pl-1 text-[10px] font-black uppercase tracking-[0.1em] text-white/75 sm:text-[11px]">
+      Mobile Number
+    </label>
 
-            <div className="relative flex flex-col gap-2" ref={countryWrapRef}>
-              <label className="pl-1 text-[11px] font-black uppercase tracking-[0.12em] text-white/75">Country / Region</label>
-              <input
-                value={countryQuery}
-                onChange={(e) => {
-                  setSelectedCountry(null);
-                  setCountryQuery(e.target.value);
-                  setCountryMenuOpen(true);
-                }}
-                onFocus={() => setCountryMenuOpen(true)}
-                placeholder="Search country / region"
-                autoComplete="off"
-                className="h-14 w-full rounded-2xl border border-white/15 bg-black/25 px-4 text-sm font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#f5b938]/70 focus:ring-4 focus:ring-[#f5b938]/10"
-              />
+    <div className="flex min-h-13 w-full min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-black/25 focus-within:border-[#f5b938]/70 focus-within:ring-4 focus-within:ring-[#f5b938]/10 sm:min-h-14">
+      <span className="flex min-w-[72px] shrink-0 items-center justify-center border-r border-white/10 bg-white/[0.055] px-2 text-xs font-black text-white sm:min-w-[96px] sm:px-3 sm:text-sm">
+        {phonePrefix}
+      </span>
 
-              {countryMenuOpen ? (
-                <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-72 overflow-auto rounded-2xl border border-[#f5b938]/30 bg-[#071221] p-2 shadow-2xl">
-                  {filteredCountries.length ? (
-                    filteredCountries.map((country) => (
-                      <button
-                        type="button"
-                        key={country[0]}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          selectCountry(country);
-                        }}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-white transition hover:bg-white/10"
-                      >
-                        <span>{flagEmoji(country[0])} {country[1]}</span>
-                        <span className="text-[#ffd877]">+{country[2]}</span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-4 text-sm font-bold text-white/50">No country found</div>
-                  )}
-                </div>
-              ) : null}
-            </div>
+      <input
+        value={form.phone}
+        onChange={(e) => updateForm("phone", e.target.value)}
+        placeholder="Mobile number"
+        className="min-w-0 flex-1 bg-transparent px-3 text-sm font-bold text-white outline-none placeholder:text-white/35 sm:px-4"
+      />
+    </div>
 
-            <Field label="State / City" placeholder="Example: Riyadh, London, Dubai" value={form.city} onChange={(value) => updateForm("city", value)} />
+    <small className="text-[11px] font-bold leading-5 text-white/40 sm:text-xs">
+      Select your country first. The dialing code updates automatically.
+    </small>
+  </div>
 
-            <SelectField label="Company Size by Employee" value={form.employees} onChange={(value) => updateForm("employees", value)} options={["1 - 10 employees", "11 - 25 employees", "26 - 50 employees", "51 - 100 employees", "101 - 250 employees", "251 - 500 employees", "500+ employees"]} placeholder="Select employee range" />
+  <Field
+    label="Business Email"
+    placeholder="name@company.com"
+    type="email"
+    value={form.email}
+    onChange={(value) => updateForm("email", value)}
+  />
 
-            <SelectField label="Interested With" value={form.service} onChange={(value) => updateForm("service", value)} options={["Microsoft CSP Licensing", "Microsoft 365 Deployment", "Azure Cloud Services", "Microsoft Security", "Backup & Disaster Recovery", "Microsoft Courses & Training", "Copilot Readiness", "Dynamics 365 & Power Platform", "Managed Support", "Complete Microsoft Business Package"]} placeholder="Select service" />
+  <div className="relative flex min-w-0 flex-col gap-2" ref={countryWrapRef}>
+    <label className="pl-1 text-[10px] font-black uppercase tracking-[0.1em] text-white/75 sm:text-[11px]">
+      Country / Region
+    </label>
 
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <label className="pl-1 text-[11px] font-black uppercase tracking-[0.12em] text-white/75">Description</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => updateForm("description", e.target.value)}
-                placeholder="Tell us about your Microsoft requirement, current setup, number of users, migration needs, security concerns, backup requirements, or training goals."
-                className="min-h-32 w-full resize-none rounded-2xl border border-white/15 bg-black/25 px-4 py-4 text-sm font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#f5b938]/70 focus:ring-4 focus:ring-[#f5b938]/10"
-              />
-            </div>
+    <input
+      value={countryQuery}
+      onChange={(e) => {
+        setSelectedCountry(null);
+        setCountryQuery(e.target.value);
+        setCountryMenuOpen(true);
+      }}
+      onFocus={() => setCountryMenuOpen(true)}
+      placeholder="Search country / region"
+      autoComplete="off"
+      className="h-13 w-full min-w-0 rounded-2xl border border-white/15 bg-black/25 px-3 text-sm font-bold text-white outline-none transition placeholder:text-white/35 focus:border-[#f5b938]/70 focus:ring-4 focus:ring-[#f5b938]/10 sm:h-14 sm:px-4"
+    />
 
-            {submitStatus ? (
-              <p className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold leading-6 text-emerald-100 sm:col-span-2">
-                {submitStatus}
-              </p>
-            ) : null}
+    {countryMenuOpen ? (
+      <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-64 overflow-auto rounded-2xl border border-[#f5b938]/30 bg-[#071221] p-2 shadow-2xl sm:max-h-72">
+        {filteredCountries.length ? (
+          filteredCountries.map((country) => (
+            <button
+              type="button"
+              key={country[0]}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                selectCountry(country);
+              }}
+              className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-white transition hover:bg-white/10"
+            >
+              <span className="min-w-0 truncate">
+                {flagEmoji(country[0])} {country[1]}
+              </span>
 
-            <button type="submit" className={`${buttonPrimary} w-full sm:col-span-2`}>
-              Submit Microsoft Consultation Request
-              <ArrowRight size={17} strokeWidth={2.4} />
+              <span className="shrink-0 text-[#ffd877]">+{country[2]}</span>
             </button>
-          </form>
+          ))
+        ) : (
+          <div className="px-3 py-4 text-sm font-bold text-white/50">
+            No country found
+          </div>
+        )}
+      </div>
+    ) : null}
+  </div>
+
+  <Field
+    label="State / City"
+    placeholder="Example: Riyadh, London, Dubai"
+    value={form.city}
+    onChange={(value) => updateForm("city", value)}
+  />
+
+  <SelectField
+    label="Company Size by Employee"
+    value={form.employees}
+    onChange={(value) => updateForm("employees", value)}
+    options={[
+      "1 - 10 employees",
+      "11 - 25 employees",
+      "26 - 50 employees",
+      "51 - 100 employees",
+      "101 - 250 employees",
+      "251 - 500 employees",
+      "500+ employees",
+    ]}
+    placeholder="Select employee range"
+  />
+
+  <SelectField
+    label="Interested With"
+    value={form.service}
+    onChange={(value) => updateForm("service", value)}
+    options={[
+      "Microsoft CSP Licensing",
+      "Microsoft 365 Deployment",
+      "Azure Cloud Services",
+      "Microsoft Security",
+      "Backup & Disaster Recovery",
+      "Microsoft Courses & Training",
+      "Copilot Readiness",
+      "Dynamics 365 & Power Platform",
+      "Managed Support",
+      "Complete Microsoft Business Package",
+    ]}
+    placeholder="Select service"
+  />
+
+  <div className="flex min-w-0 flex-col gap-2 md:col-span-2">
+    <label className="pl-1 text-[10px] font-black uppercase tracking-[0.1em] text-white/75 sm:text-[11px]">
+      Description
+    </label>
+
+    <textarea
+      value={form.description}
+      onChange={(e) => updateForm("description", e.target.value)}
+      placeholder="Tell us about your Microsoft requirement, current setup, number of users, migration needs, security concerns, backup requirements, or training goals."
+      className="min-h-32 w-full min-w-0 resize-none rounded-2xl border border-white/15 bg-black/25 px-3 py-4 text-sm font-bold leading-6 text-white outline-none transition placeholder:text-white/35 focus:border-[#f5b938]/70 focus:ring-4 focus:ring-[#f5b938]/10 sm:px-4"
+    />
+  </div>
+
+  {submitStatus ? (
+    <p className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold leading-6 text-emerald-100 md:col-span-2">
+      {submitStatus}
+    </p>
+  ) : null}
+
+  <button
+    type="submit"
+    className={`${buttonPrimary} flex w-full items-center justify-center gap-2 px-4 text-center text-[11px] sm:text-xs md:col-span-2`}
+  >
+    <span className="truncate sm:whitespace-normal">
+      Submit Microsoft Consultation Request
+    </span>
+    <ArrowRight className="shrink-0" size={17} strokeWidth={2.4} />
+  </button>
+</form>
         </div>
       </section>
     </main>

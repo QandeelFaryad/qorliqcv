@@ -938,13 +938,17 @@ return (
       </div>
 
       <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving}
-        className="h-11 rounded-full bg-qorliqGold px-5 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
-      >
-        {saving ? "Saving..." : "Save"}
-      </button>
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                >
+                  {saving
+                    ? "Saving..."
+                    : isEditMode
+                    ? "Update CV"
+                    : "Save"}
+                </button>
     </header>
 
     <div className="sticky top-0 z-40 border-b border-white/10 bg-[#101116]/95 px-4 py-3 backdrop-blur lg:hidden">
@@ -1144,7 +1148,7 @@ return (
             )}
           </div>
 
-          <div className="sticky bottom-0 mt-5 flex flex-col gap-3 border-t border-white/10 bg-[#101116] py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="sticky bottom-0 mt-5 flex  gap-3 border-t border-white/10 bg-[#101116] py-4 flex-row items-center justify-between">
             <button
               type="button"
               disabled={currentStep === 0 || saving}
@@ -1154,12 +1158,12 @@ return (
               Back
             </button>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex  gap-3 flex-row">
               <button
                 type="button"
                 onClick={clearForm}
                 disabled={saving}
-                className="h-12 rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-red-300 hover:text-red-200 disabled:opacity-50"
+                className="h-12 hidden md:block rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-red-300 hover:text-red-200 disabled:opacity-50"
               >
                 Clear
               </button>
@@ -1352,7 +1356,7 @@ function PureSummaryStep({ form, updateField }) {
   }}
 />
 
-      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+      <div className="rounded-3xl ">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
           Writing Tips
         </p>
@@ -1661,7 +1665,7 @@ function SkillsStep({
 }) {
   return (
     <div className="grid gap-5">
-      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+      <div className="rounded-3xl">
         <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
           Skills & Levels
         </label>
@@ -1734,7 +1738,7 @@ function SkillsStep({
         ) : null}
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+      <div className="rounded-3xl ">
         <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
           Languages & Proficiency
         </label>
@@ -1909,7 +1913,7 @@ function CertificationsExtraStep({
         buttonText="Add Hobby"
       />
 
-      <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+      <div className="rounded-3xl">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-lg font-black">Additional Sections</p>
@@ -1979,7 +1983,7 @@ function AdditionalSectionCard({ index, item, onChange, onRemove }) {
 
 function ExperienceCard({ index, item, form, onChange, onRemove }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+    <div className="rounded-3xl ">
       <CardTop title={`Experience ${index + 1}`} onRemove={onRemove} />
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -2080,7 +2084,7 @@ function ExperienceCard({ index, item, form, onChange, onRemove }) {
 
 function EducationCard({ index, item, onChange, onRemove }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+    <div className="rounded-3xl ">
       <CardTop title={`Education ${index + 1}`} onRemove={onRemove} />
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -2138,7 +2142,7 @@ function EducationCard({ index, item, onChange, onRemove }) {
 
 function ProjectCard({ index, item, onChange, onRemove }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+    <div className="rounded-3xl">
       <CardTop title={`Project ${index + 1}`} onRemove={onRemove} />
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -2186,7 +2190,7 @@ function ProjectCard({ index, item, onChange, onRemove }) {
 
 function CertificationCard({ index, item, onChange, onRemove }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+    <div className="rounded-3xl ">
       <CardTop title={`Certification ${index + 1}`} onRemove={onRemove} />
 
       <div className="mt-5 grid gap-5 md:grid-cols-3">
@@ -2285,11 +2289,17 @@ function Textarea({
     </div>
   );
 }
-function ToolbarDivider({ dark = false }) {
-  return <span className={`mx-1.5 h-6 w-px ${dark ? "bg-white/10" : "bg-slate-300"}`} />;
+function ToolbarDivider() {
+  return <span className="hidden h-8 w-px shrink-0 bg-slate-200 md:block" />;
 }
 
-function ToolbarButton({ title, onClick, children }) {
+function ToolbarButton({
+  title,
+  onClick,
+  active = false,
+  children,
+  className = "",
+}) {
   return (
     <button
       type="button"
@@ -2299,7 +2309,11 @@ function ToolbarButton({ title, onClick, children }) {
         e.preventDefault();
         onClick?.();
       }}
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-950 active:bg-slate-200"
+      className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border text-[15px] font-black transition-all duration-150 active:scale-[0.97] ${
+        active
+          ? "border-[#18227C] bg-[#18227C] text-white shadow-[0_8px_18px_rgba(24,34,124,0.22)]"
+          : "border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300 hover:bg-slate-50"
+      } ${className}`}
     >
       {children}
     </button>
@@ -2364,7 +2378,7 @@ function RichTextEditor({
   label,
   value,
   onChange,
-  placeholder = "Write here.",
+  placeholder = "Type or paste your text here...",
   rows = 7,
   showAI = false,
   aiType = "summary",
@@ -2374,6 +2388,7 @@ function RichTextEditor({
   const editorRef = useRef(null);
   const savedSelectionRef = useRef(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [activeAlign, setActiveAlign] = useState("left");
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -2421,20 +2436,26 @@ function RichTextEditor({
     }
   };
 
-  const runCommand = (command, commandValue = null) => {
-    restoreSelection();
+const runCommand = (command, commandValue = null) => {
+  restoreSelection();
 
-    setTimeout(() => {
-      if (
-        typeof document !== "undefined" &&
-        typeof document.execCommand === "function"
-      ) {
-        document.execCommand(command, false, commandValue);
-      }
+  setTimeout(() => {
+    if (
+      typeof document !== "undefined" &&
+      typeof document.execCommand === "function"
+    ) {
+      document.execCommand(command, false, commandValue);
+    }
 
-      updateValue();
-      saveSelection();
-    }, 0);
+    const html = editorRef.current?.innerHTML || "";
+    onChange(html);
+    saveSelection();
+  }, 0);
+};
+
+  const runAlign = (command, alignName) => {
+    setActiveAlign(alignName);
+    runCommand(command);
   };
 
   const addLink = () => {
@@ -2462,73 +2483,54 @@ function RichTextEditor({
   };
 
   const handleGenerateAI = async () => {
-  if (aiLoading) return;
+    if (aiLoading) return;
 
-  try {
-    setAiLoading(true);
+    try {
+      setAiLoading(true);
 
-    const role =
-      targetRole ||
-      cvContext?.professionalTitle ||
-      cvContext?.targetTitle ||
-      cvContext?.expTitle ||
-      cvContext?.jobTitle ||
-      "";
+      const role =
+        targetRole ||
+        cvContext?.professionalTitle ||
+        cvContext?.targetTitle ||
+        cvContext?.expTitle ||
+        cvContext?.jobTitle ||
+        "";
 
-    const safeCvContext = {
-      ...cvContext,
+      const safeCvContext = {
+        ...cvContext,
+        requestedSection: aiType,
+        aiType,
+        professionalTitle: role,
+        targetTitle: role,
+        jobTitle:
+          aiType === "responsibilities" ? cvContext?.jobTitle || role : role,
+        expTitle:
+          aiType === "responsibilities" ? role : cvContext?.expTitle || "",
+        currentEditorValue: editorRef.current?.innerHTML || value || "",
+      };
 
-      // important: API ko clear section batana
-      requestedSection: aiType,
-      aiType,
+      const html = await generateCvAiContent({
+        type: aiType,
+        cv: safeCvContext,
+      });
 
-      // role clear send karna
-      professionalTitle: role,
-      targetTitle: role,
+      if (editorRef.current) {
+        editorRef.current.innerHTML = html;
+      }
 
-      // summary and experience ko mix hone se bachana
-      jobTitle:
-        aiType === "responsibilities"
-          ? cvContext?.jobTitle || role
-          : role,
-
-      expTitle:
-        aiType === "responsibilities"
-          ? role
-          : cvContext?.expTitle || "",
-
-      currentEditorValue: editorRef.current?.innerHTML || value || "",
-    };
-
-    console.log("AI TYPE SENT:", aiType);
-    console.log("AI ROLE SENT:", role);
-    console.log("AI CONTEXT SENT:", safeCvContext);
-
-    const html = await generateCvAiContent({
-      type: aiType,
-      cv: safeCvContext,
-    });
-
-    if (editorRef.current) {
-      editorRef.current.innerHTML = html;
+      onChange(html);
+      saveSelection();
+    } catch (error) {
+      console.error("Generate AI error:", error);
+      alert(error?.message || "AI generation failed.");
+    } finally {
+      setAiLoading(false);
     }
-
-    onChange(html);
-    saveSelection();
-  } catch (error) {
-    console.error("Generate AI error:", error);
-    alert(error?.message || "AI generation failed.");
-  } finally {
-    setAiLoading(false);
-  }
-};
-
-  const toolbarBtn =
-    "flex h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-sm font-black text-slate-800 transition hover:bg-slate-100";
+  };
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="block text-xs font-black uppercase tracking-[0.16em] text-white/50">
           {label}
         </label>
@@ -2538,125 +2540,122 @@ function RichTextEditor({
             type="button"
             onClick={handleGenerateAI}
             disabled={aiLoading}
-            className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8C7BFF] via-[#7EA8FF] to-[#58C6FF] px-4 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_8px_20px_rgba(88,198,255,0.28)] transition hover:shadow-[0_10px_24px_rgba(88,198,255,0.38)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-qorliqGold px-5 text-[11px] font-black uppercase tracking-[0.14em] text-black shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span>✦</span>
-            <span>{aiLoading ? "Generating..." : "Generate AI"}</span>
+            <AIStars />
+            {aiLoading ? "Writing..." : "Generate AI"}
           </button>
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("bold");
-            }}
+      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]">
+        <div className="flex items-center gap-3 overflow-x-auto border-b border-slate-200 bg-white px-4 py-4">
+          <ToolbarButton
+            title="Paragraph"
+            onClick={() => runCommand("formatBlock", "p")}
+            className="min-w-[100px] gap-2 px-4"
           >
-            <strong>B</strong>
-          </button>
+            <span>Tt</span>
+            <span className="text-[10px] text-slate-500">▼</span>
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("italic");
-            }}
-          >
-            <em>I</em>
-          </button>
+          <ToolbarButton title="Bold" onClick={() => runCommand("bold")}>
+            B
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("underline");
-            }}
-          >
-            <u>U</u>
-          </button>
+          <ToolbarButton title="Italic" onClick={() => runCommand("italic")}>
+            <span className="italic">I</span>
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("strikeThrough");
-            }}
-          >
-            <s>S</s>
-          </button>
+          <ToolbarButton title="Underline" onClick={() => runCommand("underline")}>
+            <span className="underline underline-offset-4">U</span>
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("insertUnorderedList");
-            }}
+          <ToolbarButton
+            title="Strikethrough"
+            onClick={() => runCommand("strikeThrough")}
           >
-            • List
-          </button>
+            <span className="line-through">S</span>
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("insertOrderedList");
-            }}
-          >
-            1. List
-          </button>
+          <ToolbarDivider />
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              addLink();
-            }}
+          <ToolbarButton
+            title="Bullet list"
+            onClick={() => runCommand("insertUnorderedList")}
           >
-            Link
-          </button>
+            <span className="text-lg leading-none">.≡</span>
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("justifyLeft");
-            }}
+          <ToolbarButton
+            title="Numbered list"
+            onClick={() => runCommand("insertOrderedList")}
           >
-            Left
-          </button>
+            <span className="text-sm leading-none">1≡</span>
+          </ToolbarButton>
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("justifyCenter");
-            }}
-          >
-            Center
-          </button>
+          <ToolbarDivider />
 
-          <button
-            type="button"
-            className={toolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              runCommand("justifyRight");
-            }}
-          >
-            Right
-          </button>
+         <ToolbarButton
+  title="Quote"
+  onClick={() => runCommand("formatBlock", "<blockquote>")}
+>
+  <span className="text-lg leading-none">❞</span>
+</ToolbarButton>
+
+          <ToolbarButton title="Add link" onClick={addLink}>
+            <span className="text-lg leading-none">↗</span>
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <div className="flex shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <ToolbarButton
+              title="Align left"
+              active={activeAlign === "left"}
+              onClick={() => runAlign("justifyLeft", "left")}
+              className="rounded-none border-0 shadow-none"
+            >
+              <span className="text-lg leading-none">☰</span>
+            </ToolbarButton>
+
+            <ToolbarButton
+              title="Align center"
+              active={activeAlign === "center"}
+              onClick={() => runAlign("justifyCenter", "center")}
+              className="rounded-none border-0 border-l border-slate-200 shadow-none"
+            >
+              <span className="text-lg leading-none">≡</span>
+            </ToolbarButton>
+
+            <ToolbarButton
+              title="Align right"
+              active={activeAlign === "right"}
+              onClick={() => runAlign("justifyRight", "right")}
+              className="rounded-none border-0 border-l border-slate-200 shadow-none"
+            >
+              <span className="text-lg leading-none">☷</span>
+            </ToolbarButton>
+
+            <ToolbarButton
+              title="Justify"
+              active={activeAlign === "justify"}
+              onClick={() => runAlign("justifyFull", "justify")}
+              className="rounded-none border-0 border-l border-slate-200 shadow-none"
+            >
+              <span className="text-lg leading-none">▤</span>
+            </ToolbarButton>
+          </div>
+
+          <ToolbarDivider />
+
+          <ToolbarButton title="Undo" onClick={() => runCommand("undo")}>
+            <span className="text-xl leading-none">↶</span>
+          </ToolbarButton>
+
+          <ToolbarButton title="Redo" onClick={() => runCommand("redo")}>
+            <span className="text-xl leading-none text-slate-400">↷</span>
+          </ToolbarButton>
         </div>
 
         <div
@@ -2664,56 +2663,75 @@ function RichTextEditor({
           contentEditable
           suppressContentEditableWarning
           onInput={updateValue}
+          onBlur={() => {
+            updateValue();
+            saveSelection();
+          }}
           onKeyUp={saveSelection}
           onMouseUp={saveSelection}
-          onBlur={saveSelection}
-          className="rich-text-editor min-h-[180px] w-full bg-white px-4 py-4 text-sm leading-7 text-slate-900 outline-none"
-          style={{ minHeight: `${rows * 28}px` }}
           data-placeholder={placeholder}
+          className="rich-editor-area w-full overflow-y-auto bg-white px-6 py-6 text-[17px] font-normal leading-8 text-slate-800 outline-none"
+          style={{
+            minHeight: `${Math.max(rows * 34, 170)}px`,
+          }}
         />
       </div>
 
       <style jsx global>{`
-        .rich-text-editor:empty:before {
+        .rich-editor-area:empty:before {
           content: attr(data-placeholder);
           color: #94a3b8;
+          pointer-events: none;
+          font-weight: 400;
         }
 
-        .rich-text-editor ul {
-          list-style-type: disc !important;
-          padding-left: 22px !important;
-          margin: 6px 0 !important;
+        .rich-editor-area p {
+          margin: 0 0 10px;
         }
 
-        .rich-text-editor ol {
-          list-style-type: decimal !important;
-          padding-left: 22px !important;
-          margin: 6px 0 !important;
+        .rich-editor-area ul {
+          list-style-type: disc;
+          padding-left: 24px;
+          margin: 10px 0;
         }
 
-        .rich-text-editor li {
-          display: list-item !important;
-          margin: 3px 0 !important;
+        .rich-editor-area ol {
+          list-style-type: decimal;
+          padding-left: 24px;
+          margin: 10px 0;
         }
 
-        .rich-text-editor b,
-        .rich-text-editor strong {
-          font-weight: 800 !important;
+        .rich-editor-area li {
+          margin: 5px 0;
         }
 
-        .rich-text-editor i,
-        .rich-text-editor em {
-          font-style: italic !important;
+        .rich-editor-area blockquote {
+          margin: 12px 0;
+          border-left: 4px solid #18227c;
+          background: #f8fafc;
+          padding: 12px 16px;
+          color: #334155;
+          border-radius: 12px;
         }
 
-        .rich-text-editor u {
-          text-decoration: underline !important;
+        .rich-editor-area a {
+          color: #18227c;
+          text-decoration: underline;
+          font-weight: 700;
         }
 
-        .rich-text-editor a {
-          color: #2563eb !important;
-          text-decoration: underline !important;
-          font-weight: 700 !important;
+        .rich-editor-area::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        .rich-editor-area::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 999px;
+        }
+
+        .rich-editor-area::-webkit-scrollbar-track {
+          background: transparent;
         }
       `}</style>
     </div>
@@ -2753,7 +2771,7 @@ function DynamicListInput({
   buttonText,
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+    <div className="rounded-3xl ">
       <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
         {label}
       </label>
@@ -2818,7 +2836,7 @@ function AddButton({ text, onClick }) {
 
 function SuggestionPanel({ title, children }) {
   return (
-    <div className="mt-4 rounded-3xl border border-white/10 bg-black/25 p-5">
+    <div className="mt-4 rounded-3xl mb-4">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
         {title}
       </p>
@@ -2839,14 +2857,48 @@ function SuggestionButton({ text, onClick }) {
     </button>
   );
 }
+function decodeAllowedHtmlTags(value = "") {
+  return String(value)
+    .replace(/&lt;(b|strong)&gt;/gi, "<strong>")
+    .replace(/&lt;(i|em)&gt;/gi, "<em>")
+    .replace(/&lt;u&gt;/gi, "<u>")
+    .replace(/&lt;(s|strike|del)&gt;/gi, "<s>")
+    .replace(/&lt;p&gt;/gi, "<p>")
+    .replace(/&lt;br\s*\/?&gt;/gi, "<br>")
+    .replace(/&lt;ul&gt;/gi, "<ul>")
+    .replace(/&lt;ol&gt;/gi, "<ol>")
+    .replace(/&lt;li&gt;/gi, "<li>")
+    .replace(/&lt;blockquote&gt;/gi, "<blockquote>")
+    .replace(/&lt;\/(b|strong)&gt;/gi, "</strong>")
+    .replace(/&lt;\/(i|em)&gt;/gi, "</em>")
+    .replace(/&lt;\/u&gt;/gi, "</u>")
+    .replace(/&lt;\/(s|strike|del)&gt;/gi, "</s>")
+    .replace(/&lt;\/p&gt;/gi, "</p>")
+    .replace(/&lt;\/ul&gt;/gi, "</ul>")
+    .replace(/&lt;\/ol&gt;/gi, "</ol>")
+    .replace(/&lt;\/li&gt;/gi, "</li>")
+    .replace(/&lt;\/blockquote&gt;/gi, "</blockquote>");
+}
+
+function sanitizeHtml(value = "") {
+  return String(value)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "")
+    .replace(/\sjavascript:/gi, "");
+}
+
 function HtmlText({ html, className = "" }) {
   if (!html) return null;
+
+  const safeHtml = sanitizeHtml(decodeAllowedHtmlTags(html));
 
   return (
     <>
       <div
         className={`cv-html-text ${className}`}
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
 
       <style jsx global>{`
@@ -2886,7 +2938,8 @@ function HtmlText({ html, className = "" }) {
         }
 
         .cv-html-text s,
-        .cv-html-text strike {
+        .cv-html-text strike,
+        .cv-html-text del {
           text-decoration: line-through !important;
         }
 
@@ -2895,6 +2948,15 @@ function HtmlText({ html, className = "" }) {
           text-decoration: underline !important;
           font-weight: 700 !important;
         }
+          .cv-html-text blockquote {
+  margin: 8px 0 !important;
+  border-left: 4px solid #18227c !important;
+  background: #f8fafc !important;
+  padding: 8px 12px !important;
+  color: #334155 !important;
+  border-radius: 10px !important;
+  font-style: italic !important;
+}
       `}</style>
     </>
   );
@@ -4402,12 +4464,6 @@ function MainCVSections({
         </CVSection>
       ) : null}
 
-      {hasList(cv.strengths) ? (
-        <CVSection title="Key Strengths" accent={accent}>
-          <BulletList items={cv.strengths} />
-        </CVSection>
-      ) : null}
-
       {hasValidCertifications(cv) ? (
         <CVSection title="Certifications" accent={accent}>
           <CertificationContent cv={cv} />
@@ -4416,12 +4472,6 @@ function MainCVSections({
 
       {hasValidAdditionalSections(cv) ? (
         <AdditionalSectionsContent cv={cv} accent={accent} />
-      ) : null}
-
-      {hasText(cv.references) ? (
-        <CVSection title="References" accent={accent}>
-          <Paragraph text={cv.references} />
-        </CVSection>
       ) : null}
     </>
   );
@@ -4690,13 +4740,12 @@ function Paragraph({ text, dark = false, className = "" }) {
   if (!hasText(text)) return null;
 
   return (
-    <p
-      className={`whitespace-pre-line text-sm leading-8 ${
+    <HtmlText
+      html={text}
+      className={`text-sm leading-8 ${
         dark ? "text-white/75" : "text-black/70"
       } ${className}`}
-    >
-      {text}
-    </p>
+    />
   );
 }
 

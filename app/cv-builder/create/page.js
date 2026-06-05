@@ -888,7 +888,9 @@ setForm({
 
 return (
   <main className="h-[100dvh] overflow-hidden bg-[#101116] text-white">
-    <header className="flex h-[72px] items-center justify-between border-b border-white/10 bg-[#17181D] px-4 shadow-lg sm:px-6 lg:px-8">
+    <div className="pt-[36px]">
+  <header className="flex h-[72px] items-center justify-between border-b border-white/10 bg-[#17181D] px-4 shadow-lg sm:px-6 lg:px-8">
+
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-qorliqGold text-sm font-black text-black">
           Q
@@ -949,7 +951,11 @@ return (
                     ? "Update CV"
                     : "Save"}
                 </button>
-    </header>
+       
+  </header>
+
+  {/* baqi create page content */}
+</div>
 
     <div className="sticky top-0 z-40 border-b border-white/10 bg-[#101116]/95 px-4 py-3 backdrop-blur lg:hidden">
       <div className="grid grid-cols-2 rounded-full bg-[#17181D] p-1">
@@ -1148,7 +1154,7 @@ return (
             )}
           </div>
 
-          <div className="sticky bottom-0 mt-5 flex  gap-3 border-t border-white/10 bg-[#101116] py-4 flex-row items-center justify-between">
+          <div className="sticky  bottom-0 mt-5 flex  gap-3 border-t border-white/10 bg-[#101116] py-8 flex-row items-center justify-between">
             <button
               type="button"
               disabled={currentStep === 0 || saving}
@@ -2584,14 +2590,89 @@ const runCommand = (command, commandValue = null) => {
             title="Bullet list"
             onClick={() => runCommand("insertUnorderedList")}
           >
-            <span className="text-lg leading-none">.≡</span>
+            <span className="text-lg leading-none"><svg
+  viewBox="0 0 24 24"
+  className="h-5 w-5"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+>
+  <circle cx="5" cy="7" r="1.2" fill="currentColor" stroke="none" />
+  <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+  <circle cx="5" cy="17" r="1.2" fill="currentColor" stroke="none" />
+
+  <path d="M10 7h9" />
+  <path d="M10 12h9" />
+  <path d="M10 17h9" />
+</svg></span>
           </ToolbarButton>
 
           <ToolbarButton
             title="Numbered list"
             onClick={() => runCommand("insertOrderedList")}
           >
-            <span className="text-sm leading-none">1≡</span>
+        <svg
+  viewBox="0 0 28 24"
+  className="h-5 w-6"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <text
+    x="3"
+    y="7.5"
+    fontSize="5"
+    fontWeight="800"
+    fill="currentColor"
+    dominantBaseline="middle"
+  >
+    1
+  </text>
+
+  <text
+    x="3"
+    y="12.5"
+    fontSize="5"
+    fontWeight="800"
+    fill="currentColor"
+    dominantBaseline="middle"
+  >
+    2
+  </text>
+
+  <text
+    x="3"
+    y="17.5"
+    fontSize="5"
+    fontWeight="800"
+    fill="currentColor"
+    dominantBaseline="middle"
+  >
+    3
+  </text>
+
+  <path
+    d="M11 7H24"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+  />
+  <path
+    d="M11 12H24"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+  />
+  <path
+    d="M11 17H24"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+  />
+</svg>
           </ToolbarButton>
 
           <ToolbarDivider />
@@ -2604,7 +2685,20 @@ const runCommand = (command, commandValue = null) => {
 </ToolbarButton>
 
           <ToolbarButton title="Add link" onClick={addLink}>
-            <span className="text-lg leading-none">↗</span>
+          <svg
+  viewBox="0 0 24 24"
+  className="h-4 w-4"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+>
+  <path d="M14 4h6v6" />
+  <path d="M10 14L20 4" />
+  <path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4" />
+</svg>
           </ToolbarButton>
 
           <ToolbarDivider />
@@ -2616,7 +2710,20 @@ const runCommand = (command, commandValue = null) => {
               onClick={() => runAlign("justifyLeft", "left")}
               className="rounded-none border-0 shadow-none"
             >
-              <span className="text-lg leading-none">☰</span>
+              <span className="text-lg leading-none"><svg
+  viewBox="0 0 24 24"
+  className="h-5 w-5"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.4"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+>
+  <path d="M4 7h16" />
+  <path d="M4 12h12" />
+  <path d="M4 17h8" />
+</svg></span>
             </ToolbarButton>
 
             <ToolbarButton
@@ -2625,7 +2732,20 @@ const runCommand = (command, commandValue = null) => {
               onClick={() => runAlign("justifyCenter", "center")}
               className="rounded-none border-0 border-l border-slate-200 shadow-none"
             >
-              <span className="text-lg leading-none">≡</span>
+              <span className="text-lg leading-none"><svg
+  viewBox="0 0 24 24"
+  className="h-5 w-5"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.4"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+>
+  <path d="M4 7h16" />
+  <path d="M4 12h16" />
+  <path d="M4 17h16" />
+</svg></span>
             </ToolbarButton>
 
             <ToolbarButton
@@ -2634,7 +2754,20 @@ const runCommand = (command, commandValue = null) => {
               onClick={() => runAlign("justifyRight", "right")}
               className="rounded-none border-0 border-l border-slate-200 shadow-none"
             >
-              <span className="text-lg leading-none">☷</span>
+              <span className="text-lg leading-none"><svg
+  viewBox="0 0 24 24"
+  className="h-5 w-5"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.4"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+>
+  <path d="M4 7h16" />
+  <path d="M8 12h12" />
+  <path d="M12 17h8" />
+</svg></span>
             </ToolbarButton>
 
             <ToolbarButton
@@ -2643,7 +2776,21 @@ const runCommand = (command, commandValue = null) => {
               onClick={() => runAlign("justifyFull", "justify")}
               className="rounded-none border-0 border-l border-slate-200 shadow-none"
             >
-              <span className="text-lg leading-none">▤</span>
+              <span className="text-lg leading-none"><svg
+  viewBox="0 0 24 24"
+  className="h-5 w-5"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2.4"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  aria-hidden="true"
+>
+  <path d="M4 6h16" />
+  <path d="M4 10h16" />
+  <path d="M4 14h16" />
+  <path d="M4 18h16" />
+</svg></span>
             </ToolbarButton>
           </div>
 

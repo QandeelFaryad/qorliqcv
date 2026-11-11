@@ -1,82 +1,76 @@
-DryFruit E-Commerce Website
+Qorliq CV Builder
+A full-stack CV builder built with Next.js. Users can create professional CVs, import an existing CV, choose a template, edit their details with a live preview, and download their CV in PDF or Word format.
 
-A modern full-stack e-commerce web application for buying and selling dry fruits online, built with Next.js. This project demonstrates real-world web development practices including server-side rendering, API integration, responsive design, authentication, and smooth UI/UX animations. It is designed to provide a seamless shopping experience for customers and an easy-to-use dashboard for admins.
-
+The application includes authentication, Stripe payments, subscription management, and a personal dashboard.
 Features
-User Features
-
-Product Catalog: Browse a variety of dry fruits with images, descriptions, and prices.
-
-Search & Filter: Easily find products by name, category, or price.
-
-Shopping Cart: Add, remove, and update product quantities.
-
-User Authentication: Secure login and registration with account management.
-
-Order History: View past orders and track current orders.
-
-Responsive Design: Optimized for mobile, tablet, and desktop devices.
-
-Smooth Animations: Engaging UI with Framer Motion for a modern experience.
-
-Admin Features
-
-Dashboard: Manage products, categories, and orders from a single panel.
-
-Product Management: Add, edit, or remove products efficiently.
-
-Order Management: Track and update order status.
-
+CV Creation & Editing
+- Professional Templates: Choose from multiple CV layouts.
+- Upload Existing CV: Import PDF, DOC, DOCX, or TXT files to extract information and populate the editor.
+- Step-by-Step Editor: Add personal details, summary, experience, education, skills, languages, certifications, projects, and more.
+- Live Preview: Preview changes while editing.
+- PDF & Word Downloads: Export completed CVs.
+- Responsive Layout: Create and manage CVs on mobile, tablet, and desktop.
+User Dashboard
+- My CVs: View and manage saved CVs.
+- Download History: Track CV download activity.
+- Account Settings: Manage personal account details.
+- Billing Details: Update billing contact information and address.
+- Plan Management: View current plan status and access expiry.
+- Cancellation: Cancel paid access and return to the free account state.
+Authentication & Payments
+- Secure Login: Sign in with Google or email and password.
+- User-Specific Records: Users can access only their own saved CVs.
+- Stripe Integration: Support for one-time payments and recurring subscriptions.
+- Payment Verification: Verify payments and process subscription updates through Stripe webhooks.
+- Access Control: Restrict paid features according to the user's plan and access status.
 Tech Stack
+Area	Technologies
+Frontend	Next.js, React, Tailwind CSS
+Backend	Next.js API Routes
+Database	MongoDB, Mongoose
+Authentication	NextAuth.js, bcryptjs
+Payments	Stripe
+CV Extraction	pdf2json, Mammoth, word-extractor, Tesseract.js
 
-Frontend: Next.js, React, Tailwind CSS, Framer Motion
 
-Backend: Node.js, Express (or Next.js API routes)
+Development Challenges & Solutions
+CV Data Extraction
+Challenge: Uploaded CVs use different layouts, headings, and date formats.
 
-Database: MongoDB or MySQL
+Approach: Extract text using format-specific libraries and apply parsing rules to identify contact details, experience, education, and other sections. Users can review and correct imported information in the editor.
+Authentication & Data Ownership
+Challenge: Keep each user's CVs and account information private.
 
-Authentication: NextAuth.js or JWT-based system
+Approach: Identify the logged-in user through the server session and scope database queries to their user ID.
+Payment & Subscription Synchronization
+Challenge: Keep application access consistent with payment and subscription status.
 
-Payment Integration: Ready for Stripe or other payment gateways
+Approach: Use Stripe verification endpoints and webhooks to update plan details, payment status, and access dates.
+Responsive Editing & Preview
+Challenge: Display an A4 CV preview clearly alongside the editor on smaller screens.
 
-Problems Faced & Solutions
+Approach: Use responsive layouts and separate editing and preview views on mobile.
+Billing & Cancellation
+Challenge: Allow users to update billing information and cancel paid access.
 
-Developing a full-stack e-commerce website comes with its challenges. Some of the key problems I faced and how I solved them:
+Approach: Use authenticated APIs to update billing fields, cancel recurring Stripe subscriptions, and reset CV access fields to their default values.
+Getting Started
+Clone the repository:
+git clone https://github.com/QandeelFaryad/qorliqcv.git
+cd qorliqcv
 
-Image Upload and Display Issues
+Install dependencies:
+npm install
 
-Problem: Product images were not showing correctly on some pages and in production.
+Create a .env.local file and configure the environment variables used by the project, including MongoDB, NextAuth, Google authentication, and Stripe credentials.
 
-Solution: Used Next.js Image component with correct src paths, width and height attributes, and priority for main images.
+Start the development server:
+npm run dev
 
-Authentication and Session Management
+Open http://localhost:3000.
+Production Build
+npm run build
+npm start
 
-Problem: Handling user sessions securely with login, signup, and protected routes.
-
-Solution: Implemented NextAuth.js for authentication and used React hooks to manage session state.
-
-Responsive Layout Challenges
-
-Problem: Some sections were overflowing on smaller screens and horizontal scrollbars appeared.
-
-Solution: Used Tailwind CSS utilities like overflow-x-hidden, flex-wrap, and responsive breakpoints to fix layout issues.
-
-Shopping Cart and State Management
-
-Problem: Cart items were not persisting after page reloads.
-
-Solution: Implemented localStorage along with React state management to persist cart data.
-
-Smooth Animations Without Performance Issues
-
-Problem: Animations caused lag on slower devices.
-
-Solution: Used Framer Motion with optimized transitions and whileInView triggers to reduce performance impact.
-
-Deployment Issues
-
-Problem: Some API routes and images were not working correctly after deploying to Vercel.
-
-Solution: Ensured all environment variables were correctly set and image paths were relative to the /public folder.
-Live Demo:https://dryfruit-five.vercel.app/
-
+Repository
+Qorliq CV Builder on GitHub

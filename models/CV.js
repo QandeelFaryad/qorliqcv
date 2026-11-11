@@ -292,6 +292,16 @@ const CVSchema = new mongoose.Schema(
       index: true,
     },
 
+     isdownload: {
+      type: Boolean,
+      default: false,
+    },
+
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+
     downloadCount: {
       type: Number,
       default: 0,
@@ -321,4 +331,18 @@ CVSchema.index({ user: 1, createdAt: -1 });
 CVSchema.index({ user: 1, status: 1 });
 CVSchema.index({ template: 1, createdAt: -1 });
 
-export default mongoose.models.CV || mongoose.model("CV", CVSchema);
+// Sirf undownloaded CVs expiry ke baad delete hongi.
+CVSchema.index(
+  { expiresAt: 1 },
+  {
+    name: "delete_undownloaded_cvs_after_24h",
+    expireAfterSeconds: 0,
+    partialFilterExpression: {
+      isdownload: false,
+    },
+  }
+);
+
+export default mongoose.models.CV ||
+  mongoose.model("CV", CVSchema);
+

@@ -287,7 +287,183 @@ export default function SuccessPage() {
   const [previewHeight, setPreviewHeight] = useState(1123);
 
   const config = useMemo(() => getTemplateConfig(cv), [cv]);
+  const [savingDownloadRecord, setSavingDownloadRecord] = useState(false);
+const downloadClickRef = useRef(false);
 
+const saveDownloadDetails = async (cvId, format, fileSize) => {
+  const sendRequest = async (url, method, body, label) => {
+    try {
+      const response = await fetch(url, {
+        method,
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.success !== true) {
+        throw new Error(
+          data?.message ||
+            data?.error ||
+            `Request failed (${response.status}).`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      throw new Error(
+        `${label}: ${error.message || "Please check your connection."}`
+      );
+    }
+  };
+
+  const results = await Promise.allSettled([
+    // Update CV: isdownload = true, status = "complete"
+    sendRequest(
+      "/api/downloads",
+      "PUT",
+      { cvId },
+      "CV status could not be updated"
+    ),
+
+    // Save download history
+    sendRequest(
+      "/api/downloads",
+      "POST",
+      {
+        cvId,
+        format,
+        fileSize: fileSize || "",
+      },
+      "Download history could not be saved"
+    ),
+  ]);
+
+  const errors = results
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason.message);
+
+  if (errors.length) {
+    throw new Error(errors.join("\n"));
+  }
+};
+
+const handlePDFDownload = async () => {
+  if (
+    downloadClickRef.current ||
+    downloadingPDF ||
+    downloadingWord ||
+    savingDownloadRecord
+  ) {
+    return;
+  }
+
+  downloadClickRef.current = true;
+
+  let pdfGenerated = false;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+
+    const currentCvId = cv?._id || cv?.id || params.get("cvId");
+
+    if (
+      typeof currentCvId !== "string" ||
+      !/^[a-fA-F0-9]{24}$/.test(currentCvId)
+    ) {
+      alert("CV ID missing or invalid. Please reload your CV.");
+      return;
+    }
+
+    const result = await downloadPDF();
+
+    if (!result?.success) return;
+
+    pdfGenerated = true;
+    setSavingDownloadRecord(true);
+
+    await saveDownloadDetails(
+      currentCvId,
+      "PDF",
+      result.fileSize
+    );
+
+    console.log("CV status and PDF download history saved.");
+  } catch (error) {
+    console.error("PDF download/update error:", error);
+
+    alert(
+      pdfGenerated
+        ? `PDF download started.\n${
+            error.message || "Unable to save download details."
+          }`
+        : error.message || "Unable to generate PDF."
+    );
+  } finally {
+    downloadClickRef.current = false;
+    setSavingDownloadRecord(false);
+  }
+};
+
+const handleWordDownload = async () => {
+  if (
+    downloadClickRef.current ||
+    downloadingPDF ||
+    downloadingWord ||
+    savingDownloadRecord
+  ) {
+    return;
+  }
+
+  downloadClickRef.current = true;
+
+  let wordGenerated = false;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+
+    const currentCvId = cv?._id || cv?.id || params.get("cvId");
+
+    if (
+      typeof currentCvId !== "string" ||
+      !/^[a-fA-F0-9]{24}$/.test(currentCvId)
+    ) {
+      alert("CV ID missing or invalid. Please reload your CV.");
+      return;
+    }
+
+    const result = await downloadWord();
+
+    if (!result?.success) return;
+
+    wordGenerated = true;
+    setSavingDownloadRecord(true);
+
+    await saveDownloadDetails(
+      currentCvId,
+      "DOCX",
+      result.fileSize
+    );
+
+    console.log("CV status and Word download history saved.");
+  } catch (error) {
+    console.error("Word download/update error:", error);
+
+    alert(
+      wordGenerated
+        ? `Word download started.\n${
+            error.message || "Unable to save download details."
+          }`
+        : error.message || "Unable to generate Word file."
+    );
+  } finally {
+    downloadClickRef.current = false;
+    setSavingDownloadRecord(false);
+  }
+};
   useEffect(() => {
     async function verifyAccessAndLoadCV() {
       try {
@@ -449,116 +625,129 @@ setHasAccess(true);
 function createExportClone(element) {
   if (!element) return null;
 
+  // Remove an old clone if a previous export failed.
+  document.getElementById("qorliq-cv-export-wrapper")?.remove();
+
   const clone = element.cloneNode(true);
 
   clone.id = "qorliq-cv-export-clone";
 
-  clone.style.width = "794px";
-  clone.style.minWidth = "794px";
-  clone.style.maxWidth = "794px";
-  clone.style.height = "auto";
-  clone.style.minHeight = "1123px";
-  clone.style.background = "#ffffff";
-  clone.style.margin = "0";
-  clone.style.padding = "0";
-
-  clone.style.position = "absolute";
-  clone.style.top = "0";
-  clone.style.left = "0";
-  clone.style.transform = "none";
-  clone.style.transformOrigin = "top left";
-  clone.style.opacity = "1";
-  clone.style.visibility = "visible";
-  clone.style.pointerEvents = "none";
-  clone.style.zIndex = "999999";
-  clone.style.overflow = "visible";
-  clone.style.boxShadow = "none";
-  clone.style.clipPath = "inset(0 0 0 0)";
-  clone.style.display = "block";
+  Object.assign(clone.style, {
+    width: "794px",
+    minWidth: "794px",
+    maxWidth: "794px",
+    height: "auto",
+    minHeight: "1123px",
+    background: "#ffffff",
+    margin: "0",
+    padding: "0",
+    position: "relative",
+    top: "0",
+    left: "0",
+    transform: "none",
+    transformOrigin: "top left",
+    opacity: "1",
+    visibility: "visible",
+    pointerEvents: "none",
+    overflow: "visible",
+    boxShadow: "none",
+    display: "block",
+    WebkitFontSmoothing: "antialiased",
+    textRendering: "geometricPrecision",
+  });
 
   const wrapper = document.createElement("div");
+
   wrapper.id = "qorliq-cv-export-wrapper";
 
-  wrapper.style.position = "fixed";
-  wrapper.style.top = "0";
-  wrapper.style.left = "0";
-  wrapper.style.width = "794px";
-  wrapper.style.minWidth = "794px";
-  wrapper.style.height = "auto";
-  wrapper.style.minHeight = "1123px";
-  wrapper.style.background = "#ffffff";
-  wrapper.style.opacity = "0";
-  wrapper.style.pointerEvents = "none";
-  wrapper.style.zIndex = "999999";
-  wrapper.style.overflow = "visible";
+  Object.assign(wrapper.style, {
+    position: "fixed",
+    top: "0",
+    left: "-100000px",
+    width: "794px",
+    minWidth: "794px",
+    height: "auto",
+    minHeight: "1123px",
+    background: "#ffffff",
+    opacity: "1",
+    visibility: "visible",
+    pointerEvents: "none",
+    zIndex: "-1",
+    overflow: "visible",
+  });
 
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
 
-  const cvDownloadBlocks = clone.querySelectorAll("#cv-download");
-
-  cvDownloadBlocks.forEach((block) => {
-    block.style.width = "794px";
-    block.style.minWidth = "794px";
-    block.style.maxWidth = "794px";
-    block.style.height = "auto";
-    block.style.minHeight = "1123px";
-    block.style.background = "#ffffff";
-    block.style.overflow = "visible";
-    block.style.boxShadow = "none";
+  clone.querySelectorAll("#cv-download").forEach((block) => {
+    Object.assign(block.style, {
+      width: "794px",
+      minWidth: "794px",
+      maxWidth: "794px",
+      height: "auto",
+      minHeight: "1123px",
+      background: "#ffffff",
+      overflow: "visible",
+      boxShadow: "none",
+    });
   });
 
-  /*
-    Important:
-    createExportClone ke andar clone use hota hai,
-    exportElement nahi.
-  */
-  const exportSidebarsForPdf = clone.querySelectorAll("aside");
+  clone.querySelectorAll("main, section, article").forEach((block) => {
+    block.style.maxHeight = "none";
+    block.style.overflow = "visible";
+  });
 
-  exportSidebarsForPdf.forEach((aside) => {
-    const isFullHeightSidebar =
+  clone.querySelectorAll("aside").forEach((aside) => {
+    const fullHeight =
       aside.getAttribute("data-full-height-sidebar") === "true";
 
     aside.style.alignSelf = "flex-start";
     aside.style.height = "auto";
     aside.style.maxHeight = "none";
     aside.style.overflow = "visible";
-    aside.style.breakInside = "avoid";
-    aside.style.pageBreakInside = "avoid";
 
-    if (isFullHeightSidebar) {
+    if (fullHeight) {
       aside.style.minHeight = "1123px";
-    } else {
-      aside.style.minHeight = "0";
     }
-  });
-
-  const exportMainBlocksForPdf = clone.querySelectorAll("main");
-
-  exportMainBlocksForPdf.forEach((main) => {
-    main.style.alignItems = "flex-start";
-    main.style.overflow = "visible";
   });
 
   clone.querySelectorAll("*").forEach((node) => {
-    const style = window.getComputedStyle(node);
-
-    if (style.display === "none") {
-      return;
-    }
-
-    if (style.overflow === "hidden") {
-      node.style.overflow = "visible";
-    }
-
-    if (style.maxHeight && style.maxHeight !== "none") {
-      node.style.maxHeight = "none";
-    }
-
     node.style.visibility = "visible";
+
+    const isPhotoFrame =
+      node.matches?.(
+        [
+          ".profile-photo-frame",
+          ".cv-photo-frame",
+          "[data-profile-photo-frame='true']",
+        ].join(",")
+      ) ||
+      node.closest?.(
+        [
+          ".profile-photo-frame",
+          ".cv-photo-frame",
+          "[data-profile-photo-frame='true']",
+        ].join(",")
+      );
+
+    if (!isPhotoFrame) {
+      const isContentClipped =
+        node.scrollHeight > node.clientHeight + 2 &&
+        node.clientHeight > 0;
+
+      if (isContentClipped) {
+        node.style.height = "auto";
+        node.style.maxHeight = "none";
+        node.style.overflow = "visible";
+      }
+    }
   });
 
   return clone;
+}
+
+function removeExportClone() {
+  document.getElementById("qorliq-cv-export-wrapper")?.remove();
 }
 
 function removeExportClone(clone) {
@@ -588,13 +777,16 @@ const downloadPDF = async () => {
     return;
   }
 
+  const MAX_PDF_SIZE = 20 * 1024 * 1024;
   let exportElement = null;
   let restoreImages = null;
 
   try {
     setDownloadingPDF(true);
 
-    if (document.fonts?.ready) await document.fonts.ready;
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
 
     exportElement = createExportClone(previewElement);
 
@@ -606,7 +798,7 @@ const downloadPDF = async () => {
     await waitForImages(exportElement);
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
     const exportWidth = 794;
     const a4HeightPx = 1123;
@@ -621,9 +813,12 @@ const downloadPDF = async () => {
     );
 
     if (!realHeight || realHeight < 100) {
-      throw new Error("CV height not detected. Please try again.");
+      throw new Error("CV height was not detected.");
     }
 
+    /* =========================================
+       EXPORT DESIGN SETTINGS
+    ========================================= */
     exportElement.style.width = `${exportWidth}px`;
     exportElement.style.minWidth = `${exportWidth}px`;
     exportElement.style.maxWidth = `${exportWidth}px`;
@@ -661,19 +856,20 @@ const downloadPDF = async () => {
       }
     });
 
-    const exportGridLayouts = exportElement.querySelectorAll(".grid");
-
-    exportGridLayouts.forEach((grid) => {
+    exportElement.querySelectorAll(".grid").forEach((grid) => {
       grid.style.alignItems = "flex-start";
       grid.style.overflow = "visible";
     });
 
-    /*
-      Profile photo frame fix
-      Add data-profile-photo-frame="true" on your photo wrapper.
-    */
+    /* =========================================
+       PROFILE PHOTO FIX
+    ========================================= */
     const profileFrames = exportElement.querySelectorAll(
-      ".profile-photo-frame, .cv-photo-frame, [data-profile-photo-frame='true']"
+      [
+        ".profile-photo-frame",
+        ".cv-photo-frame",
+        "[data-profile-photo-frame='true']",
+      ].join(",")
     );
 
     profileFrames.forEach((frame) => {
@@ -682,37 +878,340 @@ const downloadPDF = async () => {
       frame.style.alignItems = "center";
       frame.style.justifyContent = "center";
 
-      const img = frame.querySelector("img");
+      const image = frame.querySelector("img");
 
-      if (img) {
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.maxWidth = "100%";
-        img.style.maxHeight = "100%";
-        img.style.objectFit = "cover";
-        img.style.objectPosition = "center";
-        img.style.display = "block";
+      if (image) {
+        image.style.width = "100%";
+        image.style.height = "100%";
+        image.style.maxWidth = "100%";
+        image.style.maxHeight = "100%";
+        image.style.objectFit = "cover";
+        image.style.objectPosition = "center";
+        image.style.display = "block";
       }
     });
 
-    const exportImages = exportElement.querySelectorAll("img");
+    exportElement.querySelectorAll("img").forEach((image) => {
+      image.style.maxWidth = "100%";
+      image.style.objectPosition = "center";
+      image.style.display = "block";
 
-    exportImages.forEach((img) => {
-      img.style.maxWidth = "100%";
-      img.style.objectPosition = "center";
-      img.style.display = "block";
-
-      if (!img.closest("[data-profile-photo-frame='true']")) {
-        img.style.objectFit = img.style.objectFit || "contain";
+      if (
+        !image.closest(
+          [
+            ".profile-photo-frame",
+            ".cv-photo-frame",
+            "[data-profile-photo-frame='true']",
+          ].join(",")
+        )
+      ) {
+        image.style.objectFit = image.style.objectFit || "contain";
       }
     });
 
-    /*
-      Quality settings:
-      2.4 gives clear PDF.
-      JPEG 0.94 keeps size close to 1MB depending on CV/photo.
-    */
-    const pixelRatio = 2.4;
+    /* =========================================
+       SEARCHABLE DATA HELPERS
+    ========================================= */
+    const cleanExtractionText = (value) => {
+      return String(value || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n[ \t]+/g, "\n")
+        .replace(/[ \t]{2,}/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    };
+
+    const htmlToExtractionText = (value) => {
+      if (!value) return "";
+
+      const container = document.createElement("div");
+      container.innerHTML = String(value)
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&amp;/gi, "&")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#039;/gi, "'");
+
+      container.querySelectorAll("script, style, iframe").forEach((e) => e.remove());
+      container.querySelectorAll("br").forEach((e) => e.replaceWith(document.createTextNode("\n")));
+
+      container.querySelectorAll("li").forEach((element, index) => {
+        const parent = element.parentElement;
+        const marker = parent?.tagName === "OL" ? `${index + 1}. ` : "- ";
+        element.insertBefore(document.createTextNode(`\n${marker}`), element.firstChild);
+        element.appendChild(document.createTextNode("\n"));
+      });
+
+      container
+        .querySelectorAll(["p", "div", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol"].join(","))
+        .forEach((element) => {
+          element.insertAdjacentText("afterend", "\n");
+        });
+
+      return cleanExtractionText(container.textContent || container.innerText || "");
+    };
+
+    const getPlainItemText = (item) => {
+      if (!item) return "";
+      if (typeof item === "string") return cleanExtractionText(item);
+      return cleanExtractionText(
+        item.name || item.title || item.label || item.value || item.text || item.skill || item.language || ""
+      );
+    };
+
+    const getDateRange = (item = {}) => {
+      const startDate = item.startDate || item.start || item.from || "";
+      const isCurrent = item.current === true || item.isCurrent === true || item.currentlyWorking === true;
+      const endDate = isCurrent ? "Present" : item.endDate || item.end || item.to || item.year || "";
+
+      return [startDate, endDate].map(cleanExtractionText).filter(Boolean).join(" - ");
+    };
+
+    const extractionLines = [];
+
+    const addBlankLine = () => {
+      if (extractionLines.length && extractionLines[extractionLines.length - 1] !== "") {
+        extractionLines.push("");
+      }
+    };
+
+    const addLine = (value) => {
+      const text = cleanExtractionText(value);
+      if (!text) return;
+
+      text.split("\n").forEach((line) => {
+        const cleanLine = cleanExtractionText(line);
+        if (cleanLine) extractionLines.push(cleanLine);
+        else addBlankLine();
+      });
+    };
+
+    const addHtml = (value) => {
+      const text = htmlToExtractionText(value);
+      if (!text) return;
+
+      text.split("\n").forEach((line) => {
+        const cleanLine = line.trim();
+        if (cleanLine) extractionLines.push(cleanLine);
+        else addBlankLine();
+      });
+    };
+
+    const addSection = (title) => {
+      addBlankLine();
+      addLine(String(title).toUpperCase());
+    };
+
+    /* =========================================
+       BUILD LOGICAL ATS DATA ORDER
+    ========================================= */
+    addLine(cv.fullName);
+    addLine(cv.jobTitle);
+
+    addLine(
+      [cv.email, cv.phone, cv.location, cv.linkedIn, cv.github, cv.portfolio, cv.website]
+        .map(cleanExtractionText)
+        .filter(Boolean)
+        .join(" | ")
+    );
+
+    if (cv.summary) {
+      addSection("Professional Summary");
+      addHtml(cv.summary);
+    }
+
+    const experiences = Array.isArray(cv.experiences) ? cv.experiences.filter(Boolean) : [];
+
+    if (experiences.length || cv.experience) {
+      addSection("Work Experience");
+
+      if (experiences.length) {
+        experiences.forEach((item) => {
+          const jobTitle = item.jobTitle || item.title || item.position || item.role || "";
+          const company = item.company || item.employer || item.organization || "";
+
+          addLine([jobTitle, company].map(cleanExtractionText).filter(Boolean).join(" - "));
+          addLine([getDateRange(item), item.location].map(cleanExtractionText).filter(Boolean).join(" | "));
+
+          if (item.description) addHtml(item.description);
+          if (item.responsibilities) addHtml(item.responsibilities);
+
+          if (Array.isArray(item.bullets)) {
+            item.bullets.forEach((bullet) => {
+              addLine(`- ${cleanExtractionText(bullet)}`);
+            });
+          }
+          addBlankLine();
+        });
+      } else {
+        addHtml(cv.experience);
+      }
+    }
+
+    const educations = Array.isArray(cv.educations) ? cv.educations.filter(Boolean) : [];
+
+    if (educations.length || cv.education) {
+      addSection("Education");
+
+      if (educations.length) {
+        educations.forEach((item) => {
+          const degree = item.degree || item.title || item.qualification || item.course || "";
+          const institution = item.institution || item.school || item.university || item.college || "";
+
+          addLine([degree, institution].map(cleanExtractionText).filter(Boolean).join(" - "));
+          addLine([getDateRange(item), item.location].map(cleanExtractionText).filter(Boolean).join(" | "));
+
+          if (item.description) addHtml(item.description);
+          addBlankLine();
+        });
+      } else {
+        addHtml(cv.education);
+      }
+    }
+
+    if (Array.isArray(cv.skills) && cv.skills.length) {
+      addSection("Skills");
+      addLine(
+        cv.skills
+          .map((skill, index) => {
+            const skillText = getPlainItemText(skill);
+            const level = cv.skillLevels?.[index] || skill?.level || "";
+            return level ? `${skillText} (${level})` : skillText;
+          })
+          .filter(Boolean)
+          .join(", ")
+      );
+    }
+
+    if (Array.isArray(cv.languages) && cv.languages.length) {
+      addSection("Languages");
+      cv.languages.forEach((language, index) => {
+        const languageText = getPlainItemText(language);
+        const level = cv.languageLevels?.[index] || language?.level || "";
+        addLine(level ? `- ${languageText} - ${level}` : `- ${languageText}`);
+      });
+    }
+
+    const certifications =
+      Array.isArray(cv.certificationsList) && cv.certificationsList.length
+        ? cv.certificationsList
+        : Array.isArray(cv.certifications)
+        ? cv.certifications
+        : [];
+
+    if (certifications.length) {
+      addSection("Certifications");
+      certifications.forEach((item) => {
+        if (typeof item === "string") {
+          addLine(`- ${item}`);
+          return;
+        }
+        addLine(
+          `- ${[
+            item.name || item.title || item.certificate,
+            item.issuer || item.institution || item.organization,
+            item.date || item.year || item.issuedDate,
+          ]
+            .map(cleanExtractionText)
+            .filter(Boolean)
+            .join(" | ")}`
+        );
+      });
+    }
+
+    const projects = Array.isArray(cv.projectsList) ? cv.projectsList.filter(Boolean) : [];
+
+    if (projects.length || cv.projects) {
+      addSection("Projects");
+
+      if (projects.length) {
+        projects.forEach((item) => {
+          addLine(
+            [item.title || item.name || item.projectTitle, item.role, item.date || item.year]
+              .map(cleanExtractionText)
+              .filter(Boolean)
+              .join(" | ")
+          );
+
+          if (item.technologies) {
+            addLine(
+              `Technologies: ${
+                Array.isArray(item.technologies) ? item.technologies.join(", ") : item.technologies
+              }`
+            );
+          }
+
+          if (item.description) addHtml(item.description);
+
+          if (Array.isArray(item.bullets)) {
+            item.bullets.forEach((bullet) => addLine(`- ${bullet}`));
+          }
+          addBlankLine();
+        });
+      } else {
+        addHtml(cv.projects);
+      }
+    }
+
+    if (Array.isArray(cv.achievements) && cv.achievements.length) {
+      addSection("Career Achievements");
+      cv.achievements.forEach((achievement) => {
+        addLine(`- ${getPlainItemText(achievement)}`);
+      });
+    }
+
+    if (Array.isArray(cv.strengths) && cv.strengths.length) {
+      addSection("Key Strengths");
+      cv.strengths.forEach((strength) => {
+        addLine(`- ${getPlainItemText(strength)}`);
+      });
+    }
+
+    if (Array.isArray(cv.additionalSections)) {
+      cv.additionalSections.filter(Boolean).forEach((section) => {
+        addSection(section.title || "Additional Information");
+        addHtml(section.description || section.content || "");
+      });
+    }
+
+    if (Array.isArray(cv.hobbies) && cv.hobbies.length) {
+      addSection("Hobbies and Interests");
+      addLine(cv.hobbies.map(getPlainItemText).filter(Boolean).join(", "));
+    }
+
+    if (cv.references) {
+      addSection("References");
+      if (Array.isArray(cv.references)) {
+        cv.references.forEach((reference) => {
+          if (typeof reference === "string") {
+            addLine(reference);
+            return;
+          }
+          addLine(
+            [
+              reference.name,
+              reference.jobTitle || reference.position,
+              reference.company,
+              reference.email,
+              reference.phone,
+            ]
+              .map(cleanExtractionText)
+              .filter(Boolean)
+              .join(" | ")
+          );
+        });
+      } else {
+        addHtml(cv.references);
+      }
+    }
+
+    /* =========================================
+       HIGH-QUALITY DESIGN CAPTURE
+    ========================================= */
+    const pixelRatio = 3.5; // High DPI for crisp rendering (kept below 4.0 to avoid oversized PNG data on long CVs)
 
     const fullCanvas = await toCanvas(exportElement, {
       cacheBust: true,
@@ -740,202 +1239,296 @@ const downloadPDF = async () => {
     });
 
     if (!fullCanvas || !fullCanvas.width || !fullCanvas.height) {
-      throw new Error("PDF capture failed. Canvas is empty.");
+      throw new Error("PDF capture failed.");
     }
-
-    const pdf = new jsPDF({
-      orientation: "p",
-      unit: "mm",
-      format: "a4",
-      compress: true,
-    });
 
     const pdfWidthMm = 210;
     const pdfHeightMm = 297;
+    const pageHeightCanvas = Math.floor(fullCanvas.width * (pdfHeightMm / pdfWidthMm));
 
-    const pageHeightCanvas = Math.floor(
-      fullCanvas.width * (pdfHeightMm / pdfWidthMm)
-    );
+    /* =========================================
+       SAFE PAGE CUT ALGORITHM
+    ========================================= */
+    const findSafePageCut = (canvas, startY, availableHeight) => {
+      const context = canvas.getContext("2d");
+      if (!context) return Math.min(startY + availableHeight, canvas.height);
 
-    const findSafePageCut = (canvas, startY, pageHeight) => {
-      const ctx = canvas.getContext("2d");
+      const idealCut = Math.min(startY + availableHeight, canvas.height);
+      if (idealCut >= canvas.height) return canvas.height;
 
-      if (!ctx) {
-        return Math.min(startY + pageHeight, canvas.height);
-      }
+      const scanStartX = Math.floor(canvas.width * 0.36);
+      const scanWidth = Math.floor(canvas.width * 0.61);
 
-      const idealCutY = Math.min(startY + pageHeight, canvas.height);
-
-      if (idealCutY >= canvas.height) {
-        return canvas.height;
-      }
-
-      const scanStartX = Math.floor(canvas.width * 0.38);
-      const scanWidth = Math.floor(canvas.width * 0.58);
-
-      const searchFromY = Math.max(idealCutY - 80, startY);
-      const searchToY = Math.max(
-        startY + Math.floor(pageHeight * 0.55),
-        startY + 140
+      const searchStart = Math.max(idealCut - Math.floor(pixelRatio * 50), startY);
+      const searchEnd = Math.max(
+        startY + Math.floor(availableHeight * 0.55),
+        startY + Math.floor(pixelRatio * 120)
       );
 
-      for (let scanY = searchFromY; scanY >= searchToY; scanY -= 2) {
-        const row = ctx.getImageData(scanStartX, scanY, scanWidth, 1).data;
-
+      for (let scanY = searchStart; scanY >= searchEnd; scanY -= 2) {
+        const row = context.getImageData(scanStartX, scanY, scanWidth, 1).data;
         let contentPixels = 0;
 
-        for (let x = 0; x < scanWidth; x += 6) {
-          const i = x * 4;
-
-          const r = row[i];
-          const g = row[i + 1];
-          const b = row[i + 2];
-
-          const isContent = r < 245 || g < 245 || b < 245;
-
-          if (isContent) contentPixels++;
+        for (let x = 0; x < scanWidth; x += 7) {
+          const index = x * 4;
+          if (row[index] < 245 || row[index + 1] < 245 || row[index + 2] < 245) {
+            contentPixels += 1;
+          }
         }
-
-        if (contentPixels < 6) {
-          return scanY;
-        }
+        if (contentPixels < 7) return scanY;
       }
 
-      return idealCutY;
+      return idealCut;
     };
 
     const nextPageTopPaddingMm = hasFullHeightSidebar ? 0 : 8;
     const pageBottomPaddingMm = hasFullHeightSidebar ? 0 : 8;
 
-    const nextPageTopPaddingCanvas = Math.floor(
-      (nextPageTopPaddingMm / pdfHeightMm) * pageHeightCanvas
-    );
+    const nextPageTopPaddingCanvas = Math.floor((nextPageTopPaddingMm / pdfHeightMm) * pageHeightCanvas);
+    const pageBottomPaddingCanvas = Math.floor((pageBottomPaddingMm / pdfHeightMm) * pageHeightCanvas);
+    const blankPageTolerance = Math.floor(pixelRatio * 35);
 
-    const pageBottomPaddingCanvas = Math.floor(
-      (pageBottomPaddingMm / pdfHeightMm) * pageHeightCanvas
-    );
-
-    let y = 0;
+    const pageSlices = [];
+    let sourceY = 0;
     let pageIndex = 0;
 
-    const blankPageToleranceCanvas = Math.floor(pixelRatio * 35);
-
-    const addCanvasPageToPdf = (sourceY, sourceHeight, topPaddingCanvas = 0) => {
-      const pageCanvas = document.createElement("canvas");
-
-      pageCanvas.width = fullCanvas.width;
-      pageCanvas.height = pageHeightCanvas;
-
-      const ctx = pageCanvas.getContext("2d");
-
-      if (!ctx) {
-        throw new Error("Unable to create PDF page canvas.");
-      }
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-      ctx.drawImage(
-        fullCanvas,
-        0,
-        sourceY,
-        fullCanvas.width,
-        sourceHeight,
-        0,
-        topPaddingCanvas,
-        fullCanvas.width,
-        sourceHeight
-      );
-
-      const pageDataUrl = pageCanvas.toDataURL("image/jpeg", 0.94);
-
-      if (!pageDataUrl || pageDataUrl === "data:,") {
-        throw new Error("PDF page capture failed.");
-      }
-
-      if (pageIndex > 0) {
-        pdf.addPage();
-      }
-
-      pdf.addImage(
-        pageDataUrl,
-        "JPEG",
-        0,
-        0,
-        pdfWidthMm,
-        pdfHeightMm,
-        undefined,
-        "MEDIUM"
-      );
-
-      pageIndex += 1;
-    };
-
-    if (fullCanvas.height <= pageHeightCanvas + blankPageToleranceCanvas) {
-      addCanvasPageToPdf(
-        0,
-        Math.min(fullCanvas.height, pageHeightCanvas),
-        0
-      );
+    if (fullCanvas.height <= pageHeightCanvas + blankPageTolerance) {
+      pageSlices.push({
+        sourceY: 0,
+        sourceHeight: Math.min(fullCanvas.height, pageHeightCanvas),
+        topPadding: 0,
+      });
     } else {
-      while (y < fullCanvas.height) {
-        const remainingHeight = fullCanvas.height - y;
+      while (sourceY < fullCanvas.height) {
+        const remainingHeight = fullCanvas.height - sourceY;
+        if (remainingHeight <= blankPageTolerance) break;
 
-        if (remainingHeight <= blankPageToleranceCanvas) {
-          break;
-        }
-
-        const willNeedAnotherPage =
-          remainingHeight > pageHeightCanvas + blankPageToleranceCanvas;
-
-        const topPaddingCanvas = hasFullHeightSidebar
-          ? 0
-          : pageIndex === 0
-          ? 0
-          : nextPageTopPaddingCanvas;
-
-        const bottomPaddingCanvas = hasFullHeightSidebar
-          ? 0
-          : willNeedAnotherPage
-          ? pageBottomPaddingCanvas
-          : 0;
-
-        const availablePageHeight =
-          pageHeightCanvas - topPaddingCanvas - bottomPaddingCanvas;
+        const needsAnotherPage = remainingHeight > pageHeightCanvas + blankPageTolerance;
+        const topPadding = hasFullHeightSidebar ? 0 : pageIndex === 0 ? 0 : nextPageTopPaddingCanvas;
+        const bottomPadding = hasFullHeightSidebar ? 0 : needsAnotherPage ? pageBottomPaddingCanvas : 0;
+        const availableHeight = pageHeightCanvas - topPadding - bottomPadding;
 
         const cutY = hasFullHeightSidebar
-          ? Math.min(y + pageHeightCanvas, fullCanvas.height)
-          : willNeedAnotherPage
-          ? findSafePageCut(fullCanvas, y, availablePageHeight)
+          ? Math.min(sourceY + pageHeightCanvas, fullCanvas.height)
+          : needsAnotherPage
+          ? findSafePageCut(fullCanvas, sourceY, availableHeight)
           : fullCanvas.height;
 
-        const sliceHeight = Math.max(
-          1,
-          Math.min(cutY - y, fullCanvas.height - y)
-        );
+        const sourceHeight = Math.max(1, Math.min(cutY - sourceY, fullCanvas.height - sourceY));
 
-        if (sliceHeight <= blankPageToleranceCanvas && pageIndex > 0) {
-          break;
-        }
+        if (sourceHeight <= blankPageTolerance && pageIndex > 0) break;
 
-        addCanvasPageToPdf(y, sliceHeight, topPaddingCanvas);
-
-        y += sliceHeight;
+        pageSlices.push({ sourceY, sourceHeight, topPadding });
+        sourceY += sourceHeight;
+        pageIndex += 1;
       }
     }
 
-    const fileName = `${safeFileName(cv.fullName || "qorliq-cv")}.pdf`;
+    if (!pageSlices.length) throw new Error("No PDF pages were generated.");
 
-    pdf.save(fileName);
+    /* =========================================
+       ATS-OPTIMIZED PDF BUILDER
+    ========================================= */
+    const buildPdf = ({ imageScale, imageQuality, imageCompression, format = "JPEG" }) => {
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+        putOnlyUsedFonts: true,
+        precision: 3,
+      });
+
+      pdf.setProperties({
+        title: `${cv.fullName || "Professional"} CV`,
+        subject: "Professional Curriculum Vitae",
+        author: cv.fullName || "Qorliq CV Builder",
+        creator: "Qorliq CV Builder",
+        keywords: "CV, resume, candidate, employment, work experience, education, skills",
+      });
+
+      if (typeof pdf.setLanguage === "function") pdf.setLanguage("en-GB");
+
+      pdf.setFont("helvetica", "normal");
+
+      const normalizePdfText = (value) => {
+        return String(value || "")
+          .normalize("NFKC")
+          .replace(/[‘’]/g, "'")
+          .replace(/[“”]/g, '"')
+          .replace(/[–—]/g, "-")
+          .replace(/•/g, "-")
+          .replace(/…/g, "...")
+          .replace(/\u00a0/g, " ")
+          .replace(/[^\x20-\x7E£€\n]/g, " ")
+          .replace(/[ \t]{2,}/g, " ")
+          .trim();
+      };
+
+      // Full printable width for natural ATS reading order
+      const maxTextWidth = 194;
+      const wrappedLines = [];
+
+      extractionLines.forEach((item) => {
+        if (!item) {
+          wrappedLines.push("");
+          return;
+        }
+        const cleanLine = normalizePdfText(item);
+        if (!cleanLine) {
+          wrappedLines.push("");
+          return;
+        }
+
+        const lines = pdf.splitTextToSize(cleanLine, maxTextWidth);
+        lines.forEach((line) => wrappedLines.push(String(line)));
+      });
+
+      const linesPerPage = Math.max(1, Math.ceil(wrappedLines.length / pageSlices.length));
+      const lineStep = 280 / linesPerPage;
+      const fontSize = Math.max(5, Math.min(8, lineStep * 2.2));
+
+      pageSlices.forEach((pageSlice, pIndex) => {
+        if (pIndex > 0) pdf.addPage();
+
+        /* Render Standard (Non-Suspicious) Selectable ATS Text Layer FIRST.
+           Using normal fill-mode text (not "invisible" Tr-3 mode) is important:
+           many real-world ATS parsers specifically detect and DISCARD Tr-3
+           invisible text because it was historically abused for resume
+           keyword-stuffing. Normal fill-mode text is indistinguishable from
+           any genuine PDF text, so every ATS/parser extracts it reliably. */
+        const startLine = pIndex * linesPerPage;
+        const endLine = Math.min(startLine + linesPerPage, wrappedLines.length);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(fontSize);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setCharSpace(0);
+
+        for (let l = startLine; l < endLine; l++) {
+          const line = wrappedLines[l];
+          const localIndex = l - startLine;
+
+          const textX = 8;
+          const textY = 8 + localIndex * lineStep + fontSize * 0.22;
+
+          if (line) {
+            pdf.text(line, textX, textY, { baseline: "alphabetic" });
+          }
+        }
+
+        /* Render Canvas Background */
+        const targetWidth = Math.max(1, Math.round(fullCanvas.width * imageScale));
+        const targetHeight = Math.max(1, Math.round(pageHeightCanvas * imageScale));
+
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = targetWidth;
+        pageCanvas.height = targetHeight;
+
+        const context = pageCanvas.getContext("2d");
+        if (!context) throw new Error("Unable to create PDF page.");
+
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, targetWidth, targetHeight);
+
+        context.drawImage(
+          fullCanvas,
+          0,
+          pageSlice.sourceY,
+          fullCanvas.width,
+          pageSlice.sourceHeight,
+          0,
+          Math.round(pageSlice.topPadding * imageScale),
+          targetWidth,
+          Math.round(pageSlice.sourceHeight * imageScale)
+        );
+
+        const pageImage =
+          format === "PNG"
+            ? pageCanvas.toDataURL("image/png")
+            : pageCanvas.toDataURL("image/jpeg", imageQuality);
+
+        if (!pageImage || pageImage === "data:,") {
+          throw new Error("PDF image generation failed.");
+        }
+
+        // Drawn AFTER the text, on top of it: this fully-opaque design image
+        // physically covers the text layer underneath with real pixels — not
+        // an alpha/opacity trick — so there is zero ghosting at any zoom or
+        // print setting, while the text itself remains 100% normal/extractable.
+        pdf.addImage(pageImage, format, 0, 0, pdfWidthMm, pdfHeightMm, undefined, imageCompression);
+      });
+
+      return pdf;
+    };
+
+    /* =========================================
+       QUALITY RESOLUTION STEPPING
+    ========================================= */
+    const totalCanvasPixels = fullCanvas.width * fullCanvas.height;
+    const PNG_SAFE_PIXEL_LIMIT = 15_000_000; // conservative threshold to avoid RangeError on giant lossless PNGs
+
+    const qualityPresets = [
+      ...(totalCanvasPixels <= PNG_SAFE_PIXEL_LIMIT
+        ? [{ imageScale: 1, imageQuality: 1, imageCompression: "NONE", format: "PNG" }]
+        : []),
+      { imageScale: 1, imageQuality: 0.97, imageCompression: "NONE", format: "JPEG" },
+      { imageScale: 1, imageQuality: 0.92, imageCompression: "MEDIUM", format: "JPEG" },
+      { imageScale: 0.9, imageQuality: 0.88, imageCompression: "MEDIUM", format: "JPEG" },
+    ];
+
+    let finalPdfBlob = null;
+
+    for (const preset of qualityPresets) {
+      try {
+        const generatedPdf = buildPdf(preset);
+        const arrayBuffer = generatedPdf.output("arraybuffer");
+        const candidateBlob = new Blob([arrayBuffer], { type: "application/pdf" });
+
+        if (candidateBlob.size <= MAX_PDF_SIZE || preset === qualityPresets[qualityPresets.length - 1]) {
+          finalPdfBlob = candidateBlob;
+          break;
+        }
+      } catch (presetError) {
+        console.warn("PDF preset failed, trying next preset:", preset, presetError);
+        // If even the last (lowest/safest) preset fails, rethrow so the outer catch can alert the user
+        if (preset === qualityPresets[qualityPresets.length - 1]) {
+          throw presetError;
+        }
+      }
+    }
+
+    if (!finalPdfBlob) throw new Error("Could not process PDF.");
+
+    const downloadUrl = URL.createObjectURL(finalPdfBlob);
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.href = downloadUrl;
+    downloadAnchor.download = `${cv.fullName ? cv.fullName.replace(/[^a-z0-9]/gi, "_") : "CV"}.pdf`;
+    document.body.appendChild(downloadAnchor);
+   downloadAnchor.click();
+downloadAnchor.remove();
+
+setTimeout(() => {
+  URL.revokeObjectURL(downloadUrl);
+}, 10000);
+
+return {
+  success: true,
+  fileSize:
+    finalPdfBlob.size >= 1024 * 1024
+      ? `${(finalPdfBlob.size / (1024 * 1024)).toFixed(2)} MB`
+      : `${(finalPdfBlob.size / 1024).toFixed(2)} KB`,
+};
   } catch (error) {
-    console.error("PDF download error:", error);
-    alert(error?.message || "PDF download failed.");
+    console.error("PDF Export Error:", error);
+    alert(error.message || "Failed to generate PDF. Please try again.");
   } finally {
     if (restoreImages) restoreImages();
-    removeExportClone(exportElement);
+    if (exportElement && exportElement.parentNode) {
+      exportElement.parentNode.removeChild(exportElement);
+    }
     setDownloadingPDF(false);
   }
 };
@@ -978,6 +1571,14 @@ const downloadPDF = async () => {
       const blob = htmlDocx.default.asBlob(html);
 
       saveAs(blob, `${safeFileName(cv.fullName || "qorliq-cv")}.docx`);
+
+return {
+  success: true,
+  fileSize:
+    blob.size >= 1024 * 1024
+      ? `${(blob.size / (1024 * 1024)).toFixed(2)} MB`
+      : `${(blob.size / 1024).toFixed(2)} KB`,
+};
     } catch (error) {
       console.error("Word download error:", error);
       alert(error?.message || "Word download failed.");
@@ -1066,23 +1667,39 @@ const downloadPDF = async () => {
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <button
-              type="button"
-              onClick={downloadPDF}
-              disabled={downloadingPDF || downloadingWord}
-              className="w-full rounded-full bg-[#B88A2C] px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-            >
-              {downloadingPDF ? "Preparing PDF..." : "Download PDF"}
-            </button>
+         <button
+  type="button"
+  onClick={handlePDFDownload}
+  disabled={
+    downloadingPDF ||
+    downloadingWord ||
+    savingDownloadRecord
+  }
+  className="w-full rounded-full bg-[#B88A2C] px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+>
+  {downloadingPDF
+    ? "Preparing PDF..."
+    : savingDownloadRecord
+      ? "Saving history..."
+      : "Download PDF"}
+</button>
 
-            <button
-              type="button"
-              onClick={downloadWord}
-              disabled={downloadingPDF || downloadingWord}
-              className="w-full rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-[#B88A2C] hover:text-[#B88A2C] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-            >
-              {downloadingWord ? "Preparing Word..." : "Download Word"}
-            </button>
+          <button
+  type="button"
+  onClick={handleWordDownload}
+  disabled={
+    downloadingPDF ||
+    downloadingWord ||
+    savingDownloadRecord
+  }
+  className="w-full rounded-full border border-white/15 px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-[#B88A2C] hover:text-[#B88A2C] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+>
+  {downloadingWord
+    ? "Preparing Word..."
+    : savingDownloadRecord
+      ? "Saving history..."
+      : "Download Word"}
+</button>
           </div>
         </div>
 
@@ -1360,7 +1977,7 @@ function EUPhotoDocumentCV({ cv, config }) {
               </div>
             </div>
 
-            <div className="text-[12px] leading-relaxed text-slate-700">
+            <div className="text-[12px] font-medium leading-relaxed text-slate-800">
               <SideCVSections cv={cv} accent={accent} />
             </div>
           </aside>
@@ -1370,13 +1987,13 @@ function EUPhotoDocumentCV({ cv, config }) {
               <div>
            <SmallHeadingLine title="Profile" accent={accent} />
 
-                <p className="whitespace-pre-line text-[12px] leading-relaxed text-slate-700">
+                <p className="whitespace-pre-line text-[12px] font-medium leading-relaxed text-slate-800">
                   {cv.summary}
                 </p>
               </div>
             )}
 
-            <div className="text-[12px] leading-relaxed text-slate-700">
+            <div className="text-[12px] font-medium leading-relaxed text-slate-800">
               <MainCVSections cv={cv} accent={accent} skipSummary />
             </div>
           </main>
@@ -1421,7 +2038,7 @@ function BerlinSidePhotoCV({ cv, config }) {
           <ContactStack cv={cv} dark />
         </div>
 
-        <div className="mt-8 space-y-8 [&_*]:text-white [&_p]:text-white/75 [&_li]:text-white/75 [&_span]:text-white/75">
+        <div className="mt-8 space-y-8 [&_*]:text-white [&_p]:text-white/90 [&_li]:text-white/90 [&_span]:text-white/90">
           <SideCVSections cv={cv} accent="#ffffff" dark />
         </div>
       </aside>
@@ -1434,7 +2051,7 @@ function BerlinSidePhotoCV({ cv, config }) {
           <CVSection title="Profile" accent={accent}>
             <HtmlText
   html={cv.summary}
-  className="text-[12px] leading-relaxed text-slate-700"
+  className="text-[12px] font-medium leading-relaxed text-slate-800"
 />
           </CVSection>
         </section>
@@ -1856,7 +2473,7 @@ function GraduateFreshCV({ cv, config }) {
                           </div>
 
                           {item.description && (
-                            <p className="mt-2 text-xs leading-relaxed text-slate-500 whitespace-pre-line font-medium">
+                            <p className="mt-2 text-xs leading-relaxed text-slate-800 whitespace-pre-line font-medium">
                               {item.description}
                             </p>
                           )}
@@ -1950,13 +2567,13 @@ function GraduateFreshCV({ cv, config }) {
                         </div>
 
                         {item.description && (
-                          <p className="mt-2 text-xs leading-relaxed text-slate-500 whitespace-pre-line font-medium pl-0.5">
+                          <p className="mt-2 text-xs leading-relaxed text-slate-800 whitespace-pre-line font-medium pl-0.5">
                             {item.description}
                           </p>
                         )}
 
                         {Array.isArray(item.bullets) && item.bullets.length > 0 && (
-                          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-relaxed text-slate-600 font-medium">
+                          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-relaxed text-slate-800 font-medium">
                             {item.bullets.map((bullet, bulletIndex) => (
                               <li key={bulletIndex}>{bullet}</li>
                             ))}
@@ -2517,7 +3134,7 @@ function ProjectManagerCV({ cv, config }) {
   <CVSection title="Professional Summary" accent={accent}>
     <HtmlText
       html={cv.summary}
-      className="text-[12px] leading-relaxed text-slate-700"
+      className="text-[12px] font-medium leading-relaxed text-slate-800"
     />
   </CVSection>
 ) : null}
@@ -2814,7 +3431,7 @@ function MainCVSections({
         <CVSection title="Professional Summary" accent={accent}>
           <HtmlText
             html={cv.summary}
-            className="text-[12px] leading-relaxed text-slate-700"
+            className="text-[12px] font-medium leading-relaxed text-slate-800"
           />
         </CVSection>
       ) : null}
@@ -2953,8 +3570,8 @@ function Paragraph({ text, dark = false, className = "" }) {
   return (
     <HtmlText
       html={text}
-      className={`text-sm leading-8 ${
-        dark ? "text-white/75" : "text-black/70"
+      className={`text-sm font-medium leading-8 ${
+        dark ? "text-white/90" : "text-black/85"
       } ${className}`}
     />
   );
@@ -2967,8 +3584,8 @@ function BulletList({ items, dark = false }) {
 
   return (
     <ul
-      className={`space-y-2 text-[12px] leading-6 ${
-        dark ? "text-white/75" : "text-slate-600"
+      className={`space-y-2 text-[12px] font-medium leading-6 ${
+        dark ? "text-white/90" : "text-slate-800"
       }`}
     >
       {list.map((item, index) => (
@@ -3018,8 +3635,8 @@ function LanguageList({ items, levels = [], dark = false }) {
       {list.map((item, index) => (
         <p
           key={`${item}-${index}`}
-          className={`text-[12px] ${
-            dark ? "text-white/75" : "text-slate-600"
+          className={`text-[12px] font-medium ${
+            dark ? "text-white/90" : "text-slate-800"
           }`}
         >
           {item}
@@ -3045,9 +3662,9 @@ function ContactLine({ cv, dark = false, center = false }) {
 
   return (
     <p
-      className={`mt-4 text-[11.5px] leading-6 ${
+      className={`mt-4 text-[11.5px] font-medium leading-6 ${
         center ? "text-center" : ""
-      } ${dark ? "text-white/65" : "text-slate-500"}`}
+      } ${dark ? "text-white/85" : "text-slate-700"}`}
     >
       {items.join(" · ")}
     </p>
@@ -3072,8 +3689,8 @@ function ContactStack({ cv, dark = false }) {
       {items.map((item, index) => (
         <p
           key={`${item}-${index}`}
-          className={`break-all text-[11.5px] leading-5 ${
-            dark ? "text-white/75" : "text-slate-600"
+          className={`break-all text-[11.5px] font-medium leading-5 ${
+            dark ? "text-white/90" : "text-slate-800"
           }`}
         >
           {item}
@@ -3132,7 +3749,7 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
           {hasHtmlText(item.description) ? (
             <HtmlText
               html={item.description}
-              className="mt-2 text-[12px] leading-relaxed text-slate-700"
+              className="mt-2 text-[12px] font-medium leading-relaxed text-slate-800"
             />
           ) : null}
         </div>

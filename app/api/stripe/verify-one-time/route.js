@@ -10,17 +10,27 @@ import ServiceOrder from "@/models/ServiceOrder";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getStripeClient() {
+  const secretKey = cleanText(process.env.STRIPE_SECRET_KEY);
+
+  if (!secretKey) {
+    return null;
+  }
+
+  return new Stripe(secretKey);
 }
 
 function makePhone(countryCode, number) {
   const code = cleanText(countryCode);
   const mobile = cleanText(number);
 
-  if (!code && !mobile) return "";
+  if (!code && !mobile) {
+    return "";
+  }
 
   return `${code}${mobile}`.replace(/\s+/g, "");
 }
@@ -31,8 +41,26 @@ function addDays(date, days) {
   return result;
 }
 
-async function updateUserServiceOrderStatus(userId, paymentIntentId, status) {
-  if (!userId || !paymentIntentId) return;
+function jsonError(message, status = 400, extra = {}) {
+  return NextResponse.json(
+    {
+      success: false,
+      hasAccess: false,
+      error: message,
+      ...extra,
+    },
+    { status }
+  );
+}
+
+async function updateUserServiceOrderStatus(
+  userId,
+  paymentIntentId,
+  status
+) {
+  if (!userId || !paymentIntentId) {
+    return;
+  }
 
   try {
     await User.updateOne(
@@ -48,11 +76,19 @@ async function updateUserServiceOrderStatus(userId, paymentIntentId, status) {
       }
     );
   } catch (error) {
-    console.log("User service order status update skipped:", error.message);
+    console.log(
+      "User service order status update skipped:",
+      error?.message
+    );
   }
 }
 
-function buildCustomerDetails({ customerForm = {}, metadata = {}, paymentIntent = {}, sessionEmail = "" }) {
+function buildCustomerDetails({
+  customerForm = {},
+  metadata = {},
+  paymentIntent = {},
+  sessionEmail = "",
+}) {
   const fallbackEmail =
     cleanText(customerForm.email).toLowerCase() ||
     cleanText(metadata.billingEmail).toLowerCase() ||
@@ -117,23 +153,22 @@ function buildCustomerDetails({ customerForm = {}, metadata = {}, paymentIntent 
     customerDetails.mobileNumber
   );
 
-  customerDetails.fullName = `${customerDetails.firstName} ${customerDetails.lastName}`
-    .trim()
-    .replace(/\s+/g, " ");
+  customerDetails.fullName =
+    `${customerDetails.firstName} ${customerDetails.lastName}`
+      .trim()
+      .replace(/\s+/g, " ");
 
   return customerDetails;
 }
 
 export async function POST(req) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json(
-        {
-          success: false,
-          hasAccess: false,
-          error: "Stripe secret key is missing.",
-        },
-        { status: 500 }
+    const stripe = getStripeClient();
+
+    if (!stripe) {
+      return jsonError(
+        "Stripe secret key is missing.",
+        500
       );
     }
 
@@ -144,21 +179,19 @@ export async function POST(req) {
     const customerForm = body.customerForm || {};
 
     if (!paymentIntentId) {
-      return NextResponse.json(
-        {
-          success: false,
-          hasAccess: false,
-          error: "Payment Intent ID is missing.",
-        },
-        { status: 400 }
+      return jsonError(
+        "Payment Intent ID is missing.",
+        400
       );
     }
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent =
+      await stripe.paymentIntents.retrieve(paymentIntentId);
 
     const metadata = paymentIntent.metadata || {};
 
-    const serviceId = cleanText(metadata.serviceId) || "cv-builder";
+    const serviceId =
+      cleanText(metadata.serviceId) || "cv-builder";
 
     const serviceName =
       cleanText(metadata.serviceName) ||
@@ -174,31 +207,42 @@ export async function POST(req) {
       cleanText(metadata.plan) ||
       "";
 
-    const finalPlanName = cleanText(metadata.planName);
-    const finalPlanType = cleanText(metadata.planType) || "payment";
-    const serviceOrderId = cleanText(metadata.serviceOrderId);
+    const finalPlanName =
+      cleanText(metadata.planName);
 
-    const isCvBuilderPlan = serviceId === "cv-builder";
-    const isLogoPlan = serviceId === "logo-design";
-    const isAdsPlan = serviceId === "ads";
-    const isGuestServicePlan = isLogoPlan || isAdsPlan;
+    const finalPlanType =
+      cleanText(metadata.planType) || "payment";
 
-    const session = await getServerSession(authOptions);
+    const serviceOrderId =
+      cleanText(metadata.serviceOrderId);
+
+    const isCvBuilderPlan =
+      serviceId === "cv-builder";
+
+    const isLogoPlan =
+      serviceId === "logo-design";
+
+    const isAdsPlan =
+      serviceId === "ads";
+
+    const isGuestServicePlan =
+      isLogoPlan || isAdsPlan;
+
+    const session =
+      await getServerSession(authOptions);
 
     /*
-      Login rule:
-      - CV Builder: login required
-      - Logo Design: no login required
-      - Ads: no login required
+      Login rules:
+      - CV Builder requires login.
+      - Logo Design and Ads allow guest checkout.
     */
-    if (isCvBuilderPlan && !session?.user?.email) {
-      return NextResponse.json(
-        {
-          success: false,
-          hasAccess: false,
-          error: "Please login first.",
-        },
-        { status: 401 }
+    if (
+      isCvBuilderPlan &&
+      !session?.user?.email
+    ) {
+      return jsonError(
+        "Please login first.",
+        401
       );
     }
 
@@ -208,69 +252,89 @@ export async function POST(req) {
 
     if (session?.user?.email) {
       user = await User.findOne({
-        email: session.user.email.toLowerCase().trim(),
+        email: cleanText(
+          session.user.email
+        ).toLowerCase(),
       });
     }
 
     if (isCvBuilderPlan && !user) {
-      return NextResponse.json(
-        {
-          success: false,
-          hasAccess: false,
-          error: "User not found.",
-        },
-        { status: 404 }
+      return jsonError(
+        "User not found.",
+        404
       );
     }
 
-    const customerDetails = buildCustomerDetails({
-      customerForm,
-      metadata,
-      paymentIntent,
-      sessionEmail: session?.user?.email || "",
-    });
+    const customerDetails =
+      buildCustomerDetails({
+        customerForm,
+        metadata,
+        paymentIntent,
+        sessionEmail:
+          session?.user?.email || "",
+      });
 
     if (!customerDetails.email) {
-      return NextResponse.json(
-        {
-          success: false,
-          hasAccess: false,
-          error: "Customer email is required.",
-        },
-        { status: 400 }
+      return jsonError(
+        "Customer email is required.",
+        400
       );
     }
 
     const billingDetails = {
-      firstName: customerDetails.firstName,
-      lastName: customerDetails.lastName,
-      email: customerDetails.email,
+      firstName:
+        customerDetails.firstName,
 
-      mobileCountryCode: customerDetails.mobileCountryCode,
-      mobileCountryFlag: customerDetails.mobileCountryFlag,
-      mobileNumber: customerDetails.mobileNumber,
-      phone: customerDetails.phone,
+      lastName:
+        customerDetails.lastName,
 
-      country: customerDetails.country,
-      countryName: customerDetails.countryName,
-      countryFlag: customerDetails.countryFlag,
+      email:
+        customerDetails.email,
 
-      postalCode: customerDetails.postalCode,
-      addressLine1: customerDetails.addressLine1,
-      addressLine2: customerDetails.addressLine2,
-      city: customerDetails.city,
+      mobileCountryCode:
+        customerDetails.mobileCountryCode,
+
+      mobileCountryFlag:
+        customerDetails.mobileCountryFlag,
+
+      mobileNumber:
+        customerDetails.mobileNumber,
+
+      phone:
+        customerDetails.phone,
+
+      country:
+        customerDetails.country,
+
+      countryName:
+        customerDetails.countryName,
+
+      countryFlag:
+        customerDetails.countryFlag,
+
+      postalCode:
+        customerDetails.postalCode,
+
+      addressLine1:
+        customerDetails.addressLine1,
+
+      addressLine2:
+        customerDetails.addressLine2,
+
+      city:
+        customerDetails.city,
     };
 
     const stripeCustomerId =
       typeof paymentIntent.customer === "string"
         ? paymentIntent.customer
-        : paymentIntent.customer?.id || user?.stripeCustomerId || "";
+        : paymentIntent.customer?.id ||
+          user?.stripeCustomerId ||
+          "";
 
     /*
-      If payment is not completed:
-      - Do not mark paid
-      - Do not create paid order
-      - Only update paymentStatus safely
+      Payment must be completed before access or order
+      confirmation can be granted.
     */
     if (paymentIntent.status !== "succeeded") {
       if (user) {
@@ -283,26 +347,40 @@ export async function POST(req) {
 
       if (serviceOrderId) {
         const updatePayload = {
-          paymentStatus: paymentIntent.status || "pending",
-          stripePaymentIntentId: paymentIntent.id,
+          paymentStatus:
+            paymentIntent.status || "pending",
+
+          stripePaymentIntentId:
+            paymentIntent.id,
+
           stripeCustomerId,
         };
 
-        if (paymentIntent.status === "canceled") {
-          updatePayload.orderStatus = "cancelled";
+        if (
+          paymentIntent.status === "canceled"
+        ) {
+          updatePayload.orderStatus =
+            "cancelled";
         }
 
-        await ServiceOrder.findByIdAndUpdate(serviceOrderId, {
-          $set: updatePayload,
-        });
+        await ServiceOrder.findByIdAndUpdate(
+          serviceOrderId,
+          {
+            $set: updatePayload,
+          }
+        );
       }
 
       return NextResponse.json(
         {
           success: false,
           hasAccess: false,
-          error: "Payment is not completed yet.",
-          stripeStatus: paymentIntent.status,
+          error:
+            "Payment is not completed yet.",
+
+          stripeStatus:
+            paymentIntent.status,
+
           serviceId,
           serviceName,
         },
@@ -313,127 +391,195 @@ export async function POST(req) {
     const now = new Date();
 
     /*
-      Stripe amount is always in minor unit:
-      GBP 15000 = £150.00
+      Stripe amounts use the smallest currency unit:
+      2399 = £23.99
+      15000 = £150.00
     */
-    const totalAmount = Number(paymentIntent.amount || 0);
-    const taxAmount = Number(metadata.taxAmount || 0);
-    const baseAmount = Number(metadata.baseAmount || totalAmount - taxAmount || totalAmount);
+    const totalAmount = Number(
+      paymentIntent.amount || 0
+    );
 
-    /*
-      CV Builder one-time:
-      - Login required
-      - 3 days access
-    */
-if (isCvBuilderPlan) {
-  const offerActive = metadata.offerActive === "true";
+    const taxAmount = Number(
+      metadata.taxAmount || 0
+    );
 
-  const offerStartedAt = metadata.offerStartedAt
-    ? new Date(metadata.offerStartedAt)
-    : user?.cvBuilderOfferStartedAt || null;
+    const baseAmount = Number(
+      metadata.baseAmount ||
+        totalAmount - taxAmount ||
+        totalAmount
+    );
 
-  const paidAt = paymentIntent.created
-    ? new Date(paymentIntent.created * 1000)
-    : new Date();
+    /* =====================================================
+       CV BUILDER ONE-TIME PAYMENT
+    ===================================================== */
 
-  const accessExpiresAt = addDays(paidAt, 3);
+    if (isCvBuilderPlan) {
+      const paidAt = paymentIntent.created
+        ? new Date(
+            paymentIntent.created * 1000
+          )
+        : now;
 
-  if (user?.stripeSubscriptionId) {
-    try {
-      await stripe.subscriptions.cancel(user.stripeSubscriptionId);
-    } catch (error) {
-      console.log("Old subscription cancel skipped:", error.message);
-    }
-  }
+      const accessExpiresAt =
+        addDays(paidAt, 3);
 
-  const updatedUser = await User.findByIdAndUpdate(
-    user._id,
-    {
-      $set: {
-        stripeCustomerId,
+      /*
+        A later one-time purchase replaces an existing
+        subscription and gives three days of access.
+      */
+      if (user?.stripeSubscriptionId) {
+        try {
+          await stripe.subscriptions.cancel(
+            user.stripeSubscriptionId
+          );
+        } catch (error) {
+          console.log(
+            "Old subscription cancellation skipped:",
+            error?.message
+          );
+        }
+      }
 
-        plan: "one-time",
-        planType: "one-time",
+      const updatedUser =
+        await User.findByIdAndUpdate(
+          user._id,
+          {
+            $set: {
+              stripeCustomerId,
+
+              plan: "one-time",
+              planType: "one-time",
+              accessType: "one-time",
+
+              paymentStatus: "paid",
+              lastPaymentStatus: "paid",
+              oneTimeAccessStatus: "active",
+
+              /*
+                These values are retained for compatibility
+                with existing access checks.
+              */
+              subscriptionStatus: "active",
+              hasActiveSubscription: true,
+
+              subscriptionStartDate: paidAt,
+              subscriptionEndDate:
+                accessExpiresAt,
+
+              accessExpiresAt,
+
+              stripePaymentIntentId:
+                paymentIntent.id,
+
+              stripeSubscriptionId: "",
+
+              billingDetails,
+
+              updatedAt: now,
+            },
+
+            /*
+              Remove the old offer/countdown field
+              from existing MongoDB records.
+            */
+            $unset: {
+              cvBuilderOfferStartedAt: "",
+            },
+          },
+          {
+            new: true,
+            runValidators: true,
+          }
+        );
+
+      if (!updatedUser) {
+        return jsonError(
+          "Unable to activate CV Builder access.",
+          500
+        );
+      }
+
+      await updateUserServiceOrderStatus(
+        user._id,
+        paymentIntent.id,
+        "paid"
+      );
+
+      if (serviceOrderId) {
+        await ServiceOrder.findByIdAndUpdate(
+          serviceOrderId,
+          {
+            $set: {
+              paymentStatus: "paid",
+
+              stripePaymentIntentId:
+                paymentIntent.id,
+
+              stripeCustomerId,
+
+              baseAmount,
+              taxAmount,
+              totalAmount,
+
+              currency:
+                paymentIntent.currency ||
+                "gbp",
+
+              orderStatus: "new",
+              updatedAt: now,
+            },
+          }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        type: "one-time",
+
+        hasAccess: true,
+        hasOneTimeAccess: true,
+        orderConfirmed: true,
+        guestCheckout: false,
+
         accessType: "one-time",
 
+        serviceId,
+        serviceName,
+
+        message:
+          "CV Builder access activated.",
+
         paymentStatus: "paid",
-        lastPaymentStatus: "paid",
-        oneTimeAccessStatus: "active",
+        stripeStatus:
+          paymentIntent.status,
 
-        subscriptionStatus: "active",
-        hasActiveSubscription: true,
+        plan: updatedUser.plan,
 
-        subscriptionStartDate: paidAt,
-        subscriptionEndDate: accessExpiresAt,
-        accessExpiresAt,
+        subscriptionStatus:
+          updatedUser.subscriptionStatus,
 
-        stripePaymentIntentId: paymentIntent.id,
-        stripeSubscriptionId: "",
+        subscriptionStartDate:
+          updatedUser.subscriptionStartDate,
 
-        billingDetails,
-        cvBuilderOfferStartedAt: offerStartedAt,
+        subscriptionEndDate:
+          updatedUser.subscriptionEndDate,
 
-        updatedAt: new Date(),
-      },
-    },
-    { new: true }
-  );
+        accessExpiresAt:
+          updatedUser.accessExpiresAt,
 
-  await updateUserServiceOrderStatus(user._id, paymentIntent.id, "paid");
+        hasActiveSubscription:
+          updatedUser.hasActiveSubscription,
 
-  if (serviceOrderId) {
-    await ServiceOrder.findByIdAndUpdate(serviceOrderId, {
-      $set: {
-        paymentStatus: "paid",
-        stripePaymentIntentId: paymentIntent.id,
-        stripeCustomerId,
-        baseAmount,
-        taxAmount,
-        totalAmount,
-        currency: paymentIntent.currency || "gbp",
-        orderStatus: "new",
-        updatedAt: new Date(),
-      },
-    });
-  }
+        billingDetails:
+          updatedUser.billingDetails ||
+          billingDetails,
+      });
+    }
 
-  return NextResponse.json({
-    success: true,
-    type: "one-time",
-    hasAccess: true,
-    hasOneTimeAccess: true,
-    orderConfirmed: true,
-    guestCheckout: false,
+    /* =====================================================
+       LOGO DESIGN / ADS PAYMENT
+    ===================================================== */
 
-    accessType: "one-time",
-    serviceId,
-    serviceName,
-    message: "CV Builder access activated.",
-
-    paymentStatus: "paid",
-    stripeStatus: paymentIntent.status,
-    plan: updatedUser.plan,
-
-    subscriptionStatus: updatedUser.subscriptionStatus,
-    subscriptionStartDate: updatedUser.subscriptionStartDate,
-    subscriptionEndDate: updatedUser.subscriptionEndDate,
-    accessExpiresAt: updatedUser.accessExpiresAt,
-    hasActiveSubscription: updatedUser.hasActiveSubscription,
-
-    billingDetails: updatedUser.billingDetails || billingDetails,
-
-    offerActive,
-    offerStartedAt,
-    offerExpiresAt: metadata.offerExpiresAt || null,
-    priceEnvUsed: metadata.priceEnvUsed || "",
-    cvBuilderOfferStartedAt: updatedUser.cvBuilderOfferStartedAt || null,
-  });
-}
-    /*
-      Logo Design / Ads:
-      - Guest checkout allowed
-      - ServiceOrder saved/updated after successful payment
-    */
     if (isGuestServicePlan) {
       const orderUpdate = {
         serviceId,
@@ -444,35 +590,65 @@ if (isCvBuilderPlan) {
         planType: finalPlanType,
 
         customer: {
-          firstName: customerDetails.firstName,
-          lastName: customerDetails.lastName,
-          fullName: customerDetails.fullName,
-          email: customerDetails.email,
+          firstName:
+            customerDetails.firstName,
 
-          mobileCountryCode: customerDetails.mobileCountryCode,
-          mobileCountryFlag: customerDetails.mobileCountryFlag,
-          mobileNumber: customerDetails.mobileNumber,
-          phone: customerDetails.phone,
+          lastName:
+            customerDetails.lastName,
 
-          country: customerDetails.country,
-          countryName: customerDetails.countryName,
-          countryFlag: customerDetails.countryFlag,
+          fullName:
+            customerDetails.fullName,
 
-          postalCode: customerDetails.postalCode,
-          addressLine1: customerDetails.addressLine1,
-          addressLine2: customerDetails.addressLine2,
-          city: customerDetails.city,
+          email:
+            customerDetails.email,
+
+          mobileCountryCode:
+            customerDetails.mobileCountryCode,
+
+          mobileCountryFlag:
+            customerDetails.mobileCountryFlag,
+
+          mobileNumber:
+            customerDetails.mobileNumber,
+
+          phone:
+            customerDetails.phone,
+
+          country:
+            customerDetails.country,
+
+          countryName:
+            customerDetails.countryName,
+
+          countryFlag:
+            customerDetails.countryFlag,
+
+          postalCode:
+            customerDetails.postalCode,
+
+          addressLine1:
+            customerDetails.addressLine1,
+
+          addressLine2:
+            customerDetails.addressLine2,
+
+          city:
+            customerDetails.city,
         },
 
         stripeCustomerId,
-        stripePaymentIntentId: paymentIntent.id,
+
+        stripePaymentIntentId:
+          paymentIntent.id,
 
         paymentStatus: "paid",
 
         baseAmount,
         taxAmount,
         totalAmount,
-        currency: paymentIntent.currency || "gbp",
+
+        currency:
+          paymentIntent.currency || "gbp",
 
         orderStatus: "new",
         source: "checkout",
@@ -483,24 +659,35 @@ if (isCvBuilderPlan) {
           planType: finalPlanType,
           serviceId,
           serviceName,
-          stripeStatus: paymentIntent.status,
-          guestCheckout: user ? false : true,
+
+          stripeStatus:
+            paymentIntent.status,
+
+          guestCheckout: !user,
+
           paidAt: now.toISOString(),
-          paymentIntentMetadata: metadata,
+
+          paymentIntentMetadata:
+            metadata,
         },
       };
 
       if (serviceOrderId) {
-        await ServiceOrder.findByIdAndUpdate(serviceOrderId, {
-          $set: orderUpdate,
-        });
+        await ServiceOrder.findByIdAndUpdate(
+          serviceOrderId,
+          {
+            $set: orderUpdate,
+          }
+        );
       } else {
         await ServiceOrder.findOneAndUpdate(
           {
-            stripePaymentIntentId: paymentIntent.id,
+            stripePaymentIntentId:
+              paymentIntent.id,
           },
           {
             $set: orderUpdate,
+
             $setOnInsert: {
               createdAt: now,
             },
@@ -519,7 +706,7 @@ if (isCvBuilderPlan) {
         hasOneTimeAccess: false,
         orderConfirmed: true,
 
-        guestCheckout: user ? false : true,
+        guestCheckout: !user,
 
         accessType: serviceId,
         serviceId,
@@ -531,35 +718,75 @@ if (isCvBuilderPlan) {
             : "Ads Service order confirmed.",
 
         paymentStatus: "paid",
-        stripeStatus: paymentIntent.status,
+
+        stripeStatus:
+          paymentIntent.status,
+
         plan: finalPlanId,
 
-        logoDesignStatus: serviceId === "logo-design" ? "paid" : "",
-        adsServiceStatus: serviceId === "ads" ? "paid" : "",
+        logoDesignStatus:
+          serviceId === "logo-design"
+            ? "paid"
+            : "",
+
+        adsServiceStatus:
+          serviceId === "ads"
+            ? "paid"
+            : "",
 
         billingDetails,
       });
     }
 
-    return NextResponse.json(
+    return jsonError(
+      "Unsupported service type.",
+      400,
       {
-        success: false,
-        hasAccess: false,
-        error: "Unsupported service type.",
         serviceId,
-      },
-      { status: 400 }
+      }
     );
   } catch (error) {
-    console.error("Verify one-time payment error:", error);
+    const errorMessage =
+      error?.raw?.message ||
+      error?.message ||
+      "Unable to verify one-time payment.";
+
+    const statusCode =
+      Number.isInteger(error?.statusCode) &&
+      error.statusCode >= 400 &&
+      error.statusCode < 600
+        ? error.statusCode
+        : 500;
+
+    console.error(
+      "Verify one-time payment error:",
+      {
+        name: error?.name,
+        type: error?.type,
+        message: error?.message,
+
+        rawMessage:
+          error?.raw?.message,
+
+        code:
+          error?.raw?.code ||
+          error?.code,
+
+        requestId:
+          error?.requestId,
+
+        statusCode,
+        stack: error?.stack,
+      }
+    );
 
     return NextResponse.json(
       {
         success: false,
         hasAccess: false,
-        error: error.message || "Unable to verify one-time payment.",
+        error: errorMessage,
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }

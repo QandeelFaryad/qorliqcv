@@ -4,10 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pricingPlans } from "@/lib/pricingPlans";
-import {
-  getOfferStartedAt,
-  getOfferState,
-} from "@/lib/cvOfferCountdown";
 
 const SERVICE_TABS = [
   {
@@ -18,10 +14,14 @@ const SERVICE_TABS = [
       "Download your professional CV in PDF and MS Word, edit it when your job search changes, and keep your application ready.",
     startText: "Start today from only",
     startPrice: "£1.99",
-    standardStartPrice: "£4.99",
     recommendation:
       "Most customers choose the 6 Months plan because it gives enough time to edit, improve, and download CV versions for different job applications.",
-    tags: ["PDF Download", "MS Word Download", "Print-Ready CV", "Edit Anytime"],
+    tags: [
+      "PDF Download",
+      "MS Word Download",
+      "Print-Ready CV",
+      "Edit Anytime",
+    ],
     footer:
       "Subscription plan savings are calculated against the standard monthly value of £4.99. The longer your plan, the more value you get while continuing to edit, improve, and download your CV.",
   },
@@ -54,7 +54,12 @@ const SERVICE_TABS = [
     startPrice: "£30",
     recommendation:
       "Most customers choose Campaign Setup because it gives a complete starting point with ad copy, audience direction, and campaign structure.",
-    tags: ["Ad Copy", "Audience Targeting", "Campaign Setup", "Creative Direction"],
+    tags: [
+      "Ad Copy",
+      "Audience Targeting",
+      "Campaign Setup",
+      "Creative Direction",
+    ],
     footer:
       "Paid advertisement packages cover strategy, setup, campaign structure, copy, and marketing support. Advertising budget is separate from our service fee and should normally be paid directly by the client to the advertising platform. If we are asked to pay the ad budget on the client’s behalf, the required campaign budget must be paid in advance.",
   },
@@ -63,7 +68,11 @@ const SERVICE_TABS = [
 function CheckIcon() {
   return (
     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-qorliqGold text-black">
-      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+      <svg
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        className="h-3.5 w-3.5"
+      >
         <path
           fillRule="evenodd"
           d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42 0L3.29 9.124a1 1 0 1 1 1.42-1.408l4.09 4.12 6.49-6.54a1 1 0 0 1 1.414-.006Z"
@@ -96,7 +105,9 @@ function getInitialService(requestedService) {
   }
 
   if (typeof window !== "undefined") {
-    const savedService = window.localStorage.getItem("selectedPricingService");
+    const savedService = window.localStorage.getItem(
+      "selectedPricingService"
+    );
 
     if (SERVICE_TABS.some((item) => item.id === savedService)) {
       return savedService;
@@ -109,44 +120,27 @@ function getInitialService(requestedService) {
 export default function PricingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const cvId = searchParams.get("cvId") || "";
   const template = searchParams.get("template") || "";
-  const requestedService = searchParams.get("service") || "cv-builder";
-
-  const [offerState, setOfferState] = useState(null);
+  const requestedService =
+    searchParams.get("service") || "cv-builder";
 
   const [activeService, setActiveService] = useState(() =>
     getInitialService(requestedService)
   );
 
   useEffect(() => {
-    window.localStorage.setItem("selectedPricingService", activeService);
-  }, [activeService]);
-
-  useEffect(() => {
-    if (activeService !== "cv-builder") {
-      setOfferState(null);
-      return;
-    }
-
-    const startedAt = getOfferStartedAt();
-
-    const updateOfferState = () => {
-      const nextState = getOfferState(startedAt);
-      setOfferState(nextState);
-    };
-
-    updateOfferState();
-
-    const interval = setInterval(updateOfferState, 1000);
-
-    return () => clearInterval(interval);
+    window.localStorage.setItem(
+      "selectedPricingService",
+      activeService
+    );
   }, [activeService]);
 
   const activeTab =
-    SERVICE_TABS.find((item) => item.id === activeService) || SERVICE_TABS[0];
+    SERVICE_TABS.find((item) => item.id === activeService) ||
+    SERVICE_TABS[0];
 
   const filteredPlans = useMemo(() => {
     return pricingPlans.filter((plan) => {
@@ -155,72 +149,45 @@ export default function PricingContent() {
     });
   }, [activeService]);
 
-  const isCvOfferActive =
-    activeService === "cv-builder" && offerState?.isActive === true;
-
-  const isCvOfferExpired =
-    activeService === "cv-builder" && offerState?.isExpired === true;
-
-  const isCvBuilderPlan = (plan) =>
-    (plan.serviceId || "cv-builder") === "cv-builder";
-
   const hasOldPrice = (plan) =>
-    Boolean(plan.oldPrice) && !plan.contactOnly && plan.type !== "contact";
+    Boolean(plan.oldPrice) &&
+    !plan.contactOnly &&
+    plan.type !== "contact";
 
   const shouldShowOldPrice = (plan) => {
-    if (!hasOldPrice(plan)) return false;
-
-    if (isCvBuilderPlan(plan)) {
-      return isCvOfferActive;
-    }
-
-    return true;
+    return hasOldPrice(plan);
   };
 
   const shouldShowOfferBadges = (plan) => {
-    if (!isCvBuilderPlan(plan)) {
-      return Boolean(plan.discount);
-    }
-
-    return isCvOfferActive;
+    return Boolean(plan.discount);
   };
 
   const getDisplayPrice = (plan) => {
-    if (!isCvBuilderPlan(plan)) {
-      return plan.price;
-    }
-
-    return isCvOfferActive ? plan.price : plan.oldPrice || plan.price;
+    return plan.price;
   };
 
   const getPriceLabel = (plan) => {
-    if (!isCvBuilderPlan(plan)) {
-      return hasOldPrice(plan) ? "Discounted price" : "Service price";
+    if (plan.contactOnly || plan.type === "contact") {
+      return "Contact for pricing";
     }
 
-    return isCvOfferActive ? "Limited-time offer price" : "Standard price";
+    return hasOldPrice(plan) ? "Offer price" : "Service price";
   };
 
   const getStartPrice = () => {
-    if (activeService !== "cv-builder") {
-      return activeTab.startPrice;
-    }
-
-    return isCvOfferActive
-      ? activeTab.startPrice
-      : activeTab.standardStartPrice || "£4.99";
+    return activeTab.startPrice;
   };
 
   const getPriceBadgeText = (plan) => {
-    if (plan.contactOnly) return "Contact for pricing";
-
-    if (plan.discount) return plan.discount;
-
-    if (isCvBuilderPlan(plan) && isCvOfferActive) {
-      return "Limited Offer";
+    if (plan.contactOnly || plan.type === "contact") {
+      return "Contact for pricing";
     }
 
-    if (!isCvBuilderPlan(plan) && hasOldPrice(plan)) {
+    if (plan.discount) {
+      return plan.discount;
+    }
+
+    if (hasOldPrice(plan)) {
       return "Special Price";
     }
 
@@ -240,15 +207,26 @@ export default function PricingContent() {
     params.set("plan", plan.id);
     params.set("service", activeService);
 
-    if (cvId) params.set("cvId", cvId);
-    if (template) params.set("template", template);
+    if (cvId) {
+      params.set("cvId", cvId);
+    }
+
+    if (template) {
+      params.set("template", template);
+    }
 
     const checkoutUrl = `/checkout?${params.toString()}`;
 
-    const serviceId = plan.serviceId || activeService || "cv-builder";
+    const serviceId =
+      plan.serviceId || activeService || "cv-builder";
 
-    if (serviceId === "cv-builder" && status !== "authenticated") {
-      router.push(`/login?callbackUrl=${encodeURIComponent(checkoutUrl)}`);
+    if (
+      serviceId === "cv-builder" &&
+      status !== "authenticated"
+    ) {
+      router.push(
+        `/login?callbackUrl=${encodeURIComponent(checkoutUrl)}`
+      );
       return;
     }
 
@@ -259,8 +237,11 @@ export default function PricingContent() {
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(255,255,255,0.10),transparent_28%),linear-gradient(135deg,#070707_0%,#111111_42%,#18130a_100%)] px-4 py-12 text-white">
       <section className="relative mx-auto max-w-7xl">
         <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-qorliqGold/20 blur-[110px]" />
+
         <div className="pointer-events-none absolute right-0 top-40 h-72 w-72 rounded-full bg-yellow-300/10 blur-[120px]" />
+
         <div className="pointer-events-none absolute bottom-10 left-0 h-80 w-80 rounded-full bg-white/[0.04] blur-[130px]" />
+
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:56px_56px] opacity-30" />
 
         <div className="relative mx-auto max-w-4xl text-center">
@@ -336,12 +317,19 @@ export default function PricingContent() {
         >
           {filteredPlans.map((plan) => {
             const isPopular = Boolean(plan.highlight);
+
             const buttonLabel = plan.contactOnly
               ? "Contact Us"
               : "Select Package";
-            const showOfferBadges = shouldShowOfferBadges(plan);
-            const oldPriceVisible = shouldShowOldPrice(plan);
-            const badgeText = getPriceBadgeText(plan);
+
+            const showOfferBadges =
+              shouldShowOfferBadges(plan);
+
+            const oldPriceVisible =
+              shouldShowOldPrice(plan);
+
+            const badgeText =
+              getPriceBadgeText(plan);
 
             return (
               <article
@@ -353,7 +341,9 @@ export default function PricingContent() {
                 }`}
               >
                 <div className="pointer-events-none absolute inset-x-6 top-0 h-24 rounded-b-full bg-gradient-to-b from-white/12 to-transparent opacity-0 blur-xl transition duration-500 group-hover:opacity-100" />
+
                 <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-qorliqGold/10 blur-2xl transition duration-500 group-hover:bg-qorliqGold/20" />
+
                 <div className="pointer-events-none absolute -left-10 bottom-24 h-28 w-28 rounded-full bg-white/5 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
 
                 {isPopular ? (
@@ -369,7 +359,7 @@ export default function PricingContent() {
 
                   {showOfferBadges ? (
                     <span className="rounded-full border border-qorliqGold/25 bg-qorliqGold/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-qorliqGold">
-                      {plan.discount || "Package"}
+                      {plan.discount}
                     </span>
                   ) : null}
                 </div>
@@ -397,7 +387,8 @@ export default function PricingContent() {
                         </p>
 
                         <p className="mt-1 text-xs leading-5 text-white/50">
-                          {plan.recommendationTone || plan.smallText}
+                          {plan.recommendationTone ||
+                            plan.smallText}
                         </p>
                       </div>
                     </div>
@@ -449,7 +440,9 @@ export default function PricingContent() {
                     ) : null}
 
                     <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/60">
-                      {oldPriceVisible ? "Discounted price" : "Standard price"}
+                      {oldPriceVisible
+                        ? "Offer price"
+                        : "Standard price"}
                     </span>
                   </div>
 
@@ -482,21 +475,26 @@ export default function PricingContent() {
                   </p>
 
                   <p className="mt-3 text-xs leading-6 text-white/60">
-                    {plan.why || "Choose this package based on your project needs."}
+                    {plan.why ||
+                      "Choose this package based on your project needs."}
                   </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => goToCheckout(plan)}
-                  disabled={status === "loading" && !plan.contactOnly}
+                  disabled={
+                    status === "loading" &&
+                    !plan.contactOnly
+                  }
                   className={`relative mt-auto rounded-full px-6 py-4 text-xs font-black uppercase tracking-[0.16em] transition duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
                     isPopular
                       ? "bg-qorliqGold text-black hover:bg-white"
                       : "bg-white text-black hover:bg-qorliqGold"
                   }`}
                 >
-                  {status === "loading" && !plan.contactOnly
+                  {status === "loading" &&
+                  !plan.contactOnly
                     ? "Checking..."
                     : buttonLabel}
                 </button>
@@ -506,7 +504,9 @@ export default function PricingContent() {
         </div>
 
         <div className="relative mx-auto mt-10 max-w-4xl rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 text-center">
-          <p className="text-sm leading-7 text-white/60">{activeTab.footer}</p>
+          <p className="text-sm leading-7 text-white/60">
+            {activeTab.footer}
+          </p>
         </div>
       </section>
     </main>

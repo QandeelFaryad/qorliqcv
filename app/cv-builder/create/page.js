@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getSession, signIn, useSession } from "next-auth/react";
 
 const colorSets = {
   blue: ["#2563EB", "#1D4ED8", "#0F172A", "#60A5FA", "#DBEAFE"],
@@ -286,6 +287,445 @@ async function generateCvAiContent({ type, cv }) {
   return data.html;
 }
 
+/*
+|--------------------------------------------------------------------------
+| Auth-gate popup — shown when a guest tries to save a CV
+|--------------------------------------------------------------------------
+*/
+
+function AuthPopup({ onClose, onSuccess }) {
+  const [mode, setMode] = useState("login");
+  const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
+  const [error, setError] = useState("");
+  const submittingRef = useRef(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const updateForm = (field, value) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const switchMode = (next) => {
+    setMode(next);
+    setError("");
+    setSuccessMsg("");
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
+    setError("");
+    setSuccessMsg("");
+
+    try {
+      const result = await signIn("credentials", {
+        email: form.email.trim(),
+        password: form.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password.");
+        return;
+      }
+
+      const updated = await getSession();
+
+      if (!updated?.user) {
+        setError("Login completed but account details could not be loaded.");
+        return;
+      }
+
+      onSuccess();
+    } catch {
+      setError("Unable to login. Please try again.");
+    } finally {
+      setLoading(false);
+      submittingRef.current = false;
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
+    setError("");
+    setSuccessMsg("");
+
+    try {
+      if (!form.name.trim() || !form.email.trim() || !form.password || !form.confirmPassword) {
+        setError("All fields are required.");
+        return;
+      }
+
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          confirmPassword: form.confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || "Unable to create account.");
+        return;
+      }
+
+      /* Registration successful — switch to login and show success banner */
+      setForm((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+      setMode("login");
+      setSuccessMsg("Account created! Please login to continue.");
+    } catch {
+      setError("Unable to create account. Please try again.");
+    } finally {
+      setLoading(false);
+      submittingRef.current = false;
+    }
+  };
+
+  /* Close on backdrop click */
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  return (
+    <>
+      {/* ---- Styles (scoped via unique class) ---- */}
+      <style>{`
+        .auth-popup-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          background: rgba(0,0,0,0.72);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          animation: authFadeIn 0.18s ease;
+        }
+        @keyframes authFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .auth-popup-sheet {
+          width: 100%;
+          max-height: 90dvh;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          background: #17181D;
+          border-top: 1px solid rgba(255,255,255,0.10);
+          border-radius: 24px 24px 0 0;
+          padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+          animation: authSlideUp 0.22s cubic-bezier(0.32,0.72,0,1);
+          box-shadow: 0 -16px 64px rgba(0,0,0,0.6);
+        }
+        @keyframes authSlideUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @media (min-width: 1024px) {
+          .auth-popup-backdrop {
+            align-items: center;
+          }
+          .auth-popup-sheet {
+            width: 100%;
+            max-width: 420px;
+            max-height: 92dvh;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.10);
+            padding: 32px;
+            animation: authScaleIn 0.2s cubic-bezier(0.32,0.72,0,1);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+          }
+          @keyframes authScaleIn {
+            from { opacity: 0; transform: scale(0.95) translateY(8px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+          }
+        }
+      `}</style>
+
+      {/* ---- Backdrop ---- */}
+      <div className="auth-popup-backdrop" onClick={handleBackdropClick}>
+        <div className="auth-popup-sheet">
+
+          {/* Header row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+            <div>
+              <p style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#B88A2C", marginBottom: "4px" }}>
+                Sign in required
+              </p>
+              <p style={{ fontSize: "18px", fontWeight: 900, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1.2 }}>
+                {mode === "login" ? "Login to save your CV" : "Create an account"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                flexShrink: 0,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.05)",
+                color: "rgba(255,255,255,0.6)",
+                fontSize: 18,
+                lineHeight: 1,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginLeft: 12,
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Tab switcher */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderRadius: 999, background: "rgba(0,0,0,0.4)", padding: 4, marginBottom: 20 }}>
+            {["login", "register"].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => switchMode(tab)}
+                style={{
+                  borderRadius: 999,
+                  padding: "10px 16px",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  border: "none",
+                  transition: "background 0.15s, color 0.15s",
+                  background: mode === tab ? "#B88A2C" : "transparent",
+                  color: mode === tab ? "#000" : "rgba(255,255,255,0.5)",
+                }}
+              >
+                {tab === "login" ? "Login" : "Sign Up"}
+              </button>
+            ))}
+          </div>
+
+          {/* Success banner (after registration) */}
+          {successMsg && (
+            <div style={{
+              marginBottom: 16,
+              padding: "12px 16px",
+              borderRadius: 14,
+              border: "1px solid rgba(52,211,153,0.25)",
+              background: "rgba(5,150,105,0.12)",
+              fontSize: 13,
+              color: "#6ee7b7",
+              fontWeight: 600,
+            }}>
+              {successMsg}
+            </div>
+          )}
+
+          {/* Form */}
+          <form
+            onSubmit={mode === "login" ? handleLogin : handleRegister}
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
+            {mode === "register" && (
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => updateForm("name", e.target.value)}
+                  placeholder="Enter your full name"
+                  required
+                  style={{
+                    width: "100%",
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "rgba(0,0,0,0.4)",
+                    padding: "14px 16px",
+                    fontSize: 14,
+                    color: "#fff",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+
+            <div>
+              <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => updateForm("email", e.target.value)}
+                placeholder="Enter your email"
+                required
+                style={{
+                  width: "100%",
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(0,0,0,0.4)",
+                  padding: "14px 16px",
+                  fontSize: 14,
+                  color: "#fff",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => updateForm("password", e.target.value)}
+                placeholder="Enter password"
+                required
+                style={{
+                  width: "100%",
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(0,0,0,0.4)",
+                  padding: "14px 16px",
+                  fontSize: 14,
+                  color: "#fff",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            {mode === "register" && (
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(e) => updateForm("confirmPassword", e.target.value)}
+                  placeholder="Confirm password"
+                  required
+                  style={{
+                    width: "100%",
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "rgba(0,0,0,0.4)",
+                    padding: "14px 16px",
+                    fontSize: 14,
+                    color: "#fff",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+              <div style={{
+                padding: "12px 16px",
+                borderRadius: 14,
+                border: "1px solid rgba(248,113,113,0.25)",
+                background: "rgba(239,68,68,0.10)",
+                fontSize: 13,
+                color: "#fca5a5",
+                fontWeight: 600,
+              }}>
+                {error}
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: "100%",
+                borderRadius: 999,
+                background: loading ? "rgba(184,138,44,0.6)" : "#B88A2C",
+                color: "#000",
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                padding: "16px 24px",
+                border: "none",
+                cursor: loading ? "not-allowed" : "pointer",
+                transition: "background 0.15s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                marginTop: 4,
+              }}
+            >
+              {loading && (
+                <span style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "50%",
+                  border: "2px solid rgba(0,0,0,0.25)",
+                  borderTopColor: "#000",
+                  display: "inline-block",
+                  animation: "authSpin 0.7s linear infinite",
+                }} />
+              )}
+              <style>{`@keyframes authSpin { to { transform: rotate(360deg); } }`}</style>
+              {loading
+                ? "Please wait..."
+                : mode === "login"
+                  ? "Login & Continue"
+                  : "Create Account"}
+            </button>
+          </form>
+
+          {/* Switch mode link */}
+          <p style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+            {mode === "login" ? "Don't have an account? " : "Already have an account? "}
+            <button
+              type="button"
+              onClick={() => switchMode(mode === "login" ? "register" : "login")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#B88A2C", fontWeight: 700, fontSize: 12, padding: 0 }}
+            >
+              {mode === "login" ? "Sign up" : "Login"}
+            </button>
+          </p>
+
+        </div>
+      </div>
+    </>
+  );
+}
+
 function CreateCVContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -306,6 +746,27 @@ function CreateCVContent() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [cvId, setCvId] = useState(null);
+
+  /* Auth-gate */
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Auth-gate: wrap any save action — opens popup for guests
+  |--------------------------------------------------------------------------
+  */
+  const requireAuth = useCallback(
+    (action) => {
+      if (isLoggedIn) {
+        action();
+      } else {
+        setShowAuthPopup(true);
+      }
+    },
+    [isLoggedIn]
+  );
 
   const baseConfig = templateConfig[form.template] || templateConfig["clean-ats"];
 
@@ -393,22 +854,22 @@ function CreateCVContent() {
 
       experiences: oldCVData?.experience
         ? [
-            {
-              ...emptyExperience,
-              jobTitle: oldCVData?.jobTitle || "",
-              location: oldCVData?.location || "",
-              description: oldCVData.experience,
-            },
-          ]
+          {
+            ...emptyExperience,
+            jobTitle: oldCVData?.jobTitle || "",
+            location: oldCVData?.location || "",
+            description: oldCVData.experience,
+          },
+        ]
         : prev.experiences,
 
       educations: oldCVData?.education
         ? [
-            {
-              ...emptyEducation,
-              description: oldCVData.education,
-            },
-          ]
+          {
+            ...emptyEducation,
+            description: oldCVData.education,
+          },
+        ]
         : prev.educations,
     }));
   }, [searchParams]);
@@ -434,75 +895,75 @@ function CreateCVContent() {
         alert("CV data response me nahi mili.");
         return;
       }
-setForm({
-  ...emptyForm,
-  template: templateConfig[cvData.template] ? cvData.template : "clean-ats",
-  selectedColor:
-    cvData.selectedColor ||
-    templateConfig[cvData.template]?.accent ||
-    "#2563EB",
+      setForm({
+        ...emptyForm,
+        template: templateConfig[cvData.template] ? cvData.template : "clean-ats",
+        selectedColor:
+          cvData.selectedColor ||
+          templateConfig[cvData.template]?.accent ||
+          "#2563EB",
 
-  fullName: cvData.fullName || "",
-  jobTitle: cvData.jobTitle || "",
-  email: cvData.email || "",
-  phone: cvData.phone || "",
-  location: cvData.location || "",
-  linkedIn: cvData.linkedIn || "",
-  github: cvData.github || "",
-  portfolio: cvData.portfolio || "",
-  website: cvData.website || "",
+        fullName: cvData.fullName || "",
+        jobTitle: cvData.jobTitle || "",
+        email: cvData.email || "",
+        phone: cvData.phone || "",
+        location: cvData.location || "",
+        linkedIn: cvData.linkedIn || "",
+        github: cvData.github || "",
+        portfolio: cvData.portfolio || "",
+        website: cvData.website || "",
 
-  photo: cvData.photo || "",
-  photoZoom: cvData.photoZoom || 1,
-  photoPositionX: cvData.photoPositionX || 50,
-  photoPositionY: cvData.photoPositionY || 50,
+        photo: cvData.photo || "",
+        photoZoom: cvData.photoZoom || 1,
+        photoPositionX: cvData.photoPositionX || 50,
+        photoPositionY: cvData.photoPositionY || 50,
 
-  summary: cvData.summary || "",
+        summary: cvData.summary || "",
 
-  skills: Array.isArray(cvData.skills) ? cvData.skills : [],
-  skillLevels: Array.isArray(cvData.skillLevels) ? cvData.skillLevels : [],
-  languages: Array.isArray(cvData.languages) ? cvData.languages : [],
-  languageLevels: Array.isArray(cvData.languageLevels)
-    ? cvData.languageLevels
-    : [],
-  strengths: Array.isArray(cvData.strengths) ? cvData.strengths : [],
-  achievements: Array.isArray(cvData.achievements)
-    ? cvData.achievements
-    : [],
-  hobbies: Array.isArray(cvData.hobbies) ? cvData.hobbies : [],
-  references: cvData.references || "",
-  additionalSections: Array.isArray(cvData.additionalSections)
-    ? cvData.additionalSections
-    : [],
+        skills: Array.isArray(cvData.skills) ? cvData.skills : [],
+        skillLevels: Array.isArray(cvData.skillLevels) ? cvData.skillLevels : [],
+        languages: Array.isArray(cvData.languages) ? cvData.languages : [],
+        languageLevels: Array.isArray(cvData.languageLevels)
+          ? cvData.languageLevels
+          : [],
+        strengths: Array.isArray(cvData.strengths) ? cvData.strengths : [],
+        achievements: Array.isArray(cvData.achievements)
+          ? cvData.achievements
+          : [],
+        hobbies: Array.isArray(cvData.hobbies) ? cvData.hobbies : [],
+        references: cvData.references || "",
+        additionalSections: Array.isArray(cvData.additionalSections)
+          ? cvData.additionalSections
+          : [],
 
-  certifications: Array.isArray(cvData.certifications)
-    ? cvData.certifications
-    : [],
+        certifications: Array.isArray(cvData.certifications)
+          ? cvData.certifications
+          : [],
 
-  experience: cvData.experience || "",
-  education: cvData.education || "",
-  projects: cvData.projects || "",
+        experience: cvData.experience || "",
+        education: cvData.education || "",
+        projects: cvData.projects || "",
 
-  experiences:
-    Array.isArray(cvData.experiences) && cvData.experiences.length
-      ? cvData.experiences
-      : [{ ...emptyExperience }],
+        experiences:
+          Array.isArray(cvData.experiences) && cvData.experiences.length
+            ? cvData.experiences
+            : [{ ...emptyExperience }],
 
-  educations:
-    Array.isArray(cvData.educations) && cvData.educations.length
-      ? cvData.educations
-      : [{ ...emptyEducation }],
+        educations:
+          Array.isArray(cvData.educations) && cvData.educations.length
+            ? cvData.educations
+            : [{ ...emptyEducation }],
 
-  projectsList:
-    Array.isArray(cvData.projectsList) && cvData.projectsList.length
-      ? cvData.projectsList
-      : [],
+        projectsList:
+          Array.isArray(cvData.projectsList) && cvData.projectsList.length
+            ? cvData.projectsList
+            : [],
 
-  certificationsList:
-    Array.isArray(cvData.certificationsList) && cvData.certificationsList.length
-      ? cvData.certificationsList
-      : [],
-});
+        certificationsList:
+          Array.isArray(cvData.certificationsList) && cvData.certificationsList.length
+            ? cvData.certificationsList
+            : [],
+      });
     } catch (error) {
       console.error("Load CV error:", error);
       alert("Failed to load CV data.");
@@ -543,8 +1004,8 @@ setForm({
         [arrayName]: updated.length
           ? updated
           : fallbackItem
-          ? [{ ...fallbackItem }]
-          : [],
+            ? [{ ...fallbackItem }]
+            : [],
       };
     });
   };
@@ -813,6 +1274,12 @@ setForm({
 
       const data = await res.json();
 
+      /* 401 — session expired; show auth popup without losing CV data */
+      if (res.status === 401) {
+        setShowAuthPopup(true);
+        return;
+      }
+
       if (!res.ok || !data.success) {
         alert(data.error || "Unable to save CV.");
         return;
@@ -886,353 +1353,346 @@ setForm({
     );
   }
 
-return (
-  <main className="h-[100dvh] overflow-hidden bg-[#101116] text-white">
-    <div className="pt-[36px]">
-  <header className="flex h-[72px] items-center justify-between border-b border-white/10 bg-[#17181D] px-4 shadow-lg sm:px-6 lg:px-8">
+  return (
+    <main className="h-[100dvh] overflow-hidden bg-[#101116] text-white">
+      <div className="">
+        <header className="flex py-4 items-center justify-between border-b border-white/10 bg-[#17181D] px-4 shadow-lg sm:px-6 lg:px-8">
 
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-qorliqGold text-sm font-black text-black">
-          Q
-        </div>
-
-        <div>
-          <p className="text-sm font-black text-white">
-            {isEditMode ? "Edit CV" : "Create CV"}
-          </p>
-          <p className="text-[11px] font-semibold text-white/40">
-            Qorliq CV Builder
-          </p>
-        </div>
-      </div>
-
-      <div className="hidden items-center gap-3 lg:flex">
-        {["Choose template", "Enter details", "Download CV"].map((item, index) => {
-          const active =
-            (currentStep <= 0 && index === 0) ||
-            (currentStep > 0 && currentStep < 6 && index === 1) ||
-            (currentStep === 6 && index === 2);
-
-          return (
-            <div key={item} className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${
-                  active
-                    ? "bg-qorliqGold text-black"
-                    : "bg-white/10 text-white/40"
-                }`}
-              >
-                {index + 1}
-              </div>
-
-              <span
-                className={`text-xs font-bold ${
-                  active ? "text-white" : "text-white/40"
-                }`}
-              >
-                {item}
-              </span>
-
-              {index < 2 && <div className="h-px w-10 bg-white/10" />}
-            </div>
-          );
-        })}
-      </div>
-
-      <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
-                >
-                  {saving
-                    ? "Saving..."
-                    : isEditMode
-                    ? "Update CV"
-                    : "Save"}
-                </button>
-       
-  </header>
-
-  {/* baqi create page content */}
-</div>
-
-    <div className="sticky top-0 z-40 border-b border-white/10 bg-[#101116]/95 px-4 py-3 backdrop-blur lg:hidden">
-      <div className="grid grid-cols-2 rounded-full bg-[#17181D] p-1">
-        <button
-          type="button"
-          onClick={() => setMobileMode("edit")}
-          className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${
-            mobileMode === "edit"
-              ? "bg-qorliqGold text-black shadow-sm"
-              : "text-white/50"
-          }`}
-        >
-          Edit
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMobileMode("preview")}
-          className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${
-            mobileMode === "preview"
-              ? "bg-qorliqGold text-black shadow-sm"
-              : "text-white/50"
-          }`}
-        >
-          Preview
-        </button>
-      </div>
-    </div>
-
-   <section className="grid h-[calc(100dvh-72px-70px)] grid-cols-1 overflow-hidden lg:h-[calc(100dvh-72px)] lg:grid-cols-[46%_54%]">
-      <form
-        onSubmit={handleSave}
-     onKeyDown={(e) => {
-  if (e.key !== "Enter") return;
-
-  const target = e.target;
-
-  if (
-    target.tagName === "TEXTAREA" ||
-    target.isContentEditable ||
-    target.closest?.("[contenteditable='true']")
-  ) {
-    return;
-  }
-
-  e.preventDefault();
-}}
-        className={`h-full overflow-y-auto bg-[#101116] px-4 py-5 sm:px-6 lg:block lg:border-r lg:border-white/10 lg:px-8 ${
-          mobileMode === "edit" ? "block" : "hidden"
-        }`}
-      >
-        <div className="mx-auto max-w-[680px]">
-          <div className="mb-5 rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-qorliqGold">
-                  Step {currentStep + 1} of {steps.length}
-                </p>
-
-                <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">
-                  {steps[currentStep].title}
-                </h1>
-
-                <p className="mt-1 text-sm leading-6 text-white/45">
-                  {steps[currentStep].desc}
-                </p>
-              </div>
-
-              <div className="hidden rounded-xl bg-black/25 px-4 py-3 text-right sm:block">
-                <p className="text-[10px] font-black uppercase text-white/40">
-                  ATS
-                </p>
-                <p className="text-xl font-black text-qorliqGold">
-                  {livePreviewCV.atsScore}%
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-qorliqGold text-sm font-black text-black">
+              Q
             </div>
 
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-qorliqGold transition-all duration-300"
-                style={{
-                  width: `${((currentStep + 1) / steps.length) * 100}%`,
-                }}
-              />
-            </div>
-
-            <CVScoreCard
-              pageScores={pageScores}
-              totalCvScore={totalCvScore}
-              currentPageScore={currentPageScore}
-              currentStep={currentStep}
-              setCurrentStep={setCurrentStep}
-            />
-
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-              {steps.map((step, index) => (
-                <button
-                  key={step.title}
-                  type="button"
-                  onClick={() => setCurrentStep(index)}
-                  className={`h-9 min-w-9 shrink-0 rounded-full px-3 text-[10px] font-black transition ${
-                    currentStep === index
-                      ? "bg-qorliqGold text-black"
-                      : "bg-white/10 text-white/40 hover:bg-white/15"
-                  }`}
-                >
-                  {index + 1}
-                </button>
-              ))}
+            <div>
+              <p className="text-sm font-black text-white">
+                {isEditMode ? "Edit CV" : "Create CV"}
+              </p>
+              <p className="text-[11px] font-semibold text-white/40">
+                Qorliq CV Builder
+              </p>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg sm:p-5">
-            {/* Yahan aapke existing steps same rahenge */}
-            {currentStep === 0 && (
-              <BasicInfoStep
-                form={form}
-                updateField={updateField}
-                cvTemplates={cvTemplates}
-                fileInputRef={fileInputRef}
-                templateSupportsPhoto={templateSupportsPhoto}
-                uploadingPhoto={uploadingPhoto}
-                handlePhotoUpload={handlePhotoUpload}
-                handleRemoveImage={handleRemoveImage}
-              />
-            )}
+          <div className="hidden items-center gap-3 lg:flex">
+            {["Choose template", "Enter details", "Download CV"].map((item, index) => {
+              const active =
+                (currentStep <= 0 && index === 0) ||
+                (currentStep > 0 && currentStep < 6 && index === 1) ||
+                (currentStep === 6 && index === 2);
 
-            {currentStep === 1 && (
-              <PureSummaryStep form={form} updateField={updateField} />
-            )}
+              return (
+                <div key={item} className="flex items-center gap-2">
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${active
+                        ? "bg-qorliqGold text-black"
+                        : "bg-white/10 text-white/40"
+                      }`}
+                  >
+                    {index + 1}
+                  </div>
 
-            {currentStep === 2 && (
-              <ExperienceStep
-                form={form}
-                updateArrayItem={updateArrayItem}
-                addArrayItem={addArrayItem}
-                removeArrayItem={removeArrayItem}
-              />
-            )}
+                  <span
+                    className={`text-xs font-bold ${active ? "text-white" : "text-white/40"
+                      }`}
+                  >
+                    {item}
+                  </span>
 
-            {currentStep === 3 && (
-              <EducationStep
-                form={form}
-                updateArrayItem={updateArrayItem}
-                addArrayItem={addArrayItem}
-                removeArrayItem={removeArrayItem}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <SkillsStep
-                form={form}
-                skillInput={skillInput}
-                setSkillInput={setSkillInput}
-                languageInput={languageInput}
-                setLanguageInput={setLanguageInput}
-                strengthInput={strengthInput}
-                setStrengthInput={setStrengthInput}
-                addSimpleItem={addSimpleItem}
-                removeSimpleItem={removeSimpleItem}
-                addSkill={addSkill}
-                removeSkill={removeSkill}
-                updateSkillLevel={updateSkillLevel}
-                addLanguage={addLanguage}
-                removeLanguage={removeLanguage}
-                updateLanguageLevel={updateLanguageLevel}
-              />
-            )}
-
-            {currentStep === 5 && (
-              <ProjectsAchievementsStep
-                form={form}
-                updateArrayItem={updateArrayItem}
-                addArrayItem={addArrayItem}
-                removeArrayItem={removeArrayItem}
-                achievementInput={achievementInput}
-                setAchievementInput={setAchievementInput}
-                addSimpleItem={addSimpleItem}
-                removeSimpleItem={removeSimpleItem}
-              />
-            )}
-
-            {currentStep === 6 && (
-              <CertificationsExtraStep
-                form={form}
-                updateField={updateField}
-                updateArrayItem={updateArrayItem}
-                addArrayItem={addArrayItem}
-                removeArrayItem={removeArrayItem}
-                hobbyInput={hobbyInput}
-                setHobbyInput={setHobbyInput}
-                addSimpleItem={addSimpleItem}
-                removeSimpleItem={removeSimpleItem}
-              />
-            )}
+                  {index < 2 && <div className="h-px w-10 bg-white/10" />}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="sticky  bottom-0 mt-5 flex  gap-3 border-t border-white/10 bg-[#101116] py-8 flex-row items-center justify-between">
-            <button
-              type="button"
-              disabled={currentStep === 0 || saving}
-              onClick={goBack}
-              className="h-12 rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-qorliqGold hover:text-qorliqGold disabled:opacity-40"
-            >
-              Back
-            </button>
+          <button
+            type="button"
+            onClick={() => requireAuth(handleSave)}
+            disabled={saving}
+            className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+          >
+            {saving
+              ? "Saving..."
+              : isEditMode
+                ? "Update CV"
+                : "Save"}
+          </button>
 
-            <div className="flex  gap-3 flex-row">
-              <button
-                type="button"
-                onClick={clearForm}
-                disabled={saving}
-                className="h-12 hidden md:block rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-red-300 hover:text-red-200 disabled:opacity-50"
-              >
-                Clear
-              </button>
+        </header>
 
-              {currentStep < steps.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={goNext}
-                  disabled={saving}
-                  className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
-                >
-                  Continue
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
-                >
-                  {saving
-                    ? "Saving..."
-                    : isEditMode
-                    ? "Update CV"
-                    : "Save & Preview"}
-                </button>
+        {/* baqi create page content */}
+      </div>
+
+      <div className="sticky top-0 z-40 border-b border-white/10 bg-[#101116]/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="grid grid-cols-2 rounded-full bg-[#17181D] p-1">
+          <button
+            type="button"
+            onClick={() => setMobileMode("edit")}
+            className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${mobileMode === "edit"
+                ? "bg-qorliqGold text-black shadow-sm"
+                : "text-white/50"
+              }`}
+          >
+            Edit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileMode("preview")}
+            className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${mobileMode === "preview"
+                ? "bg-qorliqGold text-black shadow-sm"
+                : "text-white/50"
+              }`}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
+
+      <section className="grid h-[calc(100dvh-72px-70px)] grid-cols-1 overflow-hidden dashboard-scrollbar lg:h-[calc(100dvh-72px)] lg:grid-cols-[46%_54%]">
+        <form
+          onSubmit={(e) => { e.preventDefault(); requireAuth(() => handleSave(e)); }}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+
+            const target = e.target;
+
+            if (
+              target.tagName === "TEXTAREA" ||
+              target.isContentEditable ||
+              target.closest?.("[contenteditable='true']")
+            ) {
+              return;
+            }
+
+            e.preventDefault();
+          }}
+          className={`h-full dashboard-scrollbar overflow-y-auto bg-[#101116] px-4 py-5 sm:px-6 lg:block lg:border-r lg:border-white/10 lg:px-8 ${mobileMode === "edit" ? "block" : "hidden"
+            }`}
+        >
+          <div className="mx-auto max-w-[680px]">
+            <div className="mb-5 rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-qorliqGold">
+                    Step {currentStep + 1} of {steps.length}
+                  </p>
+
+                  <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">
+                    {steps[currentStep].title}
+                  </h1>
+
+                  <p className="mt-1 text-sm leading-6 text-white/45">
+                    {steps[currentStep].desc}
+                  </p>
+                </div>
+
+                <div className="hidden rounded-xl bg-black/25 px-4 py-3 text-right sm:block">
+                  <p className="text-[10px] font-black uppercase text-white/40">
+                    ATS
+                  </p>
+                  <p className="text-xl font-black text-qorliqGold">
+                    {livePreviewCV.atsScore}%
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-qorliqGold transition-all duration-300"
+                  style={{
+                    width: `${((currentStep + 1) / steps.length) * 100}%`,
+                  }}
+                />
+              </div>
+
+              <CVScoreCard
+                pageScores={pageScores}
+                totalCvScore={totalCvScore}
+                currentPageScore={currentPageScore}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+              />
+
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                {steps.map((step, index) => (
+                  <button
+                    key={step.title}
+                    type="button"
+                    onClick={() => setCurrentStep(index)}
+                    className={`h-9 min-w-9 shrink-0 rounded-full px-3 text-[10px] font-black transition ${currentStep === index
+                        ? "bg-qorliqGold text-black"
+                        : "bg-white/10 text-white/40 hover:bg-white/15"
+                      }`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg sm:p-5">
+              {/* Yahan aapke existing steps same rahenge */}
+              {currentStep === 0 && (
+                <BasicInfoStep
+                  form={form}
+                  updateField={updateField}
+                  cvTemplates={cvTemplates}
+                  fileInputRef={fileInputRef}
+                  templateSupportsPhoto={templateSupportsPhoto}
+                  uploadingPhoto={uploadingPhoto}
+                  handlePhotoUpload={handlePhotoUpload}
+                  handleRemoveImage={handleRemoveImage}
+                />
+              )}
+
+              {currentStep === 1 && (
+                <PureSummaryStep form={form} updateField={updateField} />
+              )}
+
+              {currentStep === 2 && (
+                <ExperienceStep
+                  form={form}
+                  updateArrayItem={updateArrayItem}
+                  addArrayItem={addArrayItem}
+                  removeArrayItem={removeArrayItem}
+                />
+              )}
+
+              {currentStep === 3 && (
+                <EducationStep
+                  form={form}
+                  updateArrayItem={updateArrayItem}
+                  addArrayItem={addArrayItem}
+                  removeArrayItem={removeArrayItem}
+                />
+              )}
+
+              {currentStep === 4 && (
+                <SkillsStep
+                  form={form}
+                  skillInput={skillInput}
+                  setSkillInput={setSkillInput}
+                  languageInput={languageInput}
+                  setLanguageInput={setLanguageInput}
+                  strengthInput={strengthInput}
+                  setStrengthInput={setStrengthInput}
+                  addSimpleItem={addSimpleItem}
+                  removeSimpleItem={removeSimpleItem}
+                  addSkill={addSkill}
+                  removeSkill={removeSkill}
+                  updateSkillLevel={updateSkillLevel}
+                  addLanguage={addLanguage}
+                  removeLanguage={removeLanguage}
+                  updateLanguageLevel={updateLanguageLevel}
+                />
+              )}
+
+              {currentStep === 5 && (
+                <ProjectsAchievementsStep
+                  form={form}
+                  updateArrayItem={updateArrayItem}
+                  addArrayItem={addArrayItem}
+                  removeArrayItem={removeArrayItem}
+                  achievementInput={achievementInput}
+                  setAchievementInput={setAchievementInput}
+                  addSimpleItem={addSimpleItem}
+                  removeSimpleItem={removeSimpleItem}
+                />
+              )}
+
+              {currentStep === 6 && (
+                <CertificationsExtraStep
+                  form={form}
+                  updateField={updateField}
+                  updateArrayItem={updateArrayItem}
+                  addArrayItem={addArrayItem}
+                  removeArrayItem={removeArrayItem}
+                  hobbyInput={hobbyInput}
+                  setHobbyInput={setHobbyInput}
+                  addSimpleItem={addSimpleItem}
+                  removeSimpleItem={removeSimpleItem}
+                />
               )}
             </div>
+
+            <div className="sticky  bottom-0 mt-5 flex  gap-3 border-t border-white/10 bg-[#101116] py-4 flex-row items-center justify-between">
+              <button
+                type="button"
+                disabled={currentStep === 0 || saving}
+                onClick={goBack}
+                className="h-12 rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-qorliqGold hover:text-qorliqGold disabled:opacity-40"
+              >
+                Back
+              </button>
+
+              <div className="flex  gap-3 flex-row">
+                <button
+                  type="button"
+                  onClick={clearForm}
+                  disabled={saving}
+                  className="h-12 hidden md:block rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-red-300 hover:text-red-200 disabled:opacity-50"
+                >
+                  Clear
+                </button>
+
+                {currentStep < steps.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={saving}
+                    className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                  >
+                    Continue
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => requireAuth(handleSave)}
+                    disabled={saving}
+                    className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                  >
+                    {saving
+                      ? "Saving..."
+                      : isEditMode
+                        ? "Update CV"
+                        : "Save & Preview"}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </form>
-<aside
-  className={`h-full min-h-0 overflow-hidden bg-[#17181D] p-3 sm:p-5 lg:block ${
-    mobileMode === "preview" ? "block" : "hidden"
-  }`}
->
-  <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#101116] shadow-inner">
-    <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-qorliqGold">
-          Preview
-        </p>
+        </form>
+        <aside
+          className={`h-full min-h-0 overflow-hidden bg-[#17181D] p-3 sm:p-5 lg:block ${mobileMode === "preview" ? "block" : "hidden"
+            }`}
+        >
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#101116] shadow-inner">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-qorliqGold">
+                  Preview
+                </p>
 
-        <p className="text-[11px] font-semibold text-white/40">
-          {config.name}
-        </p>
-      </div>
+                <p className="text-[11px] font-semibold text-white/40">
+                  {config.name}
+                </p>
+              </div>
 
-      <span className="rounded-full bg-[#17181D] px-3 py-1.5 text-xs font-black text-white/70 shadow-sm">
-        {livePreviewCV.atsScore}%
-      </span>
-    </div>
+              <span className="rounded-full bg-[#17181D] px-3 py-1.5 text-xs font-black text-white/70 shadow-sm">
+                {livePreviewCV.atsScore}%
+              </span>
+            </div>
 
-    <div className="preview-viewport">
-      <div className="preview-page-holder">
-        <div className="preview-page-scale">
-          <TemplateRenderer cv={livePreviewCV} config={config} />
-        </div>
-      </div>
-    </div>
-  </div>
+            <div className="preview-viewport">
+              <div className="preview-page-holder">
+                <div className="preview-page-scale">
+                  <TemplateRenderer cv={livePreviewCV} config={config} />
+                </div>
+              </div>
+            </div>
+          </div>
 
-  <style jsx>{`
+          <style jsx>{`
     .preview-viewport {
       flex: 1;
       min-height: 0;
@@ -1325,10 +1785,18 @@ return (
   }
 }
   `}</style>
-</aside>
-    </section>
-  </main>
-);
+        </aside>
+      </section>
+
+      {/* Auth-gate popup */}
+      {showAuthPopup && (
+        <AuthPopup
+          onClose={() => setShowAuthPopup(false)}
+          onSuccess={() => setShowAuthPopup(false)}
+        />
+      )}
+    </main>
+  );
 }
 
 
@@ -1344,23 +1812,23 @@ return (
 function PureSummaryStep({ form, updateField }) {
   return (
     <div className="space-y-5">
-     <RichTextEditor
-  label="Professional Summary"
-  value={form.summary}
-  onChange={(value) => updateField("summary", value)}
-  placeholder="Write your professional summary..."
-  rows={8}
-  showAI
-  aiType="summary"
-  targetRole={form.jobTitle}
-  cvContext={{
-    ...form,
-    requestedSection: "summary",
-    professionalTitle: form.jobTitle,
-    targetTitle: form.jobTitle,
-    currentSummary: form.summary,
-  }}
-/>
+      <RichTextEditor
+        label="Professional Summary"
+        value={form.summary}
+        onChange={(value) => updateField("summary", value)}
+        placeholder="Write your professional summary..."
+        rows={8}
+        showAI
+        aiType="summary"
+        targetRole={form.jobTitle}
+        cvContext={{
+          ...form,
+          requestedSection: "summary",
+          professionalTitle: form.jobTitle,
+          targetTitle: form.jobTitle,
+          currentSummary: form.summary,
+        }}
+      />
 
       <div className="rounded-3xl ">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
@@ -1497,9 +1965,8 @@ function BasicInfoStep({
                     className="h-full w-full object-cover"
                     style={{
                       transform: `scale(${form.photoZoom || 1})`,
-                      objectPosition: `${form.photoPositionX || 50}% ${
-                        form.photoPositionY || 50
-                      }%`,
+                      objectPosition: `${form.photoPositionX || 50}% ${form.photoPositionY || 50
+                        }%`,
                     }}
                   />
                 ) : (
@@ -1597,7 +2064,6 @@ function BasicInfoStep({
 
 
 
-
 function ExperienceStep({
   form,
   updateArrayItem,
@@ -1605,20 +2071,20 @@ function ExperienceStep({
   removeArrayItem,
 }) {
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-4 sm:space-y-5">
       {form.experiences.map((item, index) => (
-       <ExperienceCard
-  key={index}
-  index={index}
-  item={item}
-  form={form}
-  onChange={(field, value) =>
-    updateArrayItem("experiences", index, field, value)
-  }
-  onRemove={() =>
-    removeArrayItem("experiences", index, emptyExperience)
-  }
-/>
+        <ExperienceCard
+          key={index}
+          index={index}
+          item={item}
+          form={form}
+          onChange={(field, value) =>
+            updateArrayItem("experiences", index, field, value)
+          }
+          onRemove={() =>
+            removeArrayItem("experiences", index, emptyExperience)
+          }
+        />
       ))}
 
       <AddButton
@@ -1987,27 +2453,38 @@ function AdditionalSectionCard({ index, item, onChange, onRemove }) {
   );
 }
 
-function ExperienceCard({ index, item, form, onChange, onRemove }) {
+function ExperienceCard({
+  index,
+  item,
+  form,
+  onChange,
+  onRemove,
+}) {
   return (
-    <div className="rounded-3xl ">
-      <CardTop title={`Experience ${index + 1}`} onRemove={onRemove} />
+    <div className="min-w-0 rounded-3xl">
+      <CardTop
+        title={`Experience ${index + 1}`}
+        onRemove={onRemove}
+      />
 
-      <div className="mt-5 grid gap-5 md:grid-cols-2">
-        <Input
-          label="Job Title"
-          value={item.jobTitle}
-          onChange={(value) => onChange("jobTitle", value)}
-          placeholder="e.g. Operations Manager"
-          required
-        />
+      <div className="mt-5 min-w-0 space-y-4 sm:space-y-5">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+          <Input
+            label="Job Title"
+            value={item.jobTitle}
+            onChange={(value) => onChange("jobTitle", value)}
+            placeholder="e.g. Operations Manager"
+            required
+          />
 
-        <Input
-          label="Company"
-          value={item.company}
-          onChange={(value) => onChange("company", value)}
-          placeholder="e.g. Brightline Services"
-          required
-        />
+          <Input
+            label="Company"
+            value={item.company}
+            onChange={(value) => onChange("company", value)}
+            placeholder="e.g. Brightline Services"
+            required
+          />
+        </div>
 
         <Input
           label="Location"
@@ -2016,73 +2493,84 @@ function ExperienceCard({ index, item, form, onChange, onRemove }) {
           placeholder="e.g. London, UK"
         />
 
-        <Input
-          label="Start Date"
-          value={item.startDate}
-          onChange={(value) => onChange("startDate", value)}
-          placeholder="e.g. Jan 2021"
-          required
-        />
+        <div className="grid min-w-0 grid-cols-1 gap-4 min-[390px]:grid-cols-2 sm:gap-5">
+          <Input
+            label="Start Date"
+            value={item.startDate}
+            onChange={(value) => onChange("startDate", value)}
+            placeholder="e.g. Jan 2021"
+            required
+          />
 
-        <Input
-          label="End Date"
-          value={item.endDate}
-          onChange={(value) => onChange("endDate", value)}
-          placeholder="e.g. Dec 2024"
-          disabled={item.current}
-        />
+          <Input
+            label="End Date"
+            value={item.endDate}
+            onChange={(value) => onChange("endDate", value)}
+            placeholder={item.current ? "Present" : "e.g. Dec 2024"}
+            disabled={item.current}
+          />
+        </div>
 
-        <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-4">
+        <label className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 transition hover:border-qorliqGold/40">
           <input
             type="checkbox"
             checked={Boolean(item.current)}
-            onChange={(e) => onChange("current", e.target.checked)}
-            className="h-4 w-4 accent-[#C8A24A]"
+            onChange={(e) => {
+              const checked = e.target.checked;
+
+              onChange("current", checked);
+
+              if (checked) {
+                onChange("endDate", "");
+              }
+            }}
+            className="h-5 w-5 shrink-0 accent-[#C8A24A]"
           />
-          <span className="text-sm font-bold text-white/70">
+
+          <span className="min-w-0 text-sm font-bold leading-5 text-white/70">
             I currently work here
           </span>
         </label>
 
-        <div className="md:col-span-2">
-    <RichTextEditor
-  label="Achievements / Responsibilities"
-  value={item.description}
-  onChange={(value) => onChange("description", value)}
-  placeholder={`Example:
+        <div className="min-w-0  overflow-hidden">
+          <RichTextEditor
+            label="Achievements / Responsibilities"
+            value={item.description}
+            onChange={(value) => onChange("description", value)}
+            placeholder={`Example:
 • Improved reporting accuracy by 38%
 • Managed supplier communication and internal workflows
 • Reduced operational delays through process improvement`}
-  rows={6}
-  showAI
-  aiType="responsibilities"
-  targetRole={item.jobTitle || form?.jobTitle}
-  cvContext={{
-    ...form,
-    expTitle: item.jobTitle,
-    company: item.company,
-    startDate: item.startDate,
-    endDate: item.current ? "Present" : item.endDate,
-    responsibilities: item.description,
-  }}
-/>
-
-          <SuggestionPanel title="Suggested Descriptions">
-            {experienceSuggestions.map((suggestion) => (
-            <SuggestionButton
-  key={suggestion}
-  text={suggestion}
-  onClick={() => {
-    const next = item.description
-      ? `${item.description}<ul><li>${suggestion}</li></ul>`
-      : `<ul><li>${suggestion}</li></ul>`;
-
-    onChange("description", next);
-  }}
-/>
-            ))}
-          </SuggestionPanel>
+            rows={6}
+            showAI
+            aiType="responsibilities"
+            targetRole={item.jobTitle || form?.jobTitle}
+            cvContext={{
+              ...form,
+              expTitle: item.jobTitle,
+              company: item.company,
+              startDate: item.startDate,
+              endDate: item.current ? "Present" : item.endDate,
+              responsibilities: item.description,
+            }}
+          />
         </div>
+
+        <SuggestionPanel title="Suggested Descriptions">
+          {experienceSuggestions.map((suggestion) => (
+            <SuggestionButton
+              key={suggestion}
+              text={suggestion}
+              onClick={() => {
+                const next = item.description
+                  ? `${item.description}<ul><li>${suggestion}</li></ul>`
+                  : `<ul><li>${suggestion}</li></ul>`;
+
+                onChange("description", next);
+              }}
+            />
+          ))}
+        </SuggestionPanel>
       </div>
     </div>
   );
@@ -2227,15 +2715,15 @@ function CertificationCard({ index, item, onChange, onRemove }) {
 
 function CardTop({ title, onRemove }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <h4 className="text-sm font-black uppercase tracking-[0.18em] text-white/75">
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+      <h4 className="min-w-0 flex-1 break-words text-xs font-black uppercase tracking-[0.14em] text-white/75 sm:text-sm sm:tracking-[0.18em]">
         {title}
       </h4>
 
       <button
         type="button"
         onClick={onRemove}
-        className="rounded-full border border-red-300/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-red-200 transition hover:bg-red-300 hover:text-black"
+        className="shrink-0 rounded-full border border-red-300/20 px-3 py-2 text-[9px] font-black uppercase tracking-[0.12em] text-red-200 transition hover:bg-red-300 hover:text-black sm:px-4 sm:text-[10px] sm:tracking-[0.14em]"
       >
         Remove
       </button>
@@ -2315,11 +2803,10 @@ function ToolbarButton({
         e.preventDefault();
         onClick?.();
       }}
-      className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border text-[15px] font-black transition-all duration-150 active:scale-[0.97] ${
-        active
+      className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border text-[15px] font-black transition-all duration-150 active:scale-[0.97] ${active
           ? "border-[#18227C] bg-[#18227C] text-white shadow-[0_8px_18px_rgba(24,34,124,0.22)]"
           : "border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300 hover:bg-slate-50"
-      } ${className}`}
+        } ${className}`}
     >
       {children}
     </button>
@@ -2363,15 +2850,14 @@ function CVScoreCard({ pageScores, totalCvScore, currentPageScore, currentStep, 
             key={`score-step-${index}`}
             type="button"
             onClick={() => setCurrentStep(index)}
-            className={`h-1.5 rounded-full transition-all ${
-              currentStep === index
+            className={`h-1.5 rounded-full transition-all ${currentStep === index
                 ? "bg-white"
                 : value >= 80
-                ? "bg-cyan-300"
-                : value > 0
-                ? "bg-cyan-300/45"
-                : "bg-white/15"
-            }`}
+                  ? "bg-cyan-300"
+                  : value > 0
+                    ? "bg-cyan-300/45"
+                    : "bg-white/15"
+              }`}
             title={`Page ${index + 1}: ${value}% | Current page: ${currentPageScore}%`}
           />
         ))}
@@ -2442,22 +2928,22 @@ function RichTextEditor({
     }
   };
 
-const runCommand = (command, commandValue = null) => {
-  restoreSelection();
+  const runCommand = (command, commandValue = null) => {
+    restoreSelection();
 
-  setTimeout(() => {
-    if (
-      typeof document !== "undefined" &&
-      typeof document.execCommand === "function"
-    ) {
-      document.execCommand(command, false, commandValue);
-    }
+    setTimeout(() => {
+      if (
+        typeof document !== "undefined" &&
+        typeof document.execCommand === "function"
+      ) {
+        document.execCommand(command, false, commandValue);
+      }
 
-    const html = editorRef.current?.innerHTML || "";
-    onChange(html);
-    saveSelection();
-  }, 0);
-};
+      const html = editorRef.current?.innerHTML || "";
+      onChange(html);
+      saveSelection();
+    }, 0);
+  };
 
   const runAlign = (command, alignName) => {
     setActiveAlign(alignName);
@@ -2554,7 +3040,7 @@ const runCommand = (command, commandValue = null) => {
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]">
+      <div className="overflow-hidden  rounded-[22px] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.10)]">
         <div className="flex items-center gap-3 overflow-x-auto border-b border-slate-200 bg-white px-4 py-4">
           <ToolbarButton
             title="Paragraph"
@@ -2591,114 +3077,114 @@ const runCommand = (command, commandValue = null) => {
             onClick={() => runCommand("insertUnorderedList")}
           >
             <span className="text-lg leading-none"><svg
-  viewBox="0 0 24 24"
-  className="h-5 w-5"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  aria-hidden="true"
->
-  <circle cx="5" cy="7" r="1.2" fill="currentColor" stroke="none" />
-  <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none" />
-  <circle cx="5" cy="17" r="1.2" fill="currentColor" stroke="none" />
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="5" cy="7" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="5" cy="17" r="1.2" fill="currentColor" stroke="none" />
 
-  <path d="M10 7h9" />
-  <path d="M10 12h9" />
-  <path d="M10 17h9" />
-</svg></span>
+              <path d="M10 7h9" />
+              <path d="M10 12h9" />
+              <path d="M10 17h9" />
+            </svg></span>
           </ToolbarButton>
 
           <ToolbarButton
             title="Numbered list"
             onClick={() => runCommand("insertOrderedList")}
           >
-        <svg
-  viewBox="0 0 28 24"
-  className="h-5 w-6"
-  fill="none"
-  xmlns="http://www.w3.org/2000/svg"
-  aria-hidden="true"
->
-  <text
-    x="3"
-    y="7.5"
-    fontSize="5"
-    fontWeight="800"
-    fill="currentColor"
-    dominantBaseline="middle"
-  >
-    1
-  </text>
+            <svg
+              viewBox="0 0 28 24"
+              className="h-5 w-6"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <text
+                x="3"
+                y="7.5"
+                fontSize="5"
+                fontWeight="800"
+                fill="currentColor"
+                dominantBaseline="middle"
+              >
+                1
+              </text>
 
-  <text
-    x="3"
-    y="12.5"
-    fontSize="5"
-    fontWeight="800"
-    fill="currentColor"
-    dominantBaseline="middle"
-  >
-    2
-  </text>
+              <text
+                x="3"
+                y="12.5"
+                fontSize="5"
+                fontWeight="800"
+                fill="currentColor"
+                dominantBaseline="middle"
+              >
+                2
+              </text>
 
-  <text
-    x="3"
-    y="17.5"
-    fontSize="5"
-    fontWeight="800"
-    fill="currentColor"
-    dominantBaseline="middle"
-  >
-    3
-  </text>
+              <text
+                x="3"
+                y="17.5"
+                fontSize="5"
+                fontWeight="800"
+                fill="currentColor"
+                dominantBaseline="middle"
+              >
+                3
+              </text>
 
-  <path
-    d="M11 7H24"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  />
-  <path
-    d="M11 12H24"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  />
-  <path
-    d="M11 17H24"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  />
-</svg>
+              <path
+                d="M11 7H24"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M11 12H24"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M11 17H24"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
           </ToolbarButton>
 
           <ToolbarDivider />
 
-         <ToolbarButton
-  title="Quote"
-  onClick={() => runCommand("formatBlock", "<blockquote>")}
->
-  <span className="text-lg leading-none">❞</span>
-</ToolbarButton>
+          <ToolbarButton
+            title="Quote"
+            onClick={() => runCommand("formatBlock", "<blockquote>")}
+          >
+            <span className="text-lg leading-none">❞</span>
+          </ToolbarButton>
 
           <ToolbarButton title="Add link" onClick={addLink}>
-          <svg
-  viewBox="0 0 24 24"
-  className="h-4 w-4"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  aria-hidden="true"
->
-  <path d="M14 4h6v6" />
-  <path d="M10 14L20 4" />
-  <path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4" />
-</svg>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 4h6v6" />
+              <path d="M10 14L20 4" />
+              <path d="M20 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4" />
+            </svg>
           </ToolbarButton>
 
           <ToolbarDivider />
@@ -2711,19 +3197,19 @@ const runCommand = (command, commandValue = null) => {
               className="rounded-none border-0 shadow-none"
             >
               <span className="text-lg leading-none"><svg
-  viewBox="0 0 24 24"
-  className="h-5 w-5"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.4"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  aria-hidden="true"
->
-  <path d="M4 7h16" />
-  <path d="M4 12h12" />
-  <path d="M4 17h8" />
-</svg></span>
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 7h16" />
+                <path d="M4 12h12" />
+                <path d="M4 17h8" />
+              </svg></span>
             </ToolbarButton>
 
             <ToolbarButton
@@ -2733,19 +3219,19 @@ const runCommand = (command, commandValue = null) => {
               className="rounded-none border-0 border-l border-slate-200 shadow-none"
             >
               <span className="text-lg leading-none"><svg
-  viewBox="0 0 24 24"
-  className="h-5 w-5"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.4"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  aria-hidden="true"
->
-  <path d="M4 7h16" />
-  <path d="M4 12h16" />
-  <path d="M4 17h16" />
-</svg></span>
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 7h16" />
+                <path d="M4 12h16" />
+                <path d="M4 17h16" />
+              </svg></span>
             </ToolbarButton>
 
             <ToolbarButton
@@ -2755,19 +3241,19 @@ const runCommand = (command, commandValue = null) => {
               className="rounded-none border-0 border-l border-slate-200 shadow-none"
             >
               <span className="text-lg leading-none"><svg
-  viewBox="0 0 24 24"
-  className="h-5 w-5"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.4"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  aria-hidden="true"
->
-  <path d="M4 7h16" />
-  <path d="M8 12h12" />
-  <path d="M12 17h8" />
-</svg></span>
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 7h16" />
+                <path d="M8 12h12" />
+                <path d="M12 17h8" />
+              </svg></span>
             </ToolbarButton>
 
             <ToolbarButton
@@ -2777,20 +3263,20 @@ const runCommand = (command, commandValue = null) => {
               className="rounded-none border-0 border-l border-slate-200 shadow-none"
             >
               <span className="text-lg leading-none"><svg
-  viewBox="0 0 24 24"
-  className="h-5 w-5"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2.4"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  aria-hidden="true"
->
-  <path d="M4 6h16" />
-  <path d="M4 10h16" />
-  <path d="M4 14h16" />
-  <path d="M4 18h16" />
-</svg></span>
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 6h16" />
+                <path d="M4 10h16" />
+                <path d="M4 14h16" />
+                <path d="M4 18h16" />
+              </svg></span>
             </ToolbarButton>
           </div>
 
@@ -2817,7 +3303,7 @@ const runCommand = (command, commandValue = null) => {
           onKeyUp={saveSelection}
           onMouseUp={saveSelection}
           data-placeholder={placeholder}
-          className="rich-editor-area w-full overflow-y-auto bg-white px-6 py-6 text-[17px] font-normal leading-8 text-slate-800 outline-none"
+          className="rich-editor-area  w-full overflow-y-auto bg-white px-6 py-6 text-[17px] font-normal leading-8 text-slate-800 outline-none"
           style={{
             minHeight: `${Math.max(rows * 34, 170)}px`,
           }}
@@ -3278,31 +3764,31 @@ function EUPhotoDocumentCV({ cv, config }) {
       </header>
 
       <main className="grid grid-cols-[30%_70%] items-start gap-8">
-      <aside className="space-y-5">
-  {hasList(cv.skills) ? (
-    <CVSection title="Skills" accent={accent}>
-      <SkillPills items={cv.skills} levels={cv.skillLevels} />
-    </CVSection>
-  ) : null}
+        <aside className="space-y-5">
+          {hasList(cv.skills) ? (
+            <CVSection title="Skills" accent={accent}>
+              <SkillPills items={cv.skills} levels={cv.skillLevels} />
+            </CVSection>
+          ) : null}
 
-  {hasList(cv.languages) ? (
-    <CVSection title="Languages" accent={accent}>
-      <LanguageList items={cv.languages} levels={cv.languageLevels} />
-    </CVSection>
-  ) : null}
+          {hasList(cv.languages) ? (
+            <CVSection title="Languages" accent={accent}>
+              <LanguageList items={cv.languages} levels={cv.languageLevels} />
+            </CVSection>
+          ) : null}
 
-  {hasList(cv.certifications) ? (
-    <CVSection title="Certifications" accent={accent}>
-      <BulletList items={cv.certifications} />
-    </CVSection>
-  ) : null}
+          {hasList(cv.certifications) ? (
+            <CVSection title="Certifications" accent={accent}>
+              <BulletList items={cv.certifications} />
+            </CVSection>
+          ) : null}
 
-  {hasList(cv.hobbies) ? (
-    <CVSection title="Hobbies" accent={accent}>
-      <BulletList items={cv.hobbies} />
-    </CVSection>
-  ) : null}
-</aside>
+          {hasList(cv.hobbies) ? (
+            <CVSection title="Hobbies" accent={accent}>
+              <BulletList items={cv.hobbies} />
+            </CVSection>
+          ) : null}
+        </aside>
 
         <section className="space-y-6">
           {hasText(cv.summary) ? (
@@ -3349,16 +3835,16 @@ function EUPhotoDocumentCV({ cv, config }) {
 
           {Array.isArray(cv.additionalSections)
             ? cv.additionalSections.map((section, index) =>
-                section?.title || section?.description ? (
-                  <CVSection
-                    key={index}
-                    title={section.title || "Additional Information"}
-                    accent={accent}
-                  >
-                    <HtmlText html={section.description || ""} />
-                  </CVSection>
-                ) : null
-              )
+              section?.title || section?.description ? (
+                <CVSection
+                  key={index}
+                  title={section.title || "Additional Information"}
+                  accent={accent}
+                >
+                  <HtmlText html={section.description || ""} />
+                </CVSection>
+              ) : null
+            )
             : null}
         </section>
       </main>
@@ -3537,7 +4023,7 @@ function GraduateFreshCV({ cv, config }) {
 
       {/* 2. Main Content Grid (4 Controlled Boxes Structure - Exact Length & Design) */}
       <main className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-        
+
         {/* ==================== BOX 1: PROFILE, SKILLS & LANGUAGES ==================== */}
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between">
           <CVSection title="Profile" accent={accent}>
@@ -3592,7 +4078,7 @@ function GraduateFreshCV({ cv, config }) {
                       return (
                         <div key={index} className="relative group">
                           {/* Timeline Dot with Accent Color */}
-                          <span 
+                          <span
                             className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white transition-transform group-hover:scale-125"
                             style={{ backgroundColor: accent }}
                           />
@@ -3670,7 +4156,7 @@ function GraduateFreshCV({ cv, config }) {
                       return (
                         <div key={index} className="relative group">
                           {/* Timeline Dot with Accent Color */}
-                          <span 
+                          <span
                             className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-white transition-transform group-hover:scale-125"
                             style={{ backgroundColor: accent }}
                           />
@@ -3726,7 +4212,7 @@ function GraduateFreshCV({ cv, config }) {
         {/* ==================== BOX 4: ACHIEVEMENTS, HOBBIES & REFERENCES ==================== */}
         <section className="col-span-1 sm:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            
+
             {/* Left Column: Achievements & Hobbies */}
             <div className="space-y-5">
               {hasList(achievements) && (
@@ -3777,7 +4263,7 @@ function GraduateFreshCV({ cv, config }) {
                 </div>
               )}
 
-              {Array.isArray(additionalSections) && additionalSections.length > 0 && 
+              {Array.isArray(additionalSections) && additionalSections.length > 0 &&
                 additionalSections.map((section, index) => {
                   const sectionTitle = section?.title || section?.heading || "Additional Information";
                   const sectionContent = section?.content || section?.description || section?.text || section?.items || "";
@@ -3794,7 +4280,7 @@ function GraduateFreshCV({ cv, config }) {
                       )}
                     </div>
                   );
-              })}
+                })}
 
               {!Array.isArray(additionalSections) && additionalSections && typeof additionalSections === "object" && (
                 <div>
@@ -3988,7 +4474,7 @@ function SalesLeaderCV({ cv, config }) {
 }
 
 function FinanceAnalystCV({ cv, config }) {
-  return <CVPage><ExactHeader cv={cv} config={config} label="Finance CV" /><div className="mt-8 grid h-28 grid-cols-5 items-end gap-2">{[35,55,45,70,60].map((height, index) => <div key={index} className="rounded-t" style={{ height: `${height}%`, backgroundColor: config.accent }} />)}</div><main className="mt-9 grid gap-9 grid-cols-[0.58fr_0.42fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
+  return <CVPage><ExactHeader cv={cv} config={config} label="Finance CV" /><div className="mt-8 grid h-28 grid-cols-5 items-end gap-2">{[35, 55, 45, 70, 60].map((height, index) => <div key={index} className="rounded-t" style={{ height: `${height}%`, backgroundColor: config.accent }} />)}</div><main className="mt-9 grid gap-9 grid-cols-[0.58fr_0.42fr]"><section className="space-y-8"><MainCVSections cv={cv} accent={config.accent} /></section><aside><SideCVSections cv={cv} accent={config.accent} /></aside></main></CVPage>;
 }
 
 function StockholmCleanCV({ cv, config }) {
@@ -4563,9 +5049,8 @@ function TimelineTemplate({ cv, config }) {
 function CVPage({ children, ivory = false }) {
   return (
     <div
-      className={`px-12 py-12 text-black shadow-2xl ${
-        ivory ? "bg-[#FBF7EF]" : "bg-white"
-      }`}
+      className={`px-12 py-12 text-black shadow-2xl ${ivory ? "bg-[#FBF7EF]" : "bg-white"
+        }`}
       style={{ width: "794px", minHeight: "1123px" }}
     >
       {children}
@@ -4627,8 +5112,8 @@ function MainCVSections({
 function AdditionalSectionsContent({ cv, accent }) {
   const items = Array.isArray(cv.additionalSections)
     ? cv.additionalSections.filter(
-        (item) => hasText(item.title) || hasText(item.description)
-      )
+      (item) => hasText(item.title) || hasText(item.description)
+    )
     : [];
 
   return (
@@ -4713,12 +5198,12 @@ function CVSection({ title, children, accent }) {
 function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
   const items = Array.isArray(cv.experiences)
     ? cv.experiences.filter(
-        (item) =>
-          hasText(item.jobTitle) ||
-          hasText(item.company) ||
-          hasText(item.location) ||
-          hasText(item.description)
-      )
+      (item) =>
+        hasText(item.jobTitle) ||
+        hasText(item.company) ||
+        hasText(item.location) ||
+        hasText(item.description)
+    )
     : [];
 
   if (!items.length) {
@@ -4755,10 +5240,10 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
           </div>
 
           {hasText(item.description) ? (
-     <HtmlText
-  html={item.description}
-  className="mt-3 text-sm leading-6 text-slate-700"
-/>
+            <HtmlText
+              html={item.description}
+              className="mt-3 text-sm leading-6 text-slate-700"
+            />
           ) : null}
         </div>
       ))}
@@ -4769,11 +5254,11 @@ function ExperienceContent({ cv, timeline = false, accent = "#111827" }) {
 function EducationContent({ cv }) {
   const items = Array.isArray(cv.educations)
     ? cv.educations.filter(
-        (item) =>
-          hasText(item.degree) ||
-          hasText(item.institution) ||
-          hasText(item.description)
-      )
+      (item) =>
+        hasText(item.degree) ||
+        hasText(item.institution) ||
+        hasText(item.description)
+    )
     : [];
 
   if (!items.length) {
@@ -4814,8 +5299,8 @@ function EducationContent({ cv }) {
 function ProjectsContent({ cv }) {
   const items = Array.isArray(cv.projectsList)
     ? cv.projectsList.filter(
-        (item) => hasText(item.title) || hasText(item.description)
-      )
+      (item) => hasText(item.title) || hasText(item.description)
+    )
     : [];
 
   if (!items.length) {
@@ -4856,8 +5341,8 @@ function ProjectsContent({ cv }) {
 function CertificationContent({ cv }) {
   const items = Array.isArray(cv.certificationsList)
     ? cv.certificationsList.filter(
-        (item) => hasText(item.name) || hasText(item.issuer) || hasText(item.date)
-      )
+      (item) => hasText(item.name) || hasText(item.issuer) || hasText(item.date)
+    )
     : [];
 
   if (!items.length) {
@@ -4889,9 +5374,8 @@ function Paragraph({ text, dark = false, className = "" }) {
   return (
     <HtmlText
       html={text}
-      className={`text-sm leading-8 ${
-        dark ? "text-white/75" : "text-black/70"
-      } ${className}`}
+      className={`text-sm leading-8 ${dark ? "text-white/75" : "text-black/70"
+        } ${className}`}
     />
   );
 }
@@ -4903,9 +5387,8 @@ function BulletList({ items, dark = false }) {
 
   return (
     <ul
-      className={`space-y-2 text-sm leading-7 ${
-        dark ? "text-white/78" : "text-black/70"
-      }`}
+      className={`space-y-2 text-sm leading-7 ${dark ? "text-white/78" : "text-black/70"
+        }`}
     >
       {list.map((item, index) => (
         <li key={`${item}-${index}`} className="flex gap-3">
@@ -4949,9 +5432,8 @@ function LanguageList({ items, levels = [], dark = false }) {
 
   return (
     <ul
-      className={`space-y-2 text-sm leading-7 ${
-        dark ? "text-white/78" : "text-black/70"
-      }`}
+      className={`space-y-2 text-sm leading-7 ${dark ? "text-white/78" : "text-black/70"
+        }`}
     >
       {list.map((item, index) => (
         <li key={`${item}-${index}`} className="flex justify-between gap-3">
@@ -4968,9 +5450,8 @@ function LanguageList({ items, levels = [], dark = false }) {
 function SmallTitle({ title, dark = false }) {
   return (
     <p
-      className={`mb-3 text-xs font-black uppercase tracking-[0.22em] ${
-        dark ? "text-white" : "text-black"
-      }`}
+      className={`mb-3 text-xs font-black uppercase tracking-[0.22em] ${dark ? "text-white" : "text-black"
+        }`}
     >
       {title}
     </p>
@@ -4980,9 +5461,8 @@ function SideSection({ title, children, accent = "#111827", dark = false }) {
   return (
     <section className="mt-8 first:mt-0">
       <h3
-        className={`text-xs font-black uppercase tracking-[0.2em] ${
-          dark ? "text-white" : ""
-        }`}
+        className={`text-xs font-black uppercase tracking-[0.2em] ${dark ? "text-white" : ""
+          }`}
         style={!dark ? { color: accent } : undefined}
       >
         {title}
@@ -5015,9 +5495,8 @@ function ContactLine({ cv, dark = false }) {
 
   return (
     <div
-      className={`mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm ${
-        dark ? "text-white/65" : "text-black/55"
-      }`}
+      className={`mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm ${dark ? "text-white/65" : "text-black/55"
+        }`}
     >
       {hasText(cv.email) ? (
         <a className={baseClass} href={`mailto:${cv.email}`}>
@@ -5095,14 +5574,13 @@ function ProfilePhoto({ cv, accent, dark = false, rounded = false, square = fals
   const shape = square
     ? "rounded-2xl"
     : rounded
-    ? "rounded-[2rem]"
-    : "rounded-full";
+      ? "rounded-[2rem]"
+      : "rounded-full";
 
   return (
     <div
-      className={`flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden ${shape} ${
-        dark ? "bg-white/15 ring-white/30" : "bg-black/5 ring-black/10"
-      } ring-1`}
+      className={`flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden ${shape} ${dark ? "bg-white/15 ring-white/30" : "bg-black/5 ring-black/10"
+        } ring-1`}
     >
       {cv.photo ? (
         <img
@@ -5111,16 +5589,14 @@ function ProfilePhoto({ cv, accent, dark = false, rounded = false, square = fals
           className="h-full w-full object-cover"
           style={{
             transform: `scale(${cv.photoZoom || 1})`,
-            objectPosition: `${cv.photoPositionX || 50}% ${
-              cv.photoPositionY || 50
-            }%`,
+            objectPosition: `${cv.photoPositionX || 50}% ${cv.photoPositionY || 50
+              }%`,
           }}
         />
       ) : (
         <span
-          className={`text-3xl font-black ${
-            dark ? "text-white" : "text-white"
-          }`}
+          className={`text-3xl font-black ${dark ? "text-white" : "text-white"
+            }`}
           style={{ color: dark ? "#fff" : accent }}
         >
           {initials}
@@ -5142,8 +5618,8 @@ function calculateATSScore(cv) {
 
   const validExperience = Array.isArray(cv.experiences)
     ? cv.experiences.filter(
-        (item) => item.jobTitle && item.company && item.startDate
-      )
+      (item) => item.jobTitle && item.company && item.startDate
+    )
     : [];
 
   const validEducation = Array.isArray(cv.educations)

@@ -11,6 +11,8 @@ export default function ClientLayout({ children }) {
     "/cv-builder/create",
     "/cv-builder/preview",
     "/cv-builder/success",
+    '/adfront',
+    '/dashboard',
   ];
 
   const shouldHideNavbarFooter = hideNavbarFooterRoutes.some((route) =>

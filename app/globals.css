@@ -3,7 +3,7 @@
 @theme {
   --color-qorliqGold: #C6A35D;
   --color-qorliqGoldDark: #8A6A35;
-  --color-qorliqCream: #F7F2E8;
+  --color-qorliqCream: white;
   --color-qorliqIvory: #FFF9EF;
   --color-qorliqDark: #050505;
   --color-qorliqCharcoal: #111111;
@@ -45,4 +45,25 @@ html {
 section,
 [id] {
   scroll-margin-top: 90px;
+}
+.dashboard-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+/* Chrome, Edge */
+.dashboard-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }

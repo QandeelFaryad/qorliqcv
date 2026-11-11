@@ -139,6 +139,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       default: "user",
+      enum:['user', 'admin'],
     },
 
     // =========================
@@ -214,10 +215,7 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    cvBuilderOfferStartedAt: {
-      type: Date,
-      default: null,
-    },
+  
 
     // =========================
     // LOGO DESIGN SERVICE

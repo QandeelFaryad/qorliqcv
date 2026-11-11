@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { getOfferStartedAt, getOfferState } from "@/lib/cvOfferCountdown";
 
 const navItems = [
   { label: "Home", href: "/#home" },
   { label: "Services", href: "/#services" },
-  { label: "Microsoft", href: "/microsoft" },
+  
   { label: "CV Builder", href: "/cv-builder" },
   { label: "Pricing", href: "/pricing" },
   { label: "Contact", href: "/#contact" },
+   { label: "Dashboard", href: "/dashboard" },
 ];
 
 export default function Header() {
@@ -20,34 +20,8 @@ export default function Header() {
 
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [isOfferVisible, setIsOfferVisible] = useState(false);
 
   const { data: session, status } = useSession();
-
-  const isSuccessPage =
-    pathname?.includes("/success") ||
-    pathname?.includes("/payment-success") ||
-    pathname?.includes("/order-success");
-
-  useEffect(() => {
-    if (isSuccessPage) {
-      setIsOfferVisible(false);
-      return;
-    }
-
-    const startedAt = getOfferStartedAt();
-
-    const checkOffer = () => {
-      const state = getOfferState(startedAt);
-      setIsOfferVisible(state.isActive && !state.isExpired);
-    };
-
-    checkOffer();
-
-    const interval = setInterval(checkOffer, 1000);
-
-    return () => clearInterval(interval);
-  }, [isSuccessPage]);
 
   useEffect(() => {
     setOpen(false);
@@ -68,11 +42,7 @@ export default function Header() {
 
   return (
     <>
-      <header
-        className={`fixed left-0 right-0 z-[9998] border-b border-white/10 bg-[#050505]/95 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300 ${
-          isOfferVisible ? "top-[36px]" : "top-0"
-        }`}
-      >
+      <header className="fixed left-0 right-0 z-[9998] border-b border-white/10 bg-[#050505]/95 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <Link
             href="/#home"
@@ -89,6 +59,7 @@ export default function Header() {
               <h1 className="bg-gradient-to-r from-white via-[#F4E5BD] to-qorliqGold bg-clip-text text-lg font-black tracking-[0.16em] text-transparent">
                 QORLIQ
               </h1>
+
               <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
                 Digital Agency
               </p>
@@ -130,6 +101,7 @@ export default function Header() {
                   <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-white/10 bg-[#101010] p-3 shadow-2xl shadow-black/40">
                     <div className="mb-3 border-b border-white/10 pb-3">
                       <p className="text-sm font-bold text-white">{userName}</p>
+
                       <p className="mt-1 truncate text-xs text-white/50">
                         {session?.user?.email}
                       </p>
@@ -167,11 +139,13 @@ export default function Header() {
                   open ? "translate-y-2 rotate-45" : ""
                 }`}
               />
+
               <span
                 className={`block h-0.5 w-5 bg-white transition ${
                   open ? "opacity-0" : ""
                 }`}
               />
+
               <span
                 className={`block h-0.5 w-5 bg-white transition ${
                   open ? "-translate-y-2 -rotate-45" : ""
@@ -214,6 +188,7 @@ export default function Header() {
                       <p className="truncate text-sm font-bold text-white">
                         {userName}
                       </p>
+
                       <p className="truncate text-xs text-white/50">
                         {session?.user?.email}
                       </p>
@@ -242,7 +217,7 @@ export default function Header() {
         ) : null}
       </header>
 
-      <div className={isOfferVisible ? "h-[110px]" : "h-[74px]"} />
+      <div className="h-[74px]" />
     </>
   );
 }

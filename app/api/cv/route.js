@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import CV from "@/models/CV";
+import { authOptions } from "@/lib/authOptions";
+import { getServerSession } from "next-auth";
+
+
 
 function cleanText(value = "") {
   return String(value || "")
@@ -84,6 +88,7 @@ function cleanObjectArray(value) {
 
 function buildCVPayload(body = {}) {
   return {
+      
     template: cleanText(body.template || "clean-ats"),
     selectedColor: cleanText(body.selectedColor || ""),
 
@@ -152,9 +157,42 @@ function validateCVPayload(payload) {
 
 export async function POST(req) {
   try {
-    await connectDB();
+    const session = await getServerSession(authOptions);
 
-    const body = await req.json();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please login to create your CV.",
+        },
+        { status: 401 }
+      );
+    }
+
+    let body;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid JSON request.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid CV data.",
+        },
+        { status: 400 }
+      );
+    }
+
     const payload = buildCVPayload(body);
 
     const validationError = validateCVPayload(payload);
@@ -169,15 +207,77 @@ export async function POST(req) {
       );
     }
 
-    const cv = await CV.create(payload);
+    if (!["draft", "completed", "archived"].includes(payload.status)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid CV status.",
+        },
+        { status: 400 }
+      );
+    }
+
+  await connectDB();
+
+// Check the model actually used by this running API.
+if (
+  !CV.schema.path("isdownload") ||
+  !CV.schema.path("expiresAt")
+) {
+  console.error("CV schema is outdated. Restart the server.");
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: "CV model is outdated. Restart the server.",
+    },
+    { status: 500 }
+  );
+}
+
+const cv = await CV.create({
+  ...payload,
+  user: session.user.id,
+  isdownload: false,
+  expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  downloadCount: 0,
+  editCount: 0,
+  lastDownloadedAt: null,
+  lastEditedAt: null,
+});
+
+// Read the actual stored document directly from MongoDB.
+const storedCV = await CV.collection.findOne(
+  { _id: cv._id },
+  {
+    projection: {
+      _id: 1,
+      isdownload: 1,
+      expiresAt: 1,
+    },
+  }
+);
+
+console.log("ACTUAL SAVED CV:", {
+  database: CV.db.name,
+  collection: CV.collection.name,
+  document: storedCV,
+});
 
     return NextResponse.json(
       {
         success: true,
+        message: "CV saved successfully.",
         cvId: cv._id.toString(),
+        userId: cv.user.toString(),
         data: cv,
       },
-      { status: 201 }
+      {
+        status: 201,
+        headers: {
+          "Cache-Control": "private, no-store",
+        },
+      }
     );
   } catch (error) {
     console.error("Create CV error:", error);
@@ -187,6 +287,119 @@ export async function POST(req) {
         success: false,
         error: "Unable to save CV.",
       },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please login to view your CVs.",
+        },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    // Model ka ownership field "user" hai.
+    const cvs = await CV.find({ user: userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: cvs.length,
+        cvs,
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, no-store",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Get user CVs error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to fetch your CVs.",
+      },
+      { status: 500 }
+    );
+  }
+}
+export async function DELETE(request) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "Please login first." },
+        { status: 401 }
+      );
+    }
+
+    let body;
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Invalid JSON body." },
+        { status: 400 }
+      );
+    }
+
+    const cvId = body?.cvId;
+
+    if (
+      typeof cvId !== "string" ||
+      !/^[a-fA-F0-9]{24}$/.test(cvId)
+    ) {
+      return NextResponse.json(
+        { success: false, message: "A valid CV ID is required." },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const deletedCV = await CV.findOneAndDelete({
+      _id: cvId,
+      user: userId,
+    });
+
+    if (!deletedCV) {
+      return NextResponse.json(
+        { success: false, message: "CV not found." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "CV deleted successfully.",
+      cvId,
+    });
+  } catch (error) {
+    console.error("Delete CV error:", error);
+
+    return NextResponse.json(
+      { success: false, message: "Unable to delete CV." },
       { status: 500 }
     );
   }

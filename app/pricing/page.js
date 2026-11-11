@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import PricingContent from "./PricingContent";
+import PricingContent from "./priceContent";
 
-export default function PricingPage() {
+export default function CheckoutPage() {
   return (
     <Suspense
       fallback={

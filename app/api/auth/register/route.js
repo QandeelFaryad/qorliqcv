@@ -7,21 +7,32 @@ import { authOptions } from "@/lib/authOptions";
 
 export async function POST(req) {
   try {
-    await connectDB();
+    let body;
 
-    const body = await req.json();
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON body." },
+        { status: 400 }
+      );
+    }
 
-    const name = body.name?.trim();
-    const email = body.email?.trim().toLowerCase();
-    const password = body.password;
-    const confirmPassword = body.confirmPassword;
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    const email =
+      typeof body?.email === "string"
+        ? body.email.trim().toLowerCase()
+        : "";
+    const password =
+      typeof body?.password === "string" ? body.password : "";
+    const confirmPassword =
+      typeof body?.confirmPassword === "string"
+        ? body.confirmPassword
+        : "";
 
     if (!name || !email || !password || !confirmPassword) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "All fields are required.",
-        },
+        { success: false, error: "All fields are required." },
         { status: 400 }
       );
     }
@@ -46,6 +57,8 @@ export async function POST(req) {
       );
     }
 
+    await connectDB();
+
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -60,23 +73,48 @@ export async function POST(req) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
 
-      // default subscription values
       subscriptionStatus: "inactive",
       plan: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
+
+      // Set on the server for every new account.
+      downloadLimit: 0,
+      downloadUsed: 0,
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Account created successfully.",
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Account created successfully.",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          plan: user.plan,
+          subscriptionStatus: user.subscriptionStatus,
+          downloadLimit: user.downloadLimit,
+          downloadUsed: user.downloadUsed,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
+    if (error?.code === 11000) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Account already exists with this email.",
+        },
+        { status: 409 }
+      );
+    }
+
     console.error("Register error:", error);
 
     return NextResponse.json(
@@ -109,15 +147,18 @@ export async function GET() {
     const user = await User.findOne({
       email: session.user.email.toLowerCase().trim(),
     }).select(
-      "name email subscriptionStatus plan stripeCustomerId stripeSubscriptionId subscription"
+      "name email subscriptionStatus plan subscription downloadLimit downloadUsed"
     );
 
     if (!user) {
-      return NextResponse.json({
-        success: false,
-        active: false,
-        error: "User not found.",
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          active: false,
+          error: "User not found.",
+        },
+        { status: 404 }
+      );
     }
 
     const active =
@@ -128,11 +169,16 @@ export async function GET() {
       success: true,
       active,
       user: {
+        id: user._id,
         name: user.name,
         email: user.email,
         plan: user.plan || user.subscription?.plan || "",
         subscriptionStatus:
-          user.subscriptionStatus || user.subscription?.status || "inactive",
+          user.subscriptionStatus ||
+          user.subscription?.status ||
+          "inactive",
+        downloadLimit: user.downloadLimit ?? 0,
+        downloadUsed: user.downloadUsed ?? 0,
       },
     });
   } catch (error) {

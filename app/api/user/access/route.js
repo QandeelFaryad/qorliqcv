@@ -89,6 +89,8 @@ export async function GET() {
           "stripeSubscriptionId",
           "stripePaymentIntentId",
           "billingDetails",
+          "downloadLimit",
+          "downloadUsed",
           "createdAt",
           "updatedAt",
         ].join(" ")
@@ -185,6 +187,11 @@ export async function GET() {
       stripePaymentIntentId: user.stripePaymentIntentId || "",
 
       billingDetails: user.billingDetails || null,
+     
+
+downloadLimit: user.downloadLimit ?? 0,
+downloadUsed: user.downloadUsed ?? 0,
+
 
       createdAt: normalizeDate(user.createdAt),
       updatedAt: normalizeDate(user.updatedAt),

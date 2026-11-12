@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/mongodb";
 import CV from "@/models/CV";
 import Download from "@/models/Download";
 import mongoose from "mongoose";
+import User from "@/models/User";
 
 export async function POST(req) {
   try {
@@ -242,45 +243,137 @@ export async function PUT(request) {
 
     await connectDB();
 
-    const cv = await CV.findOneAndUpdate(
-      {
-        _id: cvId,
-        user: userId,
-      },
-      {
-        $set: {
-          isdownload: true,
-          status: "completed",
-        },
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    ).select("_id isdownload status");
+    const dbSession = await mongoose.startSession();
+    let result;
 
-    if (!cv) {
+    try {
+      await dbSession.withTransaction(async () => {
+        const user = await User.findById(userId)
+          .select("downloadLimit downloadUsed")
+          .session(dbSession);
+
+        if (!user) {
+          const error = new Error("User account not found.");
+          error.status = 404;
+          throw error;
+        }
+
+        const downloadLimit = user.downloadLimit ?? 0;
+        const downloadUsed = user.downloadUsed ?? 0;
+
+        // Stop before making any updates.
+        if (downloadUsed >= downloadLimit) {
+          const error = new Error(
+            "You cannot download this CV. Your download limit has been reached."
+          );
+          error.status = 403;
+          error.code = "DOWNLOAD_LIMIT_REACHED";
+          throw error;
+        }
+
+        const cv = await CV.findOneAndUpdate(
+          {
+            _id: cvId,
+            user: userId,
+          },
+          {
+            $set: {
+              isdownload: true,
+              status: "completed",
+            },
+          },
+          {
+            new: true,
+            runValidators: true,
+            session: dbSession,
+          }
+        ).select("_id isdownload status");
+
+        if (!cv) {
+          const error = new Error("CV not found.");
+          error.status = 404;
+          throw error;
+        }
+
+        // Atomic check also protects against concurrent requests.
+        const updatedUser = await User.findOneAndUpdate(
+          {
+            _id: userId,
+            $expr: {
+              $lt: [
+                { $ifNull: ["$downloadUsed", 0] },
+                { $ifNull: ["$downloadLimit", 0] },
+              ],
+            },
+          },
+          {
+            $inc: { downloadUsed: 1 },
+          },
+          {
+            new: true,
+            session: dbSession,
+          }
+        ).select("downloadLimit downloadUsed");
+
+        if (!updatedUser) {
+          const error = new Error(
+            "You cannot download this CV. Your download limit has been reached."
+          );
+          error.status = 403;
+          error.code = "DOWNLOAD_LIMIT_REACHED";
+          throw error;
+        }
+
+        result = {
+          success: true,
+          message: "CV download authorized.",
+          cv,
+          downloadLimit: updatedUser.downloadLimit ?? 0,
+          downloadUsed: updatedUser.downloadUsed,
+          downloadsRemaining: Math.max(
+            0,
+            (updatedUser.downloadLimit ?? 0) -
+              updatedUser.downloadUsed
+          ),
+        };
+      });
+    } finally {
+      await dbSession.endSession();
+    }
+
+    return NextResponse.json(result);
+  } catch (error) {
+    // Expected limit response: no console error or stack trace.
+    if (error?.code === "DOWNLOAD_LIMIT_REACHED") {
       return NextResponse.json(
-        { success: false, message: "CV not found." },
+        {
+          success: false,
+          code: "DOWNLOAD_LIMIT_REACHED",
+          message:
+            "You cannot download this CV. Your download limit has been reached.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (error?.status === 404) {
+      return NextResponse.json(
+        { success: false, message: error.message },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "CV download status updated successfully.",
-      cv,
-    });
-  } catch (error) {
     console.error("CV download update error:", error);
 
     return NextResponse.json(
-      { success: false, message: "Unable to update CV status." },
+      {
+        success: false,
+        message: "Unable to update download details.",
+      },
       { status: 500 }
     );
   }
 }
-
 
 
 

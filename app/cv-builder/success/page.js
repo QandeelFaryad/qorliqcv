@@ -291,64 +291,59 @@ export default function SuccessPage() {
 const downloadClickRef = useRef(false);
 
 const saveDownloadDetails = async (cvId, format, fileSize) => {
-  const sendRequest = async (url, method, body, label) => {
-    try {
-      const response = await fetch(url, {
-        method,
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+  const response = await fetch("/api/downloads", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      cvId,
+      format: format === "PDF" ? "pdf" : "word",
+      fileSize,
+    }),
+  });
 
-      const data = await response.json().catch(() => null);
+  const data = await response.json();
 
-      if (!response.ok || data?.success !== true) {
-        throw new Error(
-          data?.message ||
-            data?.error ||
-            `Request failed (${response.status}).`
-        );
-      }
-
-      return data;
-    } catch (error) {
-      throw new Error(
-        `${label}: ${error.message || "Please check your connection."}`
-      );
-    }
-  };
-
-  const results = await Promise.allSettled([
-    // Update CV: isdownload = true, status = "complete"
-    sendRequest(
-      "/api/downloads",
-      "PUT",
-      { cvId },
-      "CV status could not be updated"
-    ),
-
-    // Save download history
-    sendRequest(
-      "/api/downloads",
-      "POST",
-      {
-        cvId,
-        format,
-        fileSize: fileSize || "",
-      },
-      "Download history could not be saved"
-    ),
-  ]);
-
-  const errors = results
-    .filter((result) => result.status === "rejected")
-    .map((result) => result.reason.message);
-
-  if (errors.length) {
-    throw new Error(errors.join("\n"));
+  if (!response.ok || data.success === false) {
+    throw new Error(
+      data.message ||
+        data.error ||
+        "Unable to save download history."
+    );
   }
+
+  return data;
+};
+
+// Checks the limit and increases downloadUsed through your PUT API.
+const authorizeDownload = async (cvId) => {
+  const response = await fetch("/api/downloads", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ cvId }),
+  });
+
+  const data = await response.json();
+
+  if (data.code === "DOWNLOAD_LIMIT_REACHED") {
+    alert(
+      data.message ||
+        "You cannot download this CV. Your download limit has been reached."
+    );
+
+    return null;
+  }
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.message || "Unable to authorize download."
+    );
+  }
+
+  return data;
 };
 
 const handlePDFDownload = async () => {
@@ -367,7 +362,6 @@ const handlePDFDownload = async () => {
 
   try {
     const params = new URLSearchParams(window.location.search);
-
     const currentCvId = cv?._id || cv?.id || params.get("cvId");
 
     if (
@@ -378,20 +372,32 @@ const handlePDFDownload = async () => {
       return;
     }
 
+    setSavingDownloadRecord(true);
+
+    const authorization = await authorizeDownload(currentCvId);
+
+    // Stop here: no PDF generation and no history POST.
+    if (!authorization) {
+      return;
+    }
+
+    setSavingDownloadRecord(false);
+
     const result = await downloadPDF();
 
-    if (!result?.success) return;
+    if (!result?.success) {
+      return;
+    }
 
     pdfGenerated = true;
     setSavingDownloadRecord(true);
 
+    // POST history only; do not call PUT again inside this helper.
     await saveDownloadDetails(
       currentCvId,
       "PDF",
       result.fileSize
     );
-
-    console.log("CV status and PDF download history saved.");
   } catch (error) {
     console.error("PDF download/update error:", error);
 
@@ -400,7 +406,7 @@ const handlePDFDownload = async () => {
         ? `PDF download started.\n${
             error.message || "Unable to save download details."
           }`
-        : error.message || "Unable to generate PDF."
+        : error.message || "Unable to download PDF."
     );
   } finally {
     downloadClickRef.current = false;
@@ -424,7 +430,6 @@ const handleWordDownload = async () => {
 
   try {
     const params = new URLSearchParams(window.location.search);
-
     const currentCvId = cv?._id || cv?.id || params.get("cvId");
 
     if (
@@ -435,20 +440,32 @@ const handleWordDownload = async () => {
       return;
     }
 
+    setSavingDownloadRecord(true);
+
+    const authorization = await authorizeDownload(currentCvId);
+
+    // Stop here: no Word generation and no history POST.
+    if (!authorization) {
+      return;
+    }
+
+    setSavingDownloadRecord(false);
+
     const result = await downloadWord();
 
-    if (!result?.success) return;
+    if (!result?.success) {
+      return;
+    }
 
     wordGenerated = true;
     setSavingDownloadRecord(true);
 
+    // POST history only; do not call PUT again inside this helper.
     await saveDownloadDetails(
       currentCvId,
       "DOCX",
       result.fileSize
     );
-
-    console.log("CV status and Word download history saved.");
   } catch (error) {
     console.error("Word download/update error:", error);
 
@@ -457,7 +474,7 @@ const handleWordDownload = async () => {
         ? `Word download started.\n${
             error.message || "Unable to save download details."
           }`
-        : error.message || "Unable to generate Word file."
+        : error.message || "Unable to download Word file."
     );
   } finally {
     downloadClickRef.current = false;

@@ -214,6 +214,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    downloadLimit: {
+  type: Number,
+  default: 0,
+  min: 0,
+},
+
+downloadUsed: {
+  type: Number,
+  default: 0,
+  min: 0,
+},
+
+    
+  
 
   
 

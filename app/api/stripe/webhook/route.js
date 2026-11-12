@@ -61,6 +61,36 @@ function getServiceName(serviceId, metadata = {}) {
   return "CV Builder";
 }
 
+/*
+  Returns the download limit for a given subscription plan.
+  - one-time  → 1
+  - 3-month   → 20
+  - 6-month   → 60
+  - annual    → 120
+*/
+function getDownloadLimitForPlan(planId) {
+  const value = cleanText(planId).toLowerCase();
+
+  if (value === "3-months" || value === "3-month") {
+    return 20;
+  }
+
+  if (value === "6-months" || value === "6-month") {
+    return 60;
+  }
+
+  if (
+    value === "annual" ||
+    value === "yearly" ||
+    value === "1-year"
+  ) {
+    return 120;
+  }
+
+  /* Fallback for unknown subscription plans */
+  return 20;
+}
+
 function getCustomerIdFromStripeObject(stripeObject) {
   if (!stripeObject) {
     return "";
@@ -549,6 +579,33 @@ async function syncSubscriptionObject(
       ? "failed"
       : "";
 
+  /*
+    Look up the existing user to detect whether this is a
+    fresh purchase or an automatic renewal.
+
+    A fresh purchase is when:
+      - The user has no previous subscription, OR
+      - The incoming subscription ID differs from the saved one
+        (user bought a new plan), OR
+      - The plan name changed (user upgraded / switched plan).
+
+    Automatic renewals keep the same subscription ID and plan,
+    so downloadUsed must NOT be reset in that case.
+  */
+  const existingUser = await findUserByIdentifiers({
+    userId,
+    customerId,
+    email,
+  });
+
+  const isNewPurchase =
+    isActive &&
+    (
+      !existingUser?.stripeSubscriptionId ||
+      existingUser.stripeSubscriptionId !== subscription.id ||
+      existingUser.plan !== plan
+    );
+
   const updateSet = {
     plan: isActive ? plan : "free",
 
@@ -585,6 +642,24 @@ async function syncSubscriptionObject(
 
     oneTimeAccessStatus: "",
     accessExpiresAt: null,
+
+    /*
+      Always keep the downloadLimit in sync with the
+      current plan.
+
+      Only reset downloadUsed on a genuine new purchase:
+      - 3-month  → 20 downloads
+      - 6-month  → 60 downloads
+      - annual   → 120 downloads
+
+      Automatic renewals (same sub ID + same plan) do NOT
+      reset downloadUsed so users keep their usage count.
+    */
+    downloadLimit: isActive
+      ? getDownloadLimitForPlan(plan)
+      : 0,
+
+    ...(isNewPurchase ? { downloadUsed: 0 } : {}),
 
     updatedAt: now,
   };

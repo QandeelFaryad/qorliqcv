@@ -63,6 +63,36 @@ function isSubscriptionPlanId(planId) {
   );
 }
 
+/*
+  Returns the download limit for a given plan.
+  - one-time  → 1
+  - 3-month   → 20
+  - 6-month   → 60
+  - annual    → 120
+*/
+function getDownloadLimitForPlan(planId) {
+  const value = cleanText(planId).toLowerCase();
+
+  if (value === "3-months" || value === "3-month") {
+    return 20;
+  }
+
+  if (value === "6-months" || value === "6-month") {
+    return 60;
+  }
+
+  if (
+    value === "annual" ||
+    value === "yearly" ||
+    value === "1-year"
+  ) {
+    return 120;
+  }
+
+  /* Fallback for unknown subscription plans */
+  return 20;
+}
+
 function errorResponse(error, status = 400, extra = {}) {
   return NextResponse.json(
     {
@@ -500,6 +530,11 @@ export async function POST(req) {
 
       The old countdown field is removed using $unset.
     */
+    const downloadLimit =
+      isActive
+        ? getDownloadLimitForPlan(finalPlan)
+        : 0;
+
     const updatedUser =
       await User.findByIdAndUpdate(
         user._id,
@@ -553,6 +588,16 @@ export async function POST(req) {
               subscriptionEndDate || null,
 
             billingDetails,
+
+            /*
+              Reset download counters whenever a new
+              subscription is activated.
+              - 3-month  → 20 downloads
+              - 6-month  → 60 downloads
+              - annual   → 120 downloads
+            */
+            downloadLimit,
+            downloadUsed: 0,
 
             updatedAt: now,
           },

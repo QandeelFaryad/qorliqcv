@@ -454,6 +454,8 @@ export async function POST(req) {
               paymentStatus: "paid",
               lastPaymentStatus: "paid",
               oneTimeAccessStatus: "active",
+                downloadLimit: 1,
+  downloadUsed: 0,
 
               /*
                 These values are retained for compatibility

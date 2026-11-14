@@ -139,7 +139,35 @@ export default function Header() {
 
   const lastScrollY = useRef(0);
 
-  const scrollFrame = useRef(null);
+  const scrollFrame = useRef(null); 
+  const [activeHash, setActiveHash] = useState("");
+
+useEffect(() => {
+  const updateActiveHash = () => {
+    setActiveHash(window.location.hash);
+  };
+
+  updateActiveHash();
+
+  window.addEventListener("hashchange", updateActiveHash);
+
+  return () => {
+    window.removeEventListener(
+      "hashchange",
+      updateActiveHash
+    );
+  };
+}, [pathname]);
+
+const isActiveLink = (href) => {
+  const [linkPath, linkHash] = href.split("#");
+
+  if (pathname !== (linkPath || "/")) {
+    return false;
+  }
+
+  return Boolean(linkHash) && activeHash === `#${linkHash}`;
+};
 
   /* ================================================
      THEME INITIALIZATION
@@ -397,23 +425,25 @@ export default function Header() {
               setMobileOpen(false)
             }
           >
-           <div className="relative">
+<div className="relative">
+  {/* Light Mode Logo */}
   <Image
     src="/QORLIQ_cv.svg"
     alt="QORLIQ CV"
-    width={158}
-    height={48}
+    width={185}
+    height={56}
     priority
-    className="h-auto w-[158px] dark:hidden"
+    className="h-auto w-[158px] lg:w-[185px] dark:hidden"
   />
 
+  {/* Dark Mode Logo */}
   <Image
     src="/QORLIQ_cv_dark.svg"
     alt="QORLIQ CV"
-    width={158}
-    height={48}
+    width={185}
+    height={56}
     priority
-    className="hidden h-auto w-[158px] dark:block"
+    className="hidden h-auto w-[158px] lg:w-[185px] dark:block"
   />
 </div>
           </Link>
@@ -421,51 +451,74 @@ export default function Header() {
           {/* ====================================
               DESKTOP NAVIGATION
           ==================================== */}
+{/* ====================================
+    DESKTOP NAVIGATION
+==================================== */}
 
-          <nav
-            aria-label="Main navigation"
-            className="
-              hidden
-              items-center
-              justify-center
-              gap-7
-              lg:flex
-              xl:gap-9
-            "
-          >
-            {navigation.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="
-                  relative
-                  whitespace-nowrap
-                  py-2
-                  text-[13px]
-                  font-medium
-                  tracking-[-0.01em]
-                  text-text-secondary
-                  transition-colors
-                  duration-200
-                  hover:text-text-primary
+<nav
+  aria-label="Main navigation"
+  className="
+    hidden items-center justify-center
+    gap-7 lg:flex xl:gap-9
+  "
+>
+  {navigation.map((item) => {
+    const active = isActiveLink(item.href);
 
-                  after:absolute
-                  after:bottom-0
-                  after:left-0
-                  after:h-[2px]
-                  after:w-0
-                  after:rounded-full
-                  after:bg-accent
-                  after:transition-all
-                  after:duration-300
+    return (
+      <Link
+        key={item.label}
+        href={item.href}
+        onClick={() => {
+          setActiveHash(
+            `#${item.href.split("#")[1]}`
+          );
+        }}
+        aria-current={active ? "location" : undefined}
+        className={`
+          relative
+          whitespace-nowrap
+          py-2
+          text-[13px]
+          font-medium
+          tracking-[-0.01em]
+          transition-colors
+          duration-300
 
-                  hover:after:w-full
-                "
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          after:absolute
+          after:bottom-0
+          after:left-0
+          after:h-[2px]
+          after:rounded-full
+          after:bg-accent
+          after:transition-all
+          after:duration-300
+
+          focus-visible:outline-2
+          focus-visible:outline-offset-4
+          focus-visible:outline-accent
+
+          ${
+            active
+              ? `
+                font-semibold
+                text-text-primary
+                after:w-full
+              `
+              : `
+                text-text-secondary
+                hover:text-text-primary
+                after:w-0
+                hover:after:w-full
+              `
+          }
+        `}
+      >
+        {item.label}
+      </Link>
+    );
+  })}
+</nav>
 
           {/* ====================================
               DESKTOP ACTIONS
@@ -518,48 +571,53 @@ export default function Header() {
             >
               Log in
             </Link>
+<Link
+  href="/cv-builder"
+  className="
+    group
+    inline-flex
+    h-11
+    items-center
+    justify-center
+    gap-2.5
+    whitespace-nowrap
+    rounded-xl
+    bg-[#07183f]
+    px-6
+    text-[13px]
+    font-semibold
+    tracking-[-0.01em]
+    text-white
+    shadow-sm
+    transition-all
+    duration-300
 
-            <Link
-              href="/cv-builder"
-              className="
-                group
-                inline-flex
-                h-11
-                items-center
-                justify-center
-                gap-2
-                whitespace-nowrap
-                rounded-xl
-                bg-[#07183f]
-                px-5
-                text-[13px]
-                font-semibold
-                text-white
-                shadow-sm
-                transition-all
-                duration-300
-                hover:-translate-y-0.5
-                hover:bg-[#102b66]
-                hover:shadow-md
+    hover:-translate-y-0.5
+    hover:bg-[#102b66]
+    hover:shadow-[0_8px_20px_rgba(7,24,63,0.15)]
 
-                dark:bg-accent
-                dark:text-[#061747]
-                dark:hover:bg-accent-hover
-              "
-            >
-              Build my CV
+    focus-visible:outline-2
+    focus-visible:outline-offset-4
+    focus-visible:outline-accent
 
-              <ArrowUpRight
-                size={16}
-                strokeWidth={2}
-                className="
-                  transition-transform
-                  duration-300
-                  group-hover:translate-x-0.5
-                  group-hover:-translate-y-0.5
-                "
-              />
-            </Link>
+    dark:bg-accent
+    dark:text-[#061747]
+    dark:hover:bg-accent-hover
+  "
+>
+  <span>Create Your CV</span>
+
+  <ArrowUpRight
+    size={16}
+    strokeWidth={1.9}
+    className="
+      transition-transform
+      duration-300
+      group-hover:translate-x-0.5
+      group-hover:-translate-y-0.5
+    "
+  />
+</Link>
           </div>
 
           {/* ====================================
@@ -683,42 +741,91 @@ export default function Header() {
                 sm:px-8
               "
             >
-              {navigation.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() =>
-                    setMobileOpen(false)
-                  }
-                  className="
-                    group
-                    flex
-                    min-h-13
-                    items-center
-                    justify-between
-                    border-b
-                    border-border
-                    py-3
-                    text-[15px]
-                    font-medium
-                    text-text-primary
-                    transition-colors
-                    hover:text-accent
-                  "
-                >
-                  {item.label}
+            {navigation.map((item) => {
+  const active = isActiveLink(item.href);
 
-                  <ChevronRight
-                    size={17}
-                    className="
-                      text-text-muted
-                      transition-transform
-                      duration-200
-                      group-hover:translate-x-1
-                    "
-                  />
-                </Link>
-              ))}
+  return (
+    <Link
+      key={item.label}
+      href={item.href}
+      onClick={() => {
+        setActiveHash(
+          `#${item.href.split("#")[1]}`
+        );
+
+        setMobileOpen(false);
+      }}
+      aria-current={active ? "location" : undefined}
+      className={`
+        group
+        relative
+        flex
+        min-h-13
+        items-center
+        justify-between
+        border-b
+        border-border
+        py-3
+        pl-4
+        pr-1
+        text-[15px]
+        font-medium
+        transition-all
+        duration-300
+
+        ${
+          active
+            ? `
+              bg-accent/10
+              font-semibold
+              text-text-primary
+            `
+            : `
+              text-text-secondary
+              hover:bg-background-soft
+              hover:text-text-primary
+            `
+        }
+      `}
+    >
+      {/* ACTIVE INDICATOR */}
+
+      {active && (
+        <span
+          aria-hidden="true"
+          className="
+            absolute
+            inset-y-2
+            left-0
+            w-[3px]
+            rounded-full
+            bg-accent
+          "
+        />
+      )}
+
+      <span>{item.label}</span>
+
+      <ChevronRight
+        size={17}
+        className={`
+          transition-all
+          duration-300
+
+          ${
+            active
+              ? "translate-x-1 text-accent"
+              : `
+                text-text-muted
+                group-hover:translate-x-1
+                group-hover:text-accent
+              `
+          }
+        `}
+      />
+    </Link>
+  );
+})}
 
               {/* Mobile buttons */}
 
@@ -753,36 +860,43 @@ export default function Header() {
                 >
                   Log in
                 </Link>
+<Link
+  href="/cv-builder"
+  onClick={() => setMobileOpen(false)}
+  className="
+    group
+    inline-flex
+    h-12
+    items-center
+    justify-center
+    gap-2
+    rounded-xl
+    bg-[#07183f]
+    px-3
+    text-sm
+    font-semibold
+    text-white
+    transition-all
+    duration-300
+    hover:bg-[#102b66]
 
-                <Link
-                  href="/cv-builder"
-                  onClick={() =>
-                    setMobileOpen(false)
-                  }
-                  className="
-                    inline-flex
-                    h-12
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    bg-[#07183f]
-                    px-3
-                    text-sm
-                    font-semibold
-                    text-white
-                    transition-colors
-                    hover:bg-[#102b66]
+    dark:bg-accent
+    dark:text-[#061747]
+    dark:hover:bg-accent-hover
+  "
+>
+  Create Your CV
 
-                    dark:bg-accent
-                    dark:text-[#061747]
-                    dark:hover:bg-accent-hover
-                  "
-                >
-                  Build my CV
-
-                  <ArrowUpRight size={16} />
-                </Link>
+  <ArrowUpRight
+    size={16}
+    className="
+      transition-transform
+      duration-300
+      group-hover:translate-x-0.5
+      group-hover:-translate-y-0.5
+    "
+  />
+</Link>
               </div>
             </nav>
           </div>

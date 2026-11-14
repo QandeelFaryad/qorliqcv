@@ -241,31 +241,32 @@ export default function Footer() {
           "
         >
           {/* LOGO */}
-
-          <Link
-            href="/"
-            aria-label="QORLIQ CV Homepage"
-            className="
-              inline-flex
-              items-center
-              transition-opacity
-              duration-200
-              hover:opacity-90
-            "
-          >
-            <Image
-              src="/QORLIQ_cv_dark.svg"
-              alt="QORLIQ CV"
-              width={185}
-              height={60}
-              className="
-                h-auto
-                w-[150px]
-                object-contain
-                sm:w-[175px]
-              "
-            />
-          </Link>
+<Link
+  href="/"
+  aria-label="QORLIQ CV Homepage"
+  className="
+    inline-flex
+    items-center
+    transition-opacity
+    duration-200
+    hover:opacity-90
+  "
+>
+  <Image
+    src="/QORLIQ_cv_dark.svg"
+    alt="QORLIQ CV"
+    width={185}
+    height={60}
+    priority
+    className="
+      h-auto
+      w-[150px]
+      object-contain
+      sm:w-[175px]
+      lg:w-[185px]
+    "
+  />
+</Link>
 
           {/* BRAND DESCRIPTION */}
 

@@ -15,7 +15,7 @@ import {
 } from "motion/react";
 
 import {
-  ArrowRight,
+  
   ArrowUpRight,
   Check,
   ChevronLeft,
@@ -1860,7 +1860,7 @@ export default function LayoutsSection() {
           >
             Explore All Templates
 
-            <ArrowRight
+            <ArrowUpRight
               size={17}
               className="
                 transition-transform

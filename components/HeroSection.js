@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  ArrowRight,
+  ArrowUpRight,
   Check,
   CheckCircle2,
   Sparkles,
@@ -612,26 +612,39 @@ export default function HeroSection() {
           {/* ========================================
               HEADING
           ======================================== */}
-
-  <h1
+<h1
   className="
     relative
-    max-w-[760px]
-    text-[clamp(3.5rem,7vw,7.5rem)]
+    max-w-[850px]
+    font-sans
+    text-[clamp(2.6rem,5.2vw,5.5rem)]
     font-semibold
-    leading-[1.08]
-    tracking-[-0.075em]
+    leading-[1.12]
+    tracking-[-0.055em]
     text-text-primary
+    sm:text-[clamp(3.2rem,5.5vw,5.8rem)]
+    lg:leading-[1.1]
   "
 >
+  {/* LINE 1 */}
+
   <AnimatedLine delay={0.1}>
-    Build a CV
+    <span className="block">
+      <span className="font-bold">
+        Qorliq CV
+      </span>
+      {" — "}
+      Build a Professional
+    </span>
   </AnimatedLine>
 
+  {/* LINE 2 */}
+
   <AnimatedLine delay={0.25}>
-    <span className="inline-block">
-      that{" "}
-      <span className="relative inline-block whitespace-nowrap">
+    <span className="block">
+      ATS-Friendly{" "}
+
+      <span className="relative inline-block">
         <span
           className="
             relative
@@ -639,14 +652,14 @@ export default function HeroSection() {
             font-editorial
             font-normal
             italic
-            tracking-[-0.065em]
+            tracking-[-0.045em]
             text-text-primary
           "
         >
-          gets read.
+          CV in Minutes.
         </span>
 
-        {/* Animated cyan background */}
+        {/* Animated Cyan Underline */}
 
         <motion.span
           aria-hidden="true"
@@ -662,10 +675,10 @@ export default function HeroSection() {
           }}
           className="
             absolute
-            bottom-[0.08em]
+            bottom-[0.07em]
             left-0
             z-0
-            h-[0.28em]
+            h-[0.22em]
             w-full
             bg-accent
           "
@@ -726,38 +739,53 @@ export default function HeroSection() {
                 whileTap={{
                   scale: 0.98,
                 }}
-              >
-                <Link
-                  href="/cv-builder"
-                  className="
-                    group
-                    inline-flex
-                    h-12
-                    items-center
-                    justify-center
-                    gap-3
-                    rounded-lg
-                    bg-[#0b0b0b]
-                    px-5
-                    text-[13px]
-                    font-semibold
-                    text-white
-                    shadow-sm
-                    transition-colors
-                    hover:bg-[#222]
+              ><Link
+  href="/cv-builder"
+  className="
+    group
+    inline-flex
+    h-11
+    items-center
+    justify-center
+    gap-2.5
+    whitespace-nowrap
+    rounded-xl
+    bg-[#07183f]
+    px-6
+    text-[13px]
+    font-semibold
+    tracking-[-0.01em]
+    text-white
+    shadow-sm
+    transition-all
+    duration-300
 
-                    dark:bg-accent
-                    dark:text-[#061747]
-                    dark:hover:bg-accent-hover
-                  "
-                >
-                  Build my CV
+    hover:-translate-y-0.5
+    hover:bg-[#102b66]
+    hover:shadow-[0_8px_20px_rgba(7,24,63,0.15)]
 
-                  <ArrowRight
-                    size={15}
-                    className="transition-transform duration-300 group-hover:translate-x-1"
-                  />
-                </Link>
+    focus-visible:outline-2
+    focus-visible:outline-offset-4
+    focus-visible:outline-accent
+
+    dark:bg-accent
+    dark:text-[#061747]
+    dark:hover:bg-accent-hover
+  "
+>
+  <span>Create Your CV</span>
+
+  <ArrowUpRight
+    size={16}
+    strokeWidth={1.9}
+    className="
+      transition-transform
+      duration-300
+      group-hover:translate-x-0.5
+      group-hover:-translate-y-0.5
+    "
+  />
+</Link>
               </motion.div>
 
               <motion.div

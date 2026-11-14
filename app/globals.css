@@ -45,40 +45,45 @@
    DARK MODE
 ========================================= */
 
+/* =========================================
+   DARK MODE — PREMIUM BRAND NAVY BLUE
+========================================= */
+
 .dark {
   color-scheme: dark;
 
-  /* Backgrounds */
-  --background: #060e25;
-  --background-soft: #0b1733;
-  --background-muted: #101f40;
+  /* Backgrounds — Brand Navy Blue */
+  --background: #061747;
+  --background-soft: #0b2055;
+  --background-muted: #112b65;
 
   /* Surfaces */
-  --surface: #0d1b39;
-  --surface-secondary: #142449;
+  --surface: #0c2254;
+  --surface-secondary: #142f68;
 
   /* Text */
-  --foreground: #f7faff;
-  --text-primary: #f7faff;
-  --text-secondary: #b5c2d9;
-  --text-muted: #8192b0;
+  --foreground: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #c4d3eb;
+  --text-muted: #91a8cc;
 
   /* Brand */
   --primary: #00d5df;
   --primary-hover: #33e5eb;
 
+  /* Accent */
   --accent: #00d5df;
   --accent-hover: #33e5eb;
 
   /* Borders */
-  --border: #253657;
-  --border-strong: #34476a;
+  --border: #244174;
+  --border-strong: #36558a;
 
   /* Interactive */
   --ring: #00d5df;
 
   /* Shadows */
-  --shadow-color: 0 0 0;
+  --shadow-color: 2 12 40;
 }
 
 /* =========================================
@@ -118,12 +123,20 @@
   --color-ring: var(--ring);
 
   /* Typography */
---font-sans: var(--font-dm-sans), Arial, sans-serif;
+/* =========================================
+   TYPOGRAPHY
+========================================= */
+
+--font-sans: var(--font-rubik), Arial, sans-serif;
 --font-editorial: var(--font-instrument-serif), Georgia, serif;
 }
 
 /* =========================================
    GLOBAL BASE
+========================================= */
+
+/* =========================================
+   GLOBAL BASE — RUBIK FONT
 ========================================= */
 
 html {
@@ -137,13 +150,34 @@ body {
   background: var(--background);
   color: var(--foreground);
 
-  font-family: var(--font-sans);
+  /* Primary Font — Rubik */
+  font-family: var(--font-rubik), Arial, sans-serif;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
   transition:
     background-color 0.25s ease,
     color 0.25s ease;
+}
+
+/* =========================================
+   FORM ELEMENTS
+========================================= */
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* =========================================
+   EDITORIAL FONT — KEEP ITALIC
+========================================= */
+
+.font-editorial {
+  font-family: var(--font-instrument-serif), Georgia, serif;
 }
 
 /* =========================================

@@ -1,223 +1,803 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+
+import {
+  ArrowUpRight,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  ChevronRight,
+} from "lucide-react";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import { usePathname } from "next/navigation";
 
-const navItems = [
-  { label: "Home", href: "/#home" },
-  { label: "Services", href: "/#services" },
-  
-  { label: "CV Builder", href: "/cv-builder" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Contact", href: "/#contact" },
-   { label: "Dashboard", href: "/dashboard" },
+/* ================================================
+   NAVIGATION
+================================================ */
+
+const navigation = [
+  {
+    label: "How it works",
+    href: "/#how-it-works",
+  },
+  {
+    label: "Features",
+    href: "/#features",
+  },
+  {
+    label: "Layouts",
+    href: "/#layouts",
+  },
+  {
+    label: "FAQ",
+    href: "/#faq",
+  },
 ];
+
+/* ================================================
+   THEME TOGGLE
+================================================ */
+
+function ThemeToggle({ theme, toggleTheme }) {
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={
+        theme === "dark"
+          ? "Switch to light mode"
+          : "Switch to dark mode"
+      }
+      aria-pressed={theme === "dark"}
+      title={
+        theme === "dark"
+          ? "Light mode"
+          : "Dark mode"
+      }
+      className="
+        group
+        relative
+        flex
+        h-10
+        w-10
+        shrink-0
+        items-center
+        justify-center
+        rounded-full
+        border
+        border-border
+        bg-surface
+        text-text-primary
+        transition-all
+        duration-300
+        hover:border-accent
+        hover:bg-background-soft
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-accent
+        focus-visible:ring-offset-2
+        focus-visible:ring-offset-background
+      "
+    >
+      <Sun
+        size={18}
+        strokeWidth={1.8}
+        className="
+          absolute
+          rotate-0
+          scale-100
+          transition-all
+          duration-300
+          dark:rotate-90
+          dark:scale-0
+        "
+      />
+
+      <Moon
+        size={18}
+        strokeWidth={1.8}
+        className="
+          absolute
+          -rotate-90
+          scale-0
+          transition-all
+          duration-300
+          dark:rotate-0
+          dark:scale-100
+        "
+      />
+    </button>
+  );
+}
+
+/* ================================================
+   HEADER
+================================================ */
 
 export default function Header() {
   const pathname = usePathname();
 
-  const [open, setOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
 
-  const { data: session, status } = useSession();
+  const [mounted, setMounted] = useState(false);
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [headerVisible, setHeaderVisible] =
+    useState(true);
+
+  const [scrolled, setScrolled] = useState(false);
+
+  const lastScrollY = useRef(0);
+
+  const scrollFrame = useRef(null);
+
+  /* ================================================
+     THEME INITIALIZATION
+  ================================================ */
 
   useEffect(() => {
-    setOpen(false);
-    setProfileOpen(false);
+    const savedTheme = localStorage.getItem(
+      "qorliq-theme"
+    );
+
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+
+    const initialTheme =
+      savedTheme === "dark" ||
+      savedTheme === "light"
+        ? savedTheme
+        : prefersDark
+          ? "dark"
+          : "light";
+
+    document.documentElement.classList.toggle(
+      "dark",
+      initialTheme === "dark"
+    );
+
+    document.documentElement.style.colorScheme =
+      initialTheme;
+
+    setTheme(initialTheme);
+
+    setMounted(true);
+  }, []);
+
+  /* ================================================
+     TOGGLE THEME
+  ================================================ */
+
+  const toggleTheme = () => {
+    const nextTheme =
+      theme === "dark" ? "light" : "dark";
+
+    document.documentElement.classList.toggle(
+      "dark",
+      nextTheme === "dark"
+    );
+
+    document.documentElement.style.colorScheme =
+      nextTheme;
+
+    localStorage.setItem(
+      "qorliq-theme",
+      nextTheme
+    );
+
+    setTheme(nextTheme);
+  };
+
+  /* ================================================
+     SCROLL BEHAVIOR
+  ================================================ */
+
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+
+    const handleScroll = () => {
+      if (scrollFrame.current !== null) return;
+
+      scrollFrame.current = window.requestAnimationFrame(
+        () => {
+          const currentScrollY = Math.max(
+            0,
+            window.scrollY
+          );
+
+          const previousScrollY =
+            lastScrollY.current;
+
+          const difference =
+            currentScrollY - previousScrollY;
+
+          setScrolled(currentScrollY > 16);
+
+          /* Always display navbar near top */
+
+          if (currentScrollY < 80) {
+            setHeaderVisible(true);
+          }
+
+          /* Keep navbar visible with mobile menu */
+
+          else if (mobileOpen) {
+            setHeaderVisible(true);
+          }
+
+          /* Scroll downward */
+
+          else if (difference > 5) {
+            setHeaderVisible(false);
+          }
+
+          /* Scroll upward */
+
+          else if (difference < -5) {
+            setHeaderVisible(true);
+          }
+
+          lastScrollY.current =
+            currentScrollY;
+
+          scrollFrame.current = null;
+        }
+      );
+    };
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      { passive: true }
+    );
+
+    handleScroll();
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      );
+
+      if (scrollFrame.current !== null) {
+        cancelAnimationFrame(
+          scrollFrame.current
+        );
+      }
+    };
+  }, [mobileOpen]);
+
+  /* ================================================
+     CLOSE MOBILE MENU ON ROUTE CHANGE
+  ================================================ */
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setHeaderVisible(true);
   }, [pathname]);
 
-  const userName = session?.user?.name || session?.user?.email || "User";
-  const userInitial = userName?.charAt(0)?.toUpperCase() || "U";
+  /* ================================================
+     MOBILE MENU — ESCAPE
+  ================================================ */
 
-  const handleLogout = async () => {
-    setProfileOpen(false);
-    setOpen(false);
+  useEffect(() => {
+    if (!mobileOpen) return;
 
-    await signOut({
-      callbackUrl: "/login",
-    });
-  };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, [mobileOpen]);
 
   return (
     <>
-      <header className="fixed left-0 right-0 z-[9998] border-b border-white/10 bg-[#050505]/95 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl transition-all duration-300">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+      {/* ============================================
+          FIXED HEADER
+      ============================================ */}
+
+      <header
+        className={`
+          fixed
+          inset-x-0
+          top-0
+          z-50
+          w-full
+          border-b
+          transition-[transform,background-color,border-color,box-shadow]
+          duration-300
+          ease-[cubic-bezier(0.22,1,0.36,1)]
+          motion-reduce:transition-none
+
+          ${
+            headerVisible
+              ? "translate-y-0"
+              : "-translate-y-full"
+          }
+
+          ${
+            scrolled || mobileOpen
+              ? `
+                border-border
+                bg-background/95
+                shadow-[0_8px_30px_rgba(0,0,0,0.035)]
+                backdrop-blur-xl
+                dark:shadow-[0_8px_30px_rgba(0,0,0,0.16)]
+              `
+              : `
+                border-transparent
+                bg-background
+              `
+          }
+        `}
+      >
+        {/* ========================================
+            MAIN NAVBAR
+        ======================================== */}
+
+        <div
+          className="
+            mx-auto
+            flex
+            h-[76px]
+            w-full
+            max-w-[1440px]
+            items-center
+            justify-between
+            gap-6
+            px-5
+            sm:px-8
+            lg:h-[84px]
+            lg:px-12
+            xl:px-16
+          "
+        >
+          {/* ====================================
+              LOGO
+          ==================================== */}
+
           <Link
-            href="/#home"
-            onClick={() => setOpen(false)}
-            className="group flex items-center gap-3"
+            href="/"
+            aria-label="QORLIQ CV — Home"
+            className="
+              relative
+              z-10
+              flex
+              shrink-0
+              items-center
+              outline-none
+              focus-visible:rounded-md
+              focus-visible:ring-2
+              focus-visible:ring-accent
+            "
+            onClick={() =>
+              setMobileOpen(false)
+            }
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-qorliqGold/35 bg-qorliqGold/10 shadow-lg shadow-qorliqGold/10">
-              <span className="bg-gradient-to-br from-white to-qorliqGold bg-clip-text text-lg font-black text-transparent">
-                Q
-              </span>
-            </div>
+           <div className="relative">
+  <Image
+    src="/QORLIQ_cv.svg"
+    alt="QORLIQ CV"
+    width={158}
+    height={48}
+    priority
+    className="h-auto w-[158px] dark:hidden"
+  />
 
-            <div className="leading-none">
-              <h1 className="bg-gradient-to-r from-white via-[#F4E5BD] to-qorliqGold bg-clip-text text-lg font-black tracking-[0.16em] text-transparent">
-                QORLIQ
-              </h1>
-
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
-                Digital Agency
-              </p>
-            </div>
+  <Image
+    src="/QORLIQ_cv_dark.svg"
+    alt="QORLIQ CV"
+    width={158}
+    height={48}
+    priority
+    className="hidden h-auto w-[158px] dark:block"
+  />
+</div>
           </Link>
 
-          <nav className="hidden items-center rounded-full border border-white/10 bg-white/[0.04] px-2 py-2 text-sm font-semibold text-white/65 lg:flex">
-            {navItems.map((item) => (
+          {/* ====================================
+              DESKTOP NAVIGATION
+          ==================================== */}
+
+          <nav
+            aria-label="Main navigation"
+            className="
+              hidden
+              items-center
+              justify-center
+              gap-7
+              lg:flex
+              xl:gap-9
+            "
+          >
+            {navigation.map((item) => (
               <Link
-                key={item.href}
+                key={item.label}
                 href={item.href}
-                className="rounded-full px-4 py-2 transition hover:bg-white/10 hover:text-qorliqGold"
+                className="
+                  relative
+                  whitespace-nowrap
+                  py-2
+                  text-[13px]
+                  font-medium
+                  tracking-[-0.01em]
+                  text-text-secondary
+                  transition-colors
+                  duration-200
+                  hover:text-text-primary
+
+                  after:absolute
+                  after:bottom-0
+                  after:left-0
+                  after:h-[2px]
+                  after:w-0
+                  after:rounded-full
+                  after:bg-accent
+                  after:transition-all
+                  after:duration-300
+
+                  hover:after:w-full
+                "
               >
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="hidden items-center gap-3 lg:flex">
+          {/* ====================================
+              DESKTOP ACTIONS
+          ==================================== */}
+
+          <div
+            className="
+              hidden
+              shrink-0
+              items-center
+              gap-3
+              lg:flex
+            "
+          >
+            {mounted ? (
+              <ThemeToggle
+                theme={theme}
+                toggleTheme={toggleTheme}
+              />
+            ) : (
+              <span
+                className="
+                  h-10
+                  w-10
+                  rounded-full
+                  border
+                  border-border
+                "
+                aria-hidden="true"
+              />
+            )}
+
             <Link
-              href="/cv-builder"
-              className="rounded-full bg-gradient-to-r from-[#F3D88B] to-qorliqGold px-5 py-3 text-sm font-black text-black shadow-lg shadow-qorliqGold/20 transition hover:scale-[1.02] hover:shadow-qorliqGold/30"
+              href="/login"
+              className="
+                inline-flex
+                h-10
+                items-center
+                justify-center
+                whitespace-nowrap
+                rounded-full
+                px-4
+                text-[13px]
+                font-semibold
+                text-text-primary
+                transition-colors
+                duration-200
+                hover:bg-background-soft
+              "
             >
-              CV Builder
+              Log in
             </Link>
 
-            {status === "authenticated" ? (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setProfileOpen((prev) => !prev)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-qorliqGold/40 bg-qorliqGold/15 text-sm font-black uppercase text-qorliqGold transition hover:bg-qorliqGold/25"
-                  aria-label="User profile"
-                >
-                  {userInitial}
-                </button>
+            <Link
+              href="/cv-builder"
+              className="
+                group
+                inline-flex
+                h-11
+                items-center
+                justify-center
+                gap-2
+                whitespace-nowrap
+                rounded-xl
+                bg-[#07183f]
+                px-5
+                text-[13px]
+                font-semibold
+                text-white
+                shadow-sm
+                transition-all
+                duration-300
+                hover:-translate-y-0.5
+                hover:bg-[#102b66]
+                hover:shadow-md
 
-                {profileOpen ? (
-                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-white/10 bg-[#101010] p-3 shadow-2xl shadow-black/40">
-                    <div className="mb-3 border-b border-white/10 pb-3">
-                      <p className="text-sm font-bold text-white">{userName}</p>
+                dark:bg-accent
+                dark:text-[#061747]
+                dark:hover:bg-accent-hover
+              "
+            >
+              Build my CV
 
-                      <p className="mt-1 truncate text-xs text-white/50">
-                        {session?.user?.email}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-left text-sm font-bold text-red-300 transition hover:bg-red-500/20"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="rounded-full border border-qorliqGold/30 px-5 py-3 text-sm font-black text-qorliqGold transition hover:bg-qorliqGold/10"
-              >
-                Login
-              </Link>
-            )}
+              <ArrowUpRight
+                size={16}
+                strokeWidth={2}
+                className="
+                  transition-transform
+                  duration-300
+                  group-hover:translate-x-0.5
+                  group-hover:-translate-y-0.5
+                "
+              />
+            </Link>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setOpen((prev) => !prev)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-white lg:hidden"
-            aria-label="Toggle menu"
+          {/* ====================================
+              MOBILE ACTIONS
+          ==================================== */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-2
+              lg:hidden
+            "
           >
-            <span className="space-y-1.5">
-              <span
-                className={`block h-0.5 w-5 bg-white transition ${
-                  open ? "translate-y-2 rotate-45" : ""
-                }`}
+            {mounted ? (
+              <ThemeToggle
+                theme={theme}
+                toggleTheme={toggleTheme}
               />
+            ) : (
+              <span
+                className="
+                  h-10
+                  w-10
+                  rounded-full
+                  border
+                  border-border
+                "
+                aria-hidden="true"
+              />
+            )}
 
-              <span
-                className={`block h-0.5 w-5 bg-white transition ${
-                  open ? "opacity-0" : ""
-                }`}
-              />
-
-              <span
-                className={`block h-0.5 w-5 bg-white transition ${
-                  open ? "-translate-y-2 -rotate-45" : ""
-                }`}
-              />
-            </span>
-          </button>
+            <button
+              type="button"
+              aria-label={
+                mobileOpen
+                  ? "Close navigation menu"
+                  : "Open navigation menu"
+              }
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => {
+                setMobileOpen((prev) => !prev);
+                setHeaderVisible(true);
+              }}
+              className="
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-border
+                bg-surface
+                text-text-primary
+                transition-colors
+                duration-200
+                hover:bg-background-soft
+                focus-visible:outline-none
+                focus-visible:ring-2
+                focus-visible:ring-accent
+              "
+            >
+              {mobileOpen ? (
+                <X
+                  size={21}
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <Menu
+                  size={21}
+                  strokeWidth={1.8}
+                />
+              )}
+            </button>
+          </div>
         </div>
 
-        {open ? (
-          <div className="border-t border-white/10 bg-[#050505]/98 px-5 py-5 lg:hidden">
-            <nav className="mx-auto grid max-w-7xl gap-2">
-              {navItems.map((item) => (
+        {/* ========================================
+            MOBILE NAVIGATION
+        ======================================== */}
+
+        <div
+          id="mobile-navigation"
+          inert={!mobileOpen}
+          className={`
+            grid
+            overflow-hidden
+            border-border
+            bg-background
+            transition-[grid-template-rows,opacity,border-color]
+            duration-300
+            ease-in-out
+            lg:hidden
+
+            ${
+              mobileOpen
+                ? `
+                  grid-rows-[1fr]
+                  border-t
+                  opacity-100
+                `
+                : `
+                  grid-rows-[0fr]
+                  border-transparent
+                  opacity-0
+                `
+            }
+          `}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <nav
+              aria-label="Mobile navigation"
+              className="
+                flex
+                flex-col
+                px-5
+                pb-6
+                pt-3
+                sm:px-8
+              "
+            >
+              {navigation.map((item) => (
                 <Link
-                  key={item.href}
+                  key={item.label}
                   href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-sm font-bold text-white/75 transition hover:border-qorliqGold hover:text-qorliqGold"
+                  onClick={() =>
+                    setMobileOpen(false)
+                  }
+                  className="
+                    group
+                    flex
+                    min-h-13
+                    items-center
+                    justify-between
+                    border-b
+                    border-border
+                    py-3
+                    text-[15px]
+                    font-medium
+                    text-text-primary
+                    transition-colors
+                    hover:text-accent
+                  "
                 >
                   {item.label}
+
+                  <ChevronRight
+                    size={17}
+                    className="
+                      text-text-muted
+                      transition-transform
+                      duration-200
+                      group-hover:translate-x-1
+                    "
+                  />
                 </Link>
               ))}
 
-              <Link
-                href="/cv-builder"
-                onClick={() => setOpen(false)}
-                className="mt-3 rounded-full bg-gradient-to-r from-[#F3D88B] to-qorliqGold px-5 py-4 text-center text-sm font-black text-black"
+              {/* Mobile buttons */}
+
+              <div
+                className="
+                  mt-6
+                  grid
+                  grid-cols-2
+                  gap-3
+                "
               >
-                Open CV Builder
-              </Link>
-
-              {status === "authenticated" ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-qorliqGold/40 bg-qorliqGold/15 text-sm font-black uppercase text-qorliqGold">
-                      {userInitial}
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-white">
-                        {userName}
-                      </p>
-
-                      <p className="truncate text-xs text-white/50">
-                        {session?.user?.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full rounded-full border border-red-500/20 bg-red-500/10 px-5 py-4 text-center text-sm font-black text-red-300 transition hover:bg-red-500/20"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
                 <Link
                   href="/login"
-                  onClick={() => setOpen(false)}
-                  className="mt-3 rounded-full border border-qorliqGold/30 px-5 py-4 text-center text-sm font-black text-qorliqGold transition hover:bg-qorliqGold/10"
+                  onClick={() =>
+                    setMobileOpen(false)
+                  }
+                  className="
+                    inline-flex
+                    h-12
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-border-strong
+                    bg-surface
+                    text-sm
+                    font-semibold
+                    text-text-primary
+                    transition-colors
+                    hover:bg-background-soft
+                  "
                 >
-                  Login
+                  Log in
                 </Link>
-              )}
+
+                <Link
+                  href="/cv-builder"
+                  onClick={() =>
+                    setMobileOpen(false)
+                  }
+                  className="
+                    inline-flex
+                    h-12
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-[#07183f]
+                    px-3
+                    text-sm
+                    font-semibold
+                    text-white
+                    transition-colors
+                    hover:bg-[#102b66]
+
+                    dark:bg-accent
+                    dark:text-[#061747]
+                    dark:hover:bg-accent-hover
+                  "
+                >
+                  Build my CV
+
+                  <ArrowUpRight size={16} />
+                </Link>
+              </div>
             </nav>
           </div>
-        ) : null}
+        </div>
       </header>
 
-      <div className="h-[74px]" />
+      {/* ============================================
+          HEADER SPACE
+          Prevents page content from jumping
+      ============================================ */}
+
+      <div
+        aria-hidden="true"
+        className="h-[76px] lg:h-[84px]"
+      />
     </>
   );
 }

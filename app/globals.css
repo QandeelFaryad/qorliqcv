@@ -1,69 +1,278 @@
 @import "tailwindcss";
 
-@theme {
-  --color-qorliqGold: #C6A35D;
-  --color-qorliqGoldDark: #8A6A35;
-  --color-qorliqCream: white;
-  --color-qorliqIvory: #FFF9EF;
-  --color-qorliqDark: #050505;
-  --color-qorliqCharcoal: #111111;
+/* =========================================
+   LIGHT MODE — DEFAULT
+========================================= */
 
-  --shadow-luxury: 0 24px 80px rgba(0, 0, 0, 0.18);
-  --shadow-gold: 0 20px 60px rgba(198, 163, 93, 0.22);
+
+:root {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --background: #ffffff;
+  --background-soft: #f5f9ff;
+  --background-muted: #eaf2ff;
+
+  /* Surfaces */
+  --surface: #ffffff;
+  --surface-secondary: #f0f6ff;
+
+  /* Text */
+  --foreground: #07183f;
+  --text-primary: #07183f;
+  --text-secondary: #52617a;
+  --text-muted: #8490a5;
+
+  /* Brand */
+  --primary: #061747;
+  --primary-hover: #102b66;
+
+  --accent: #00d5df;
+  --accent-hover: #00b8c5;
+
+  /* Borders */
+  --border: #e2eaf5;
+  --border-strong: #cbd8e9;
+
+  /* Interactive */
+  --ring: #00d5df;
+
+  /* Shadows */
+  --shadow-color: 7 24 63;
 }
 
-html,
+/* =========================================
+   DARK MODE
+========================================= */
+
+.dark {
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --background: #060e25;
+  --background-soft: #0b1733;
+  --background-muted: #101f40;
+
+  /* Surfaces */
+  --surface: #0d1b39;
+  --surface-secondary: #142449;
+
+  /* Text */
+  --foreground: #f7faff;
+  --text-primary: #f7faff;
+  --text-secondary: #b5c2d9;
+  --text-muted: #8192b0;
+
+  /* Brand */
+  --primary: #00d5df;
+  --primary-hover: #33e5eb;
+
+  --accent: #00d5df;
+  --accent-hover: #33e5eb;
+
+  /* Borders */
+  --border: #253657;
+  --border-strong: #34476a;
+
+  /* Interactive */
+  --ring: #00d5df;
+
+  /* Shadows */
+  --shadow-color: 0 0 0;
+}
+
+/* =========================================
+   TAILWIND THEME
+========================================= */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /* Backgrounds */
+  --color-background: var(--background);
+  --color-background-soft: var(--background-soft);
+  --color-background-muted: var(--background-muted);
+
+  /* Surfaces */
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+
+  /* Text */
+  --color-foreground: var(--foreground);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  /* Brand */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  /* Borders */
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  /* Focus */
+  --color-ring: var(--ring);
+
+  /* Typography */
+--font-sans: var(--font-dm-sans), Arial, sans-serif;
+--font-editorial: var(--font-instrument-serif), Georgia, serif;
+}
+
+/* =========================================
+   GLOBAL BASE
+========================================= */
+
+html {
+  background: var(--background);
+}
+
 body {
+  min-height: 100vh;
   margin: 0;
-  padding: 0;
-  overflow-x: hidden;
+
+  background: var(--background);
+  color: var(--foreground);
+
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
-body {
-  background: #ffffff;
-  color: #050505;
+/* =========================================
+   SELECTION
+========================================= */
+
+::selection {
+  background: var(--accent);
+  color: #061747;
 }
-@media print {
-  body {
-    background: white !important;
+
+/* =========================================
+   ACCESSIBILITY
+========================================= */
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+/* =========================================
+   PARTNERS MARQUEE
+========================================= */
+
+.partner-marquee {
+  width: 100%;
+  overflow: hidden;
+
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+
+/* Track */
+
+.partner-marquee-track {
+  display: flex;
+  width: max-content;
+
+  animation: partner-scroll 28s linear infinite;
+
+  will-change: transform;
+}
+
+/* Each logo group */
+
+.partner-marquee-group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* Seamless animation */
+
+@keyframes partner-scroll {
+  from {
+    transform: translateX(0);
   }
 
-  header,
-  .print\:hidden {
-    display: none !important;
-  }
-
-  main {
-    padding: 0 !important;
-    background: white !important;
+  to {
+    transform: translateX(-50%);
   }
 }
+
+/* Pause on hover */
+
+.partner-marquee:hover .partner-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Pause while a child receives keyboard focus */
+
+.partner-marquee:focus-within .partner-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Mobile */
+
+@media (max-width: 640px) {
+  .partner-marquee-track {
+    animation-duration: 22s;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .partner-marquee-track {
+    animation: none;
+  }
+
+  .partner-marquee {
+    overflow-x: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .partner-marquee-group[aria-hidden="true"] {
+    display: none;
+  }
+}
+/* =========================================
+   SMOOTH SCROLL BEHAVIOR
+========================================= */
+
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 100px;
 }
 
-section,
-[id] {
-  scroll-margin-top: 90px;
-}
-.dashboard-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+/* Prevent horizontal overflow */
+body {
+  overflow-x: clip;
 }
 
-/* Chrome, Edge */
-.dashboard-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dashboard-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.dashboard-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.dashboard-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

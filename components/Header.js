@@ -373,7 +373,9 @@ function UserAvatarMenu({
           right-0 top-full
           z-[100]
           mt-3
-          w-[min(320px,calc(100vw-28px))]
+          w-[min(250px,calc(100vw-32px))]
+sm:w-[290px]
+lg:w-[320px]
           origin-top-right
           overflow-hidden
           rounded-2xl
@@ -1126,62 +1128,35 @@ export default function Header() {
               LOGO
           ======================================== */}
 
-          <Link
-            href="/"
-            aria-label="QORLIQ CV — Home"
-            onClick={() => {
-              setMobileOpen(false);
-            }}
-            className="
-              relative z-10
-              inline-flex shrink-0
-              items-center
-
-              rounded-md
-
-              focus-visible:outline-2
-              focus-visible:outline-offset-4
-              focus-visible:outline-accent
-            "
-          >
-            {/* LIGHT MODE LOGO */}
-
-            <Image
-              src="/QORLIQ_cv.svg"
-              alt="QORLIQ CV"
-              width={185}
-              height={56}
-              priority
-              className="
-                h-auto w-[125px]
-                object-contain
-
-                dark:hidden
-
-                sm:w-[158px]
-                lg:w-[185px]
-              "
-            />
-
-            {/* DARK MODE LOGO */}
-
-            <Image
-              src="/QORLIQ_cv_dark.svg"
-              alt="QORLIQ CV"
-              width={185}
-              height={56}
-              priority
-              className="
-                hidden h-auto w-[125px]
-                object-contain
-
-                dark:block
-
-                sm:w-[158px]
-                lg:w-[185px]
-              "
-            />
-          </Link>
+        <Link
+          href="/"
+          aria-label="QORLIQ CV homepage"
+          className="
+            inline-flex shrink-0 items-center
+            rounded-md outline-offset-4
+            focus-visible:outline-2 focus-visible:outline-accent
+          "
+        >
+          {/* Light Mode Logo */}
+          <Image
+             src="/QORLIQ_cv.svg"
+             alt="QORLIQ CV"
+             width={185}
+             height={56}
+             priority
+             className="h-auto w-[158px] lg:w-[185px] dark:hidden"
+           />
+        
+          {/* Dark Mode Logo */}
+          <Image
+            src="/QORLIQ_cv_dark.svg"
+            alt="QORLIQ CV"
+            width={185}
+            height={56}
+            priority
+            className="hidden h-auto w-[158px] lg:w-[185px] dark:block"
+          />
+        </Link>
 
           {/* ========================================
               DESKTOP NAVIGATION

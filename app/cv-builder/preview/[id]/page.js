@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { ArrowLeft, Pencil, ArrowUpRight, RefreshCw, WifiOff, Smartphone, LoaderCircle, X, AlertCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -113,6 +114,66 @@ const emptyCV = {
   atsScore: 0,
 };
 
+/* =========================================================
+   RESPONSIVE A4 DOCUMENT FRAME
+   Keeps every original 794px template unchanged.
+   Reserves the correct *scaled* height to prevent empty space.
+========================================================= */
+function ResponsiveCVFrame({ cv, config }) {
+  const frameRef = useRef(null);
+  const documentRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ scale: 1, height: 1123 });
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    const content = documentRef.current;
+    if (!frame || !content) return;
+
+    const update = () => {
+      const availableWidth = frame.clientWidth;
+      if (!availableWidth) return;
+      const scale = Math.min(1, availableWidth / 794);
+      const documentElement = content.querySelector("#cv-download");
+      const documentHeight = documentElement
+        ? Math.max(1123, documentElement.scrollHeight, documentElement.offsetHeight)
+        : 1123;
+      setDimensions((previous) =>
+        Math.abs(previous.scale - scale) < 0.001 && previous.height === documentHeight
+          ? previous
+          : { scale, height: documentHeight }
+      );
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(frame);
+    const target = content.querySelector("#cv-download");
+    if (target) observer.observe(target);
+    return () => observer.disconnect();
+  }, [cv, config]);
+
+  return (
+    <div ref={frameRef} className="w-full min-w-0 print:!w-auto">
+      <div
+        className="relative mx-auto print:!h-auto print:!w-auto"
+        style={{ width: 794 * dimensions.scale, height: dimensions.height * dimensions.scale }}
+      >
+        <div
+          ref={documentRef}
+          className="absolute left-0 top-0 origin-top-left bg-white shadow-[0_12px_35px_rgba(15,23,42,0.09)] print:!static print:!transform-none print:!shadow-none"
+          style={{ width: 794, transform: `scale(${dimensions.scale})` }}
+        >
+          <TemplateRenderer cv={cv} config={config} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   CV PREVIEW PAGE — UI + NETWORK HANDLING
+   API routes, payload shape and payment rules preserved.
+========================================================= */
 export default function CVPreviewPage() {
   const params = useParams();
   const cvId = params.id;
@@ -122,211 +183,306 @@ export default function CVPreviewPage() {
   const [cv, setCv] = useState(emptyCV);
   const [loading, setLoading] = useState(true);
   const [checkingAccess, setCheckingAccess] = useState(false);
-
-  useEffect(() => {
-    async function loadCV() {
-      try {
-        const res = await fetch(`/api/cv/${cvId}`, { cache: "no-store" });
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          console.error("Unable to load CV:", data);
-          return;
-        }
-
-        const loaded = data.cv || data.data || {};
-
-        setCv({
-          ...emptyCV,
-          ...loaded,
-          template: loaded.template || "clean-ats",
-          selectedColor: loaded.selectedColor || loaded.color || "",
-          skills: normalizeList(loaded.skills),
-          skillLevels: normalizeList(loaded.skillLevels),
-          languages: normalizeList(loaded.languages),
-          languageLevels: normalizeList(loaded.languageLevels),
-          certifications: normalizeList(loaded.certifications),
-          strengths: normalizeList(loaded.strengths),
-          achievements: normalizeList(loaded.achievements),
-          hobbies: normalizeList(loaded.hobbies),
-          experiences: Array.isArray(loaded.experiences) ? loaded.experiences : [],
-          educations: Array.isArray(loaded.educations) ? loaded.educations : [],
-          projectsList: Array.isArray(loaded.projectsList) ? loaded.projectsList : [],
-          certificationsList: Array.isArray(loaded.certificationsList) ? loaded.certificationsList : [],
-          additionalSections: Array.isArray(loaded.additionalSections) ? loaded.additionalSections : [],
-        });
-      } catch (error) {
-        console.error("Load CV error:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (cvId) loadCV();
-  }, [cvId]);
+  const [networkError, setNetworkError] = useState(false);
+  const [pageError, setPageError] = useState("");
+  const [notice, setNotice] = useState(null);
+  const requestRef = useRef(null);
+  const loadCountRef = useRef(0);
+  const accessRequestRef = useRef(null);
+  const paymentBusyRef = useRef(false);
 
   const config = useMemo(() => getTemplateConfig(cv), [cv]);
+  const editHref = `/cv-builder/create?edit=${cvId}&template=${encodeURIComponent(config.id)}&color=${encodeURIComponent(config.accent)}`;
 
-  const handlePayAndSave = async () => {
+  const showNotice = useCallback((message, tone = "error") => {
+    setNotice({ message, tone, id: Date.now() });
+  }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 6500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const goBack = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(editHref);
+    }
+  }, [router, editHref]);
+
+  const loadCV = useCallback(async () => {
+    if (!cvId) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const requestNumber = ++loadCountRef.current;
+    setLoading(true);
+    setNetworkError(false);
+    setPageError("");
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setLoading(false);
+      setNetworkError(true);
+      return;
+    }
+
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      setCheckingAccess(true);
-
-      const savedCvId = cv?._id || cv?.id || cvId;
-      const template = config.id || cv?.template || "clean-ats";
-
-      if (!savedCvId) {
-        alert("CV ID missing. Please save your CV first.");
+      const res = await fetch(`/api/cv/${cvId}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      if (requestNumber !== loadCountRef.current) return;
+      if (!res.ok) {
+        if (res.status >= 500) throw new Error("Network or server unavailable");
+        setPageError("Unable to load this CV. Please try again.");
         return;
       }
+      const data = await res.json();
+      if (requestNumber !== loadCountRef.current) return;
+      if (!data.success) {
+        setPageError("Unable to load this CV. Please try again.");
+        return;
+      }
+      const loaded = data.cv || data.data || {};
+      setCv({
+        ...emptyCV,
+        ...loaded,
+        template: loaded.template || "clean-ats",
+        selectedColor: loaded.selectedColor || loaded.color || "",
+        skills: normalizeList(loaded.skills),
+        skillLevels: normalizeList(loaded.skillLevels),
+        languages: normalizeList(loaded.languages),
+        languageLevels: normalizeList(loaded.languageLevels),
+        certifications: normalizeList(loaded.certifications),
+        strengths: normalizeList(loaded.strengths),
+        achievements: normalizeList(loaded.achievements),
+        hobbies: normalizeList(loaded.hobbies),
+        experiences: Array.isArray(loaded.experiences) ? loaded.experiences : [],
+        educations: Array.isArray(loaded.educations) ? loaded.educations : [],
+        projectsList: Array.isArray(loaded.projectsList) ? loaded.projectsList : [],
+        certificationsList: Array.isArray(loaded.certificationsList) ? loaded.certificationsList : [],
+        additionalSections: Array.isArray(loaded.additionalSections) ? loaded.additionalSections : [],
+      });
+    } catch (error) {
+      if (requestNumber !== loadCountRef.current) return;
+      if (controller.signal.aborted && requestRef.current !== controller) return;
+      console.error("Load CV error:", error);
+      setNetworkError(true);
+    } finally {
+      clearTimeout(timeout);
+      if (requestNumber === loadCountRef.current) setLoading(false);
+    }
+  }, [cvId]);
 
+  useEffect(() => {
+    loadCV();
+    return () => requestRef.current?.abort();
+  }, [loadCV]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (networkError) loadCV();
+    };
+    const handleOffline = () => {
+      requestRef.current?.abort();
+      setNetworkError(true);
+      setLoading(false);
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [networkError, loadCV]);
+
+  // Existing access checks and destinations are unchanged.
+  const handlePayAndSave = async () => {
+    if (paymentBusyRef.current) return;
+    paymentBusyRef.current = true;
+    setCheckingAccess(true);
+    try {
+      const savedCvId = cv?._id || cv?.id || cvId;
+      const template = config.id || cv?.template || "clean-ats";
+      if (!savedCvId) {
+        showNotice("CV ID missing. Please save your CV first.");
+        return;
+      }
       if (status === "loading") return;
-
       if (status !== "authenticated") {
         router.push(`/login?callbackUrl=/pricing&cvId=${savedCvId}&template=${template}`);
         return;
       }
-
-      const res = await fetch("/api/user/access", {
-        method: "GET",
-        cache: "no-store",
-      });
-
+      accessRequestRef.current?.abort();
+      const controller = new AbortController();
+      accessRequestRef.current = controller;
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let res;
+      try {
+        res = await fetch("/api/user/access", {
+          method: "GET", cache: "no-store", signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
       const data = await res.json();
-
       if (!res.ok) {
-        alert(data?.error || "Unable to verify your access.");
+        showNotice(data?.error || "Unable to verify your access.");
         return;
       }
-
       if (data?.hasAccess === true) {
         router.push(`/cv-builder/success?cvId=${savedCvId}&template=${template}`);
         return;
       }
-
       router.push(`/pricing?cvId=${savedCvId}&template=${template}`);
     } catch (error) {
       console.error("Pay and save error:", error);
-      alert("Unable to continue. Please try again.");
+      showNotice("Unable to continue. Please check your connection and try again.");
     } finally {
+      paymentBusyRef.current = false;
       setCheckingAccess(false);
     }
   };
 
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-[#B88A2C]">
-          Loading CV...
-        </p>
-      </main>
-    );
-  }
+  const errorState = networkError || Boolean(pageError);
+
+  // One set of actions for desktop, another for mobile; both share the same handlers.
+  const actions = (mobile = false) => (
+    <>
+      <Link
+        href={editHref}
+        className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-4 text-[13px] font-semibold text-text-primary transition-colors hover:border-accent hover:bg-background-soft focus-visible:outline-2 focus-visible:outline-accent ${mobile ? "min-w-0" : ""}`}
+      >
+        <Pencil size={16} aria-hidden="true" /> Edit CV
+      </Link>
+      <button
+        type="button"
+        onClick={handlePayAndSave}
+        disabled={checkingAccess || status === "loading"}
+        className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-[#07183F] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#102B66] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-accent dark:text-[#07183F] dark:hover:opacity-90 focus-visible:outline-2 focus-visible:outline-accent"
+      >
+        {checkingAccess && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}
+        <span>{checkingAccess ? "Checking..." : "Pay & Save"}</span>
+        {!checkingAccess && <ArrowUpRight size={16} aria-hidden="true" />}
+      </button>
+    </>
+  );
 
   return (
-    <main className="min-h-screen bg-[#050505] px-3 py-6 text-white sm:px-4 md:px-6 md:py-10 print:bg-white print:p-0">
-      <div className="mx-auto max-w-6xl print:max-w-none">
-        <div className="mb-6 flex flex-col gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 backdrop-blur md:flex-row md:items-center md:justify-between print:hidden">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-[#B88A2C]">
-              Qorliq CV Builder
-            </p>
-
-            <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] md:text-3xl">
-              CV Preview
-            </h1>
-
-            <p className="mt-2 text-sm text-white/50">
-              Selected Template:{" "}
-              <span className="font-bold text-[#B88A2C]">{config.name}</span>
-            </p>
-
-            <p className="mt-1 text-xs text-white/35">
-              Template ID: {config.id}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={`/cv-builder/create?edit=${cvId}&template=${encodeURIComponent(config.id)}&color=${encodeURIComponent(config.accent)}`}
-              className="rounded-full border border-white/15 px-6 py-3 text-center text-xs font-black uppercase tracking-[0.16em] text-white/70 transition hover:border-[#B88A2C] hover:text-[#B88A2C]"
-            >
-              Edit CV
-            </Link>
-
-            <button
-              type="button"
-              onClick={handlePayAndSave}
-              disabled={checkingAccess}
-              className="rounded-full bg-[#B88A2C] px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {checkingAccess ? "Checking..." : "Pay & Save"}
-            </button>
-          </div>
-        </div>
-
-        <div className="mx-auto flex w-full justify-center overflow-x-auto rounded-[1.7rem] bg-white/5 p-2 sm:p-4 print:block print:overflow-visible print:rounded-none print:bg-white print:p-0">
-          <div className="cv-preview-scale origin-top print:!scale-100">
-            <TemplateRenderer cv={cv} config={config} />
-          </div>
+    <main className="min-h-screen bg-background text-text-primary print:min-h-0 print:bg-white print:p-0">
+      {/* Desktop: top-right actions. Mobile: Back and preview icon only. */}
+      <div className="border-b border-border bg-surface print:hidden">
+        <div className="mx-auto flex min-h-[68px] w-full max-w-[1200px] items-center gap-3 px-3 py-2 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-text-primary transition-colors hover:bg-background-soft focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <ArrowLeft size={19} aria-hidden="true" /><span>Back</span>
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-[14px] font-semibold text-text-primary md:text-left md:text-[16px]">
+            {loading || errorState ? "CV Preview" : config.name}
+          </h1>
+          {!loading && !errorState && (
+            <div className="hidden shrink-0 items-center gap-3 md:flex">
+              {actions()}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={goBack}
+            title="Return to previous page"
+            aria-label="Return to previous page"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-text-secondary transition-colors hover:border-accent hover:text-text-primary focus-visible:outline-2 focus-visible:outline-accent md:hidden"
+          >
+            <Smartphone size={19} aria-hidden="true" />
+          </button>
         </div>
       </div>
 
-     <style jsx global>{`
-  @media screen and (max-width: 420px) {
-    .cv-preview-scale {
-      transform: scale(0.43);
-      transform-origin: top center;
-      height: auto;
-    }
-  }
+      <div className="mx-auto w-full max-w-[1100px] px-2 pb-[calc(102px+env(safe-area-inset-bottom))] pt-3 sm:px-5 md:px-8 md:pb-8 md:pt-6 print:max-w-none print:p-0">
+        {errorState ? (
+          <div role="alert" className="mx-auto mt-8 flex max-w-md flex-col items-center rounded-2xl border border-border bg-surface px-6 py-10 text-center shadow-sm">
+            <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
+              <WifiOff size={27} strokeWidth={1.8} aria-hidden="true" />
+            </span>
+            <h2 className="text-center text-base font-semibold text-text-primary">
+              {networkError ? "Couldn't reach the internet. Please check your internet connection." : pageError}
+            </h2>
+            <button type="button" onClick={loadCV} disabled={loading}
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-[#07183F] transition-opacity hover:opacity-85 disabled:opacity-60">
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} aria-hidden="true" /> Reload
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="mx-auto w-full max-w-[794px] animate-pulse overflow-hidden rounded-lg border border-border bg-surface p-5 sm:p-8" aria-label="Loading CV preview" role="status">
+            <div className="h-7 w-2/5 rounded bg-background-muted" />
+            <div className="mt-5 h-3 w-3/5 rounded bg-background-muted" />
+            <div className="mt-8 h-3 w-full rounded bg-background-muted" />
+            <div className="mt-3 h-3 w-4/5 rounded bg-background-muted" />
+            <div className="mt-8 h-3 w-1/2 rounded bg-background-muted" />
+          </div>
+        ) : (
+          <div className="mx-auto w-full max-w-[794px] print:max-w-none">
+            <ResponsiveCVFrame cv={cv} config={config} />
+          </div>
+        )}
+      </div>
 
-  @media screen and (min-width: 421px) and (max-width: 639px) {
-    .cv-preview-scale {
-      transform: scale(0.5);
-      transform-origin: top center;
-      height: auto;
-    }
-  }
+      {/* Mobile: fixed bottom action bar; no duplicate desktop buttons. */}
+      {!loading && !errorState && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_28px_rgba(15,23,42,0.06)] backdrop-blur-md md:hidden print:hidden">
+          <div className="mx-auto grid w-full max-w-[500px] grid-cols-2 gap-3">
+            {actions(true)}
+          </div>
+        </div>
+      )}
 
-  @media screen and (min-width: 640px) and (max-width: 767px) {
-    .cv-preview-scale {
-      transform: scale(0.7);
-      transform-origin: top center;
-      height: auto;
-    }
-  }
+      {/* Custom notice replaces browser alerts; slides up above mobile actions. */}
+      {notice && (
+        <div
+          key={notice.id}
+          role="alert"
+          aria-live="assertive"
+          className="qorliq-preview-notice fixed inset-x-3 bottom-[calc(94px+env(safe-area-inset-bottom))] z-[70] mx-auto flex w-auto max-w-[420px] items-start gap-3 rounded-2xl border border-border bg-surface px-4 py-4 text-text-primary shadow-[0_16px_48px_rgba(7,24,63,0.20)] md:inset-x-auto md:bottom-auto md:right-6 md:top-24 md:w-[400px] print:hidden"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-400">
+            <AlertCircle size={19} aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <p className="text-[13px] font-semibold">Unable to continue</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">{notice.message}</p>
+          </div>
+          <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss notification"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-background-soft hover:text-text-primary focus-visible:outline-2 focus-visible:outline-accent">
+            <X size={17} aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
-  @media screen and (min-width: 768px) and (max-width: 1023px) {
-    .cv-preview-scale {
-      transform: scale(0.88);
-      transform-origin: top center;
-      height: auto;
-    }
-  }
-
-  @media screen and (min-width: 1024px) {
-    .cv-preview-scale {
-      transform: scale(1);
-      transform-origin: top center;
-      height: auto;
-    }
-  }
-
-  @media print {
-    .cv-preview-scale {
-      transform: none !important;
-      height: auto !important;
-    }
-
-    #cv-download {
-      box-shadow: none !important;
-      overflow: visible !important;
-    }
-  }
-`}</style>
+      <style jsx global>{`
+        @keyframes qorliq-preview-notice-in {
+          from { opacity: 0; transform: translateY(24px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .qorliq-preview-notice {
+          animation: qorliq-preview-notice-in 250ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .qorliq-preview-notice { animation: none; }
+        }
+        @media print {
+          .cv-preview-scale { transform: none !important; height: auto !important; }
+          #cv-download { box-shadow: none !important; overflow: visible !important; }
+        }
+      `}</style>
     </main>
   );
 }
+
 function hasHtmlText(value) {
   if (!value) return false;
 

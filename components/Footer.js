@@ -273,63 +273,35 @@ export default function Footer() {
               RESPONSIVE LOGO
           ==================================== */}
 
-          <Link
-            href="/"
-            aria-label="QORLIQ CV Homepage"
-            className="
-              inline-flex
-              items-center
-              rounded-md
+      <Link
+  href="/"
+  aria-label="QORLIQ CV homepage"
+  className="
+    inline-flex shrink-0 items-center
+    rounded-md outline-offset-4
+    focus-visible:outline-2 focus-visible:outline-accent
+  "
+>
+  {/* Light Mode Logo */}
+  <Image
+     src="/QORLIQ_cv.svg"
+     alt="QORLIQ CV"
+     width={185}
+     height={56}
+     priority
+     className="h-auto w-[158px] lg:w-[185px] dark:hidden"
+   />
 
-              transition-opacity
-              duration-200
-
-              hover:opacity-85
-
-              focus-visible:outline-2
-              focus-visible:outline-offset-4
-              focus-visible:outline-accent
-            "
-          >
-            {/* LIGHT MODE */}
-
-            <Image
-              src="/QORLIQ_cv.svg"
-              alt="QORLIQ CV"
-              width={185}
-              height={60}
-              className="
-                h-auto
-                w-[150px]
-                object-contain
-
-                dark:hidden
-
-                sm:w-[175px]
-                lg:w-[185px]
-              "
-            />
-
-            {/* DARK MODE */}
-
-            <Image
-              src="/QORLIQ_cv_dark.svg"
-              alt="QORLIQ CV"
-              width={185}
-              height={60}
-              className="
-                hidden
-                h-auto
-                w-[150px]
-                object-contain
-
-                dark:block
-
-                sm:w-[175px]
-                lg:w-[185px]
-              "
-            />
-          </Link>
+  {/* Dark Mode Logo */}
+  <Image
+    src="/QORLIQ_cv_dark.svg"
+    alt="QORLIQ CV"
+    width={185}
+    height={56}
+    priority
+    className="hidden h-auto w-[158px] lg:w-[185px] dark:block"
+  />
+</Link>
 
           {/* ====================================
               BRAND DESCRIPTION

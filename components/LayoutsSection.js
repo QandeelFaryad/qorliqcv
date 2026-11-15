@@ -1147,6 +1147,8 @@ function TemplateSelector({
         border-border
         px-5
         py-5
+        lg:px-6
+        lg:py-6
         text-left
         transition-all
         duration-300
@@ -1186,7 +1188,9 @@ function TemplateSelector({
         <div className="flex items-center justify-between gap-3">
           <h3
             className={`
-              text-[19px]
+              text-[21px]
+              sm:text-[22px]
+              lg:text-[24px]
               font-semibold
               tracking-[-0.035em]
               transition-colors
@@ -1306,6 +1310,53 @@ export default function LayoutsSection() {
   const reduceMotion = useReducedMotion();
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const templateListRef = useRef(null);
+  const scrollFrameRef = useRef(null);
+
+  // The template list scrolls independently on desktop. The item nearest
+  // the centre of the list controls the live preview on the right.
+  const syncTemplateFromScroll = () => {
+    const list = templateListRef.current;
+    if (!list || !window.matchMedia("(min-width: 1024px)").matches) return;
+
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      const cards = Array.from(list.querySelectorAll("[data-template-index]"));
+      const middle = list.getBoundingClientRect().top + list.clientHeight / 2;
+      let nearestIndex = 0;
+      let nearestDistance = Infinity;
+
+      cards.forEach((card) => {
+        const rect = card.getBoundingClientRect();
+        const distance = Math.abs(rect.top + rect.height / 2 - middle);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = Number(card.dataset.templateIndex);
+        }
+      });
+      setActiveIndex((current) => current === nearestIndex ? current : nearestIndex);
+      scrollFrameRef.current = null;
+    });
+  };
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+  }, []);
+
+  const selectTemplate = (index) => {
+    setActiveIndex(index);
+    const list = templateListRef.current;
+    if (!list || !window.matchMedia("(min-width: 1024px)").matches) return;
+    const card = list.querySelector(`[data-template-index="${index}"]`);
+    if (!card) return;
+    const top = card.offsetTop - list.offsetTop - (list.clientHeight - card.clientHeight) / 2;
+    list.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+  };
 
   const [selectedColors, setSelectedColors] =
     useState(() =>
@@ -1331,10 +1382,7 @@ export default function LayoutsSection() {
   };
 
   const changeTemplate = (direction) => {
-    setActiveIndex((previous) =>
-      (previous + direction + templates.length) %
-      templates.length
-    );
+    selectTemplate((activeIndex + direction + templates.length) % templates.length);
   };
 
   const templateURL =
@@ -1502,7 +1550,7 @@ export default function LayoutsSection() {
             items-start
             gap-8
             lg:mt-20
-            lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]
+            lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]
             lg:gap-10
             xl:gap-16
           "
@@ -1516,21 +1564,38 @@ export default function LayoutsSection() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="
-              min-w-0
-              border-t
-              border-border-strong
-            "
+            className="min-w-0"
           >
-            {templates.map((template, index) => (
-              <TemplateSelector
-                key={template.id}
-                template={template}
-                index={index}
-                active={index === activeIndex}
-                onClick={() => setActiveIndex(index)}
-              />
-            ))}
+            <p className="mb-3 hidden text-[12px] font-medium text-text-secondary lg:block">
+              Scroll to explore all {templates.length} CV layouts
+            </p>
+            <div
+              ref={templateListRef}
+              onScroll={syncTemplateFromScroll}
+              aria-label="Scroll through CV templates"
+              tabIndex={0}
+              className="
+                min-w-0 border-t border-border-strong
+                lg:max-h-[min(680px,calc(100vh-150px))]
+                lg:overflow-y-auto lg:overscroll-contain
+                lg:scroll-smooth
+                lg:[scrollbar-width:none]
+                lg:[&::-webkit-scrollbar]:hidden
+                focus-visible:outline-2 focus-visible:outline-accent
+              "
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {templates.map((template, index) => (
+                <div key={template.id} data-template-index={index}>
+                  <TemplateSelector
+                    template={template}
+                    index={index}
+                    active={index === activeIndex}
+                    onClick={() => selectTemplate(index)}
+                  />
+                </div>
+              ))}
+            </div>
           </motion.div>
 
           {/* ========================================
@@ -1550,8 +1615,8 @@ export default function LayoutsSection() {
               p-4
               sm:p-6
               lg:sticky
-              lg:top-[105px]
-              lg:p-8
+              lg:top-[100px]
+              lg:p-6
             "
           >
             {/* PREVIEW HEADER */}
@@ -1582,7 +1647,8 @@ export default function LayoutsSection() {
                 <h3
                   className="
                     mt-1
-                    text-[20px]
+                    text-[23px]
+                    sm:text-[25px]
                     font-semibold
                     tracking-[-0.04em]
                     text-text-primary
@@ -1645,7 +1711,7 @@ export default function LayoutsSection() {
                 FULL CV PREVIEW
             ==================================== */}
 
-            <div className="relative">
+            <div className="relative mx-auto w-full max-w-[390px] xl:max-w-[420px]">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTemplate.id}

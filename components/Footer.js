@@ -93,7 +93,7 @@ function FooterColumn({ title, links }) {
           font-bold
           uppercase
           tracking-[0.16em]
-          text-[#B9C5D8]
+          text-text-primary
           sm:text-[12px]
         "
       >
@@ -110,31 +110,45 @@ function FooterColumn({ title, links }) {
               className="
                 group
                 inline-flex
-                min-h-[24px]
+                min-h-[28px]
                 items-center
                 gap-2
+
                 text-[13px]
                 font-medium
                 leading-relaxed
-                text-[#E1E7F0]
+                text-text-secondary
+
                 transition-colors
-                duration-200
-                hover:text-[#16D4CF]
+                duration-300
+
+                hover:text-text-primary
+
+                focus-visible:rounded-sm
+                focus-visible:outline-2
+                focus-visible:outline-offset-4
+                focus-visible:outline-accent
+
                 sm:text-[14px]
               "
             >
               <span
                 className="
                   relative
+
                   after:absolute
                   after:bottom-[-3px]
                   after:left-0
-                  after:h-px
+                  after:h-[2px]
                   after:w-0
-                  after:bg-[#16D4CF]
+                  after:rounded-full
+                  after:bg-accent
+
                   after:transition-all
                   after:duration-300
+
                   group-hover:after:w-full
+                  group-focus-visible:after:w-full
                 "
               >
                 {link.label}
@@ -143,14 +157,20 @@ function FooterColumn({ title, links }) {
               <ArrowUpRight
                 size={14}
                 strokeWidth={1.8}
+                aria-hidden="true"
                 className="
                   -translate-x-1
-                  text-[#16D4CF]
+                  text-accent
                   opacity-0
+
                   transition-all
-                  duration-200
+                  duration-300
+
                   group-hover:translate-x-0
                   group-hover:opacity-100
+
+                  group-focus-visible:translate-x-0
+                  group-focus-visible:opacity-100
                 "
               />
             </Link>
@@ -171,7 +191,7 @@ export default function Footer() {
   const fadeUp = {
     hidden: {
       opacity: reduceMotion ? 1 : 0,
-      y: reduceMotion ? 0 : 24,
+      y: reduceMotion ? 0 : 20,
     },
 
     visible: {
@@ -186,8 +206,12 @@ export default function Footer() {
         relative
         w-full
         overflow-hidden
-        bg-[#090B10]
-        text-white
+
+        border-t
+        border-border
+
+        bg-background
+        text-text-primary
       "
     >
       {/* ============================================
@@ -210,16 +234,21 @@ export default function Footer() {
           w-full
           max-w-[1440px]
           grid-cols-1
+
           gap-14
+
           px-5
           pb-16
           pt-20
+
           sm:px-8
           sm:pb-20
           sm:pt-24
+
           lg:grid-cols-[1.15fr_1fr]
           lg:gap-20
           lg:px-12
+
           xl:px-16
         "
       >
@@ -240,45 +269,84 @@ export default function Footer() {
             items-start
           "
         >
-          {/* LOGO */}
-<Link
-  href="/"
-  aria-label="QORLIQ CV Homepage"
-  className="
-    inline-flex
-    items-center
-    transition-opacity
-    duration-200
-    hover:opacity-90
-  "
->
-  <Image
-    src="/QORLIQ_cv_dark.svg"
-    alt="QORLIQ CV"
-    width={185}
-    height={60}
-    priority
-    className="
-      h-auto
-      w-[150px]
-      object-contain
-      sm:w-[175px]
-      lg:w-[185px]
-    "
-  />
-</Link>
+          {/* ====================================
+              RESPONSIVE LOGO
+          ==================================== */}
 
-          {/* BRAND DESCRIPTION */}
+          <Link
+            href="/"
+            aria-label="QORLIQ CV Homepage"
+            className="
+              inline-flex
+              items-center
+              rounded-md
+
+              transition-opacity
+              duration-200
+
+              hover:opacity-85
+
+              focus-visible:outline-2
+              focus-visible:outline-offset-4
+              focus-visible:outline-accent
+            "
+          >
+            {/* LIGHT MODE */}
+
+            <Image
+              src="/QORLIQ_cv.svg"
+              alt="QORLIQ CV"
+              width={185}
+              height={60}
+              className="
+                h-auto
+                w-[150px]
+                object-contain
+
+                dark:hidden
+
+                sm:w-[175px]
+                lg:w-[185px]
+              "
+            />
+
+            {/* DARK MODE */}
+
+            <Image
+              src="/QORLIQ_cv_dark.svg"
+              alt="QORLIQ CV"
+              width={185}
+              height={60}
+              className="
+                hidden
+                h-auto
+                w-[150px]
+                object-contain
+
+                dark:block
+
+                sm:w-[175px]
+                lg:w-[185px]
+              "
+            />
+          </Link>
+
+          {/* ====================================
+              BRAND DESCRIPTION
+          ==================================== */}
 
           <p
             className="
               mt-7
               max-w-[420px]
+
               text-[15px]
               font-normal
               leading-[1.85]
               tracking-[-0.01em]
-              text-[#D1DAE8]
+
+              text-text-secondary
+
               sm:text-[16px]
             "
           >
@@ -289,7 +357,9 @@ export default function Footer() {
             from start to finish.
           </p>
 
-          {/* OPTIONAL BRAND CTA */}
+          {/* ====================================
+              BRAND CTA
+          ==================================== */}
 
           <Link
             href="/cv-builder"
@@ -299,20 +369,49 @@ export default function Footer() {
               inline-flex
               items-center
               gap-2
+
               text-[13px]
               font-semibold
-              text-[#16D4CF]
+
+              text-text-primary
+
               transition-colors
-              duration-200
-              hover:text-[#51E9E3]
+              duration-300
+
+              hover:text-accent
+
+              focus-visible:rounded-sm
+              focus-visible:outline-2
+              focus-visible:outline-offset-4
+              focus-visible:outline-accent
+
               sm:text-[14px]
             "
           >
-            Start Building Your CV
+            <span
+              className="
+                relative
+
+                after:absolute
+                after:bottom-[-4px]
+                after:left-0
+                after:h-[2px]
+                after:w-0
+                after:bg-accent
+
+                after:transition-all
+                after:duration-300
+
+                group-hover:after:w-full
+              "
+            >
+              Start Building Your CV
+            </span>
 
             <ArrowRight
               size={16}
               strokeWidth={1.8}
+              aria-hidden="true"
               className="
                 transition-transform
                 duration-300
@@ -336,10 +435,13 @@ export default function Footer() {
           className="
             grid
             grid-cols-2
+
             gap-x-8
             gap-y-12
+
             sm:grid-cols-3
             sm:gap-x-10
+
             lg:gap-x-12
           "
         >
@@ -362,6 +464,7 @@ export default function Footer() {
           mx-auto
           w-full
           max-w-[1440px]
+
           px-5
           sm:px-8
           lg:px-12
@@ -374,11 +477,11 @@ export default function Footer() {
           className="
             h-px
             w-full
-            bg-white/[0.16]
+            bg-border
           "
         />
 
-        {/* BOTTOM ROW */}
+        {/* COPYRIGHT ROW */}
 
         <div
           className="
@@ -386,8 +489,10 @@ export default function Footer() {
             flex-col
             items-start
             justify-between
+
             gap-4
             py-7
+
             sm:flex-row
             sm:items-center
           "
@@ -397,7 +502,7 @@ export default function Footer() {
               text-[12px]
               font-medium
               leading-relaxed
-              text-[#B9C5D8]
+              text-text-secondary
             "
           >
             © {new Date().getFullYear()} QORLIQ CV.
@@ -409,7 +514,7 @@ export default function Footer() {
               text-[12px]
               font-medium
               leading-relaxed
-              text-[#B9C5D8]
+              text-text-secondary
             "
           >
             Built for ambition. Designed for opportunity.

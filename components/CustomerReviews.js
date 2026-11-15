@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   motion,
@@ -331,10 +331,82 @@ export default function CustomerReviews() {
 
   const total = reviews.length;
 
-  const changeReview = (direction) => {
-    setActiveIndex((previous) =>
-      (previous + direction + total) % total
-    );
+  // Keep the current review available to native wheel listeners without
+  // reattaching listeners after every state change.
+  const carouselRef = useRef(null);
+  const activeIndexRef = useRef(0);
+  const wheelLockedUntilRef = useRef(0);
+  const touchStartRef = useRef(null);
+  const [slideDirection, setSlideDirection] = useState(1);
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  const changeReview = useCallback((direction) => {
+    setSlideDirection(direction >= 0 ? 1 : -1);
+    setActiveIndex((previous) => {
+      const next = (previous + direction + total) % total;
+      activeIndexRef.current = next;
+      return next;
+    });
+  }, [total]);
+
+  // When the pointer is over the reviews, mouse-wheel and trackpad gestures
+  // advance one card at a time. Outside this area, page scrolling is normal.
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const handleWheel = (event) => {
+      if (event.ctrlKey) return; // Preserve browser pinch-to-zoom.
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+        ? event.deltaX
+        : event.deltaY;
+      if (Math.abs(delta) < 8) return;
+
+      const direction = delta > 0 ? 1 : -1;
+      const current = activeIndexRef.current;
+      const atBoundary = direction > 0
+        ? current === total - 1
+        : current === 0;
+
+      // Let the page continue scrolling at either end of the reviews.
+      if (atBoundary) return;
+
+      event.preventDefault();
+      const now = performance.now();
+      if (now < wheelLockedUntilRef.current) return;
+      wheelLockedUntilRef.current = now + 480;
+
+      setSlideDirection(direction);
+      activeIndexRef.current = current + direction;
+      setActiveIndex(current + direction);
+    };
+
+    carousel.addEventListener('wheel', handleWheel, { passive: false });
+    return () => carousel.removeEventListener('wheel', handleWheel);
+  }, [total]);
+
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+
+    // Only horizontal thumb swipes change reviews. Vertical swipes scroll
+    // the page normally without triggering a carousel transition.
+    if (Math.abs(dx) < 45 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
+    changeReview(dx < 0 ? 1 : -1);
   };
 
   const visibleReviews = [
@@ -652,11 +724,18 @@ export default function CustomerReviews() {
         ============================================ */}
 
         <div
+          ref={carouselRef}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => { touchStartRef.current = null; }}
           className="
             relative
             mt-6
             min-h-[390px]
+            select-none
+            [touch-action:pan-y]
           "
+          aria-label="Customer reviews — swipe left or right to browse"
           aria-live="polite"
           aria-atomic="false"
         >
@@ -668,7 +747,7 @@ export default function CustomerReviews() {
                   ? false
                   : {
                       opacity: 0,
-                      x: 35,
+                      x: slideDirection * 35,
                     }
               }
               animate={{

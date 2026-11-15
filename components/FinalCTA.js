@@ -8,7 +8,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 /* =========================================================
    ANIMATION
@@ -209,9 +209,9 @@ export default function FinalCTA() {
                 hover:shadow-[0_12px_30px_rgba(22,212,207,0.15)]
               "
             >
-              Build my CV
+              Build Your CV
 
-              <ArrowRight
+              <ArrowUpRight
                 size={16}
                 strokeWidth={2}
                 className="

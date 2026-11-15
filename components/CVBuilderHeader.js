@@ -132,37 +132,22 @@ export default function CVBuilderHeader({
 >
   {/* Light Mode Logo */}
   <Image
-    src="/QORLIQ_cv.svg"
-    alt="QORLIQ CV"
-    width={185}
-    height={60}
-    priority
-    className="
-      h-auto
-      w-[105px]
-      object-contain
-      sm:w-[175px]
-      lg:w-[185px]
-      dark:hidden
-    "
-  />
+     src="/QORLIQ_cv.svg"
+     alt="QORLIQ CV"
+     width={185}
+     height={56}
+     priority
+     className="h-auto w-[158px] lg:w-[185px] dark:hidden"
+   />
 
   {/* Dark Mode Logo */}
   <Image
     src="/QORLIQ_cv_dark.svg"
     alt="QORLIQ CV"
     width={185}
-    height={60}
+    height={56}
     priority
-    className="
-      hidden
-      h-auto
-      w-[105px]
-      object-contain
-      sm:w-[175px]
-      lg:w-[185px]
-      dark:block
-    "
+    className="hidden h-auto w-[158px] lg:w-[185px] dark:block"
   />
 </Link>
 

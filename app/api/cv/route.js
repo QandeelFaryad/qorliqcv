@@ -139,21 +139,7 @@ function buildCVPayload(body = {}) {
   };
 }
 
-function validateCVPayload(payload) {
-  if (!payload.fullName) {
-    return "Full name is required.";
-  }
 
-  if (!payload.jobTitle) {
-    return "Job title is required.";
-  }
-
-  if (!payload.email) {
-    return "Email address is required.";
-  }
-
-  return null;
-}
 
 export async function POST(req) {
   try {
@@ -195,18 +181,8 @@ export async function POST(req) {
 
     const payload = buildCVPayload(body);
 
-    const validationError = validateCVPayload(payload);
 
-    if (validationError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validationError,
-        },
-        { status: 400 }
-      );
-    }
-
+ 
     if (!["draft", "completed", "archived"].includes(payload.status)) {
       return NextResponse.json(
         {

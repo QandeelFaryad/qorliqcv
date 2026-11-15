@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSession, signIn, useSession } from "next-auth/react";
+import "./builder-ui.css";
 
 const colorSets = {
   blue: ["#2563EB", "#1D4ED8", "#0F172A", "#60A5FA", "#DBEAFE"],
@@ -226,13 +227,7 @@ const proficiencyOptions = [
 export default function CreateCVPage() {
   return (
     <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#101116] text-white">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
-            Loading Builder...
-          </p>
-        </main>
-      }
+      fallback={<div className="min-h-[60vh] bg-background" aria-label="Loading CV builder" />}
     >
       <CreateCVContent />
     </Suspense>
@@ -414,7 +409,7 @@ function AuthPopup({ onClose, onSuccess }) {
           position: fixed;
           inset: 0;
           z-index: 9999;
-          background: rgba(0,0,0,0.72);
+          background: rgba(3, 10, 27, 0.64);
           backdrop-filter: blur(4px);
           -webkit-backdrop-filter: blur(4px);
           display: flex;
@@ -431,8 +426,8 @@ function AuthPopup({ onClose, onSuccess }) {
           max-height: 90dvh;
           overflow-y: auto;
           overscroll-behavior: contain;
-          background: #17181D;
-          border-top: 1px solid rgba(255,255,255,0.10);
+          background: var(--surface);
+          border-top: 1px solid var(--border);
           border-radius: 24px 24px 0 0;
           padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
           animation: authSlideUp 0.22s cubic-bezier(0.32,0.72,0,1);
@@ -451,7 +446,7 @@ function AuthPopup({ onClose, onSuccess }) {
             max-width: 420px;
             max-height: 92dvh;
             border-radius: 24px;
-            border: 1px solid rgba(255,255,255,0.10);
+            border: 1px solid var(--border);
             padding: 32px;
             animation: authScaleIn 0.2s cubic-bezier(0.32,0.72,0,1);
             box-shadow: 0 24px 80px rgba(0,0,0,0.7);
@@ -470,10 +465,10 @@ function AuthPopup({ onClose, onSuccess }) {
           {/* Header row */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
             <div>
-              <p style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#B88A2C", marginBottom: "4px" }}>
+              <p style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "4px" }}>
                 Sign in required
               </p>
-              <p style={{ fontSize: "18px", fontWeight: 900, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1.2 }}>
+              <p style={{ fontSize: "18px", fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.03em", lineHeight: 1.2 }}>
                 {mode === "login" ? "Login to save your CV" : "Create an account"}
               </p>
             </div>
@@ -486,9 +481,9 @@ function AuthPopup({ onClose, onSuccess }) {
                 width: 36,
                 height: 36,
                 borderRadius: "50%",
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.6)",
+                border: "1px solid var(--border)",
+                background: "var(--background-soft)",
+                color: "var(--text-secondary)",
                 fontSize: 18,
                 lineHeight: 1,
                 cursor: "pointer",
@@ -502,31 +497,54 @@ function AuthPopup({ onClose, onSuccess }) {
             </button>
           </div>
 
-          {/* Tab switcher */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderRadius: 999, background: "rgba(0,0,0,0.4)", padding: 4, marginBottom: 20 }}>
-            {["login", "register"].map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => switchMode(tab)}
-                style={{
-                  borderRadius: 999,
-                  padding: "10px 16px",
-                  fontSize: 11,
-                  fontWeight: 900,
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  border: "none",
-                  transition: "background 0.15s, color 0.15s",
-                  background: mode === tab ? "#B88A2C" : "transparent",
-                  color: mode === tab ? "#000" : "rgba(255,255,255,0.5)",
-                }}
-              >
-                {tab === "login" ? "Login" : "Sign Up"}
-              </button>
-            ))}
-          </div>
+       {/* LOGIN / SIGN UP SWITCHER */}
+
+<div
+  className="
+    mb-5 grid grid-cols-2
+    rounded-xl border border-border
+    bg-background-soft p-1
+  "
+>
+  {["login", "register"].map((tab) => {
+    const active = mode === tab;
+
+    return (
+      <button
+        key={tab}
+        type="button"
+        onClick={() => switchMode(tab)}
+        aria-pressed={active}
+        className={`
+          flex min-h-11 items-center justify-center
+          rounded-lg px-5 py-3
+          text-[13px] font-semibold
+          transition-all duration-300
+          focus-visible:outline-2
+          focus-visible:outline-offset-2
+          focus-visible:outline-accent
+
+          ${
+            active
+              ? `
+                bg-accent
+                text-[#07183F]
+                shadow-sm
+              `
+              : `
+                bg-transparent
+                text-text-primary
+                hover:bg-surface
+                hover:text-accent
+              `
+          }
+        `}
+      >
+        {tab === "login" ? "Log In" : "Sign Up"}
+      </button>
+    );
+  })}
+</div>
 
           {/* Success banner (after registration) */}
           {successMsg && (
@@ -551,7 +569,7 @@ function AuthPopup({ onClose, onSuccess }) {
           >
             {mode === "register" && (
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 8 }}>
                   Full Name
                 </label>
                 <input
@@ -563,11 +581,11 @@ function AuthPopup({ onClose, onSuccess }) {
                   style={{
                     width: "100%",
                     borderRadius: 14,
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    background: "rgba(0,0,0,0.4)",
+                    border: "1px solid var(--border)",
+                    background: "var(--background-soft)",
                     padding: "14px 16px",
                     fontSize: 14,
-                    color: "#fff",
+                    color: "var(--text-primary)",
                     outline: "none",
                     boxSizing: "border-box",
                   }}
@@ -576,7 +594,7 @@ function AuthPopup({ onClose, onSuccess }) {
             )}
 
             <div>
-              <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+              <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 8 }}>
                 Email
               </label>
               <input
@@ -588,11 +606,11 @@ function AuthPopup({ onClose, onSuccess }) {
                 style={{
                   width: "100%",
                   borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: "rgba(0,0,0,0.4)",
+                  border: "1px solid var(--border)",
+                  background: "var(--background-soft)",
                   padding: "14px 16px",
                   fontSize: 14,
-                  color: "#fff",
+                  color: "var(--text-primary)",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -600,7 +618,7 @@ function AuthPopup({ onClose, onSuccess }) {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+              <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 8 }}>
                 Password
               </label>
               <input
@@ -612,11 +630,11 @@ function AuthPopup({ onClose, onSuccess }) {
                 style={{
                   width: "100%",
                   borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: "rgba(0,0,0,0.4)",
+                  border: "1px solid var(--border)",
+                  background: "var(--background-soft)",
                   padding: "14px 16px",
                   fontSize: 14,
-                  color: "#fff",
+                  color: "var(--text-primary)",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -625,7 +643,7 @@ function AuthPopup({ onClose, onSuccess }) {
 
             {mode === "register" && (
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 8 }}>
                   Confirm Password
                 </label>
                 <input
@@ -637,11 +655,11 @@ function AuthPopup({ onClose, onSuccess }) {
                   style={{
                     width: "100%",
                     borderRadius: 14,
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    background: "rgba(0,0,0,0.4)",
+                    border: "1px solid var(--border)",
+                    background: "var(--background-soft)",
                     padding: "14px 16px",
                     fontSize: 14,
-                    color: "#fff",
+                    color: "var(--text-primary)",
                     outline: "none",
                     boxSizing: "border-box",
                   }}
@@ -671,7 +689,7 @@ function AuthPopup({ onClose, onSuccess }) {
               style={{
                 width: "100%",
                 borderRadius: 999,
-                background: loading ? "rgba(184,138,44,0.6)" : "#B88A2C",
+                background: loading ? "rgba(22,212,207,0.60)" : "var(--accent)",
                 color: "#000",
                 fontSize: 11,
                 fontWeight: 900,
@@ -709,12 +727,12 @@ function AuthPopup({ onClose, onSuccess }) {
           </form>
 
           {/* Switch mode link */}
-          <p style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+          <p style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: "var(--text-secondary)" }}>
             {mode === "login" ? "Don't have an account? " : "Already have an account? "}
             <button
               type="button"
               onClick={() => switchMode(mode === "login" ? "register" : "login")}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#B88A2C", fontWeight: 700, fontSize: 12, padding: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", fontWeight: 700, fontSize: 12, padding: 0 }}
             >
               {mode === "login" ? "Sign up" : "Login"}
             </button>
@@ -1161,58 +1179,13 @@ function CreateCVContent() {
     }
   };
 
-  const validateBeforeSubmit = () => {
-    if (!form.fullName.trim()) {
-      alert("Full name is required.");
-      setCurrentStep(0);
-      setMobileMode("edit");
-      return false;
-    }
-
-    if (!form.jobTitle.trim()) {
-      alert("Job title is required.");
-      setCurrentStep(0);
-      setMobileMode("edit");
-      return false;
-    }
-
-    if (!form.email.trim()) {
-      alert("Email address is required.");
-      setCurrentStep(0);
-      setMobileMode("edit");
-      return false;
-    }
-
-    const validExperience = form.experiences.some(
-      (item) => item.jobTitle && item.company && item.startDate
-    );
-
-    const validEducation = form.educations.some(
-      (item) => item.degree && item.institution && item.startDate
-    );
-
-    if (!validExperience) {
-      alert("Please add at least one work experience with title, company and start date.");
-      setCurrentStep(2);
-      setMobileMode("edit");
-      return false;
-    }
-
-    if (!validEducation) {
-      alert("Please add at least one education record with degree, institution and start date.");
-      setCurrentStep(3);
-      setMobileMode("edit");
-      return false;
-    }
-
-    return true;
-  };
+  // All CV editor fields are optional. Preserve the existing payload and API flow.
+  // Account login/registration retains its separate authentication requirements.
 
   const handleSave = async (e) => {
     e?.preventDefault?.();
 
     if (saving) return;
-    if (!validateBeforeSubmit()) return;
 
     try {
       setSaving(true);
@@ -1343,93 +1316,18 @@ function CreateCVContent() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#101116] text-white">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-qorliqGold">
-          Loading CV Data...
-        </p>
-      </main>
-    );
-  }
-
   return (
-    <main className="h-[100dvh] overflow-hidden bg-[#101116] text-white">
-      <div className="">
-        <header className="flex py-4 items-center justify-between border-b border-white/10 bg-[#17181D] px-4 shadow-lg sm:px-6 lg:px-8">
+    <main className="qorliq-builder flex h-[calc(100dvh-76px)] min-h-[360px] flex-col overflow-hidden bg-background text-text-primary lg:h-[calc(100dvh-84px)]">
 
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-qorliqGold text-sm font-black text-black">
-              Q
-            </div>
 
-            <div>
-              <p className="text-sm font-black text-white">
-                {isEditMode ? "Edit CV" : "Create CV"}
-              </p>
-              <p className="text-[11px] font-semibold text-white/40">
-                Qorliq CV Builder
-              </p>
-            </div>
-          </div>
-
-          <div className="hidden items-center gap-3 lg:flex">
-            {["Choose template", "Enter details", "Download CV"].map((item, index) => {
-              const active =
-                (currentStep <= 0 && index === 0) ||
-                (currentStep > 0 && currentStep < 6 && index === 1) ||
-                (currentStep === 6 && index === 2);
-
-              return (
-                <div key={item} className="flex items-center gap-2">
-                  <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${active
-                        ? "bg-qorliqGold text-black"
-                        : "bg-white/10 text-white/40"
-                      }`}
-                  >
-                    {index + 1}
-                  </div>
-
-                  <span
-                    className={`text-xs font-bold ${active ? "text-white" : "text-white/40"
-                      }`}
-                  >
-                    {item}
-                  </span>
-
-                  {index < 2 && <div className="h-px w-10 bg-white/10" />}
-                </div>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => requireAuth(handleSave)}
-            disabled={saving}
-            className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
-          >
-            {saving
-              ? "Saving..."
-              : isEditMode
-                ? "Update CV"
-                : "Save"}
-          </button>
-
-        </header>
-
-        {/* baqi create page content */}
-      </div>
-
-      <div className="sticky top-0 z-40 border-b border-white/10 bg-[#101116]/95 px-4 py-3 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-2 rounded-full bg-[#17181D] p-1">
+      <div className="sticky top-0 z-40 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-lg lg:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-2 rounded-xl border border-border bg-background-soft p-1">
           <button
             type="button"
             onClick={() => setMobileMode("edit")}
-            className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${mobileMode === "edit"
-                ? "bg-qorliqGold text-black shadow-sm"
-                : "text-white/50"
+            className={`h-11 rounded-lg text-[13px] font-semibold transition ${mobileMode === "edit"
+                ? "bg-accent text-[#07183f] shadow-sm"
+                : "text-text-secondary"
               }`}
           >
             Edit
@@ -1438,9 +1336,9 @@ function CreateCVContent() {
           <button
             type="button"
             onClick={() => setMobileMode("preview")}
-            className={`h-11 rounded-full text-xs font-black uppercase tracking-[0.14em] transition ${mobileMode === "preview"
-                ? "bg-qorliqGold text-black shadow-sm"
-                : "text-white/50"
+            className={`h-11 rounded-lg text-[13px] font-semibold transition ${mobileMode === "preview"
+                ? "bg-accent text-[#07183f] shadow-sm"
+                : "text-text-secondary"
               }`}
           >
             Preview
@@ -1448,7 +1346,7 @@ function CreateCVContent() {
         </div>
       </div>
 
-      <section className="grid h-[calc(100dvh-72px-70px)] grid-cols-1 overflow-hidden dashboard-scrollbar lg:h-[calc(100dvh-72px)] lg:grid-cols-[46%_54%]">
+      <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,50%)_minmax(0,50%)]">
         <form
           onSubmit={(e) => { e.preventDefault(); requireAuth(() => handleSave(e)); }}
           onKeyDown={(e) => {
@@ -1466,71 +1364,49 @@ function CreateCVContent() {
 
             e.preventDefault();
           }}
-          className={`h-full dashboard-scrollbar overflow-y-auto bg-[#101116] px-4 py-5 sm:px-6 lg:block lg:border-r lg:border-white/10 lg:px-8 ${mobileMode === "edit" ? "block" : "hidden"
+          className={`builder-editor h-full min-h-0 flex-col overflow-hidden bg-background lg:border-r lg:border-border ${mobileMode === "edit" ? "flex" : "hidden"
             }`}
         >
-          <div className="mx-auto max-w-[680px]">
-            <div className="mb-5 rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-qorliqGold">
-                    Step {currentStep + 1} of {steps.length}
-                  </p>
-
-                  <h1 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">
-                    {steps[currentStep].title}
-                  </h1>
-
-                  <p className="mt-1 text-sm leading-6 text-white/45">
-                    {steps[currentStep].desc}
-                  </p>
-                </div>
-
-                <div className="hidden rounded-xl bg-black/25 px-4 py-3 text-right sm:block">
-                  <p className="text-[10px] font-black uppercase text-white/40">
-                    ATS
-                  </p>
-                  <p className="text-xl font-black text-qorliqGold">
-                    {livePreviewCV.atsScore}%
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-qorliqGold transition-all duration-300"
-                  style={{
-                    width: `${((currentStep + 1) / steps.length) * 100}%`,
-                  }}
-                />
-              </div>
-
-              <CVScoreCard
-                pageScores={pageScores}
-                totalCvScore={totalCvScore}
-                currentPageScore={currentPageScore}
-                currentStep={currentStep}
-                setCurrentStep={setCurrentStep}
-              />
-
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {/* Only the step content scrolls; action buttons remain docked at the bottom. */}
+          <div className="builder-editor-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain dashboard-scrollbar px-3 pb-5 pt-3 sm:px-5 lg:px-6">
+            <div className="mx-auto w-full max-w-[850px]">
+            {/* Seven working steps. Original step indices and handlers unchanged. */}
+            <nav aria-label="CV editor steps" className="builder-steps mb-4 overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
+              <div className="flex min-w-max items-stretch">
                 {steps.map((step, index) => (
                   <button
                     key={step.title}
                     type="button"
                     onClick={() => setCurrentStep(index)}
-                    className={`h-9 min-w-9 shrink-0 rounded-full px-3 text-[10px] font-black transition ${currentStep === index
-                        ? "bg-qorliqGold text-black"
-                        : "bg-white/10 text-white/40 hover:bg-white/15"
-                      }`}
+                    aria-current={currentStep === index ? "step" : undefined}
+                    className={`builder-step group relative flex min-h-[65px] min-w-[89px] flex-1 flex-col items-center justify-center gap-2 px-3 py-2.5 text-center transition-colors duration-200 sm:min-w-[89px] ${currentStep === index ? "is-active" : ""}`}
                   >
-                    {index + 1}
+                    <span className="whitespace-nowrap text-[11px] font-semibold tracking-[-0.01em] sm:text-[12px]">{["Contacts", "Summary", "Experience", "Education", "Skills", "Projects", "Finalize"][index]}</span>
+                    <span className="builder-step-dot h-[8px] w-[8px] rounded-full border-[2px]" />
                   </button>
                 ))}
               </div>
-            </div>
+            </nav>
 
-            <div className="rounded-2xl border border-white/10 bg-[#17181D] p-4 shadow-lg sm:p-5">
+            <div className="builder-step-heading mb-4 flex flex-wrap items-center justify-between gap-3 px-1 pt-3">
+              <div>
+                <p className="mb-1 text-[11px] font-semibold tracking-[0.05em] text-text-secondary">Step {currentStep + 1} of {steps.length}</p>
+                <h1 className="text-[clamp(1.65rem,3vw,2.15rem)] font-semibold tracking-[-0.045em] text-text-primary">{steps[currentStep].title}</h1>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-[12px] font-semibold text-text-secondary">
+                <span className="text-text-primary">{pageScores[currentStep] || 0}%</span> section complete
+              </div>
+            </div>
+            <CVScoreCard
+              pageScores={pageScores}
+              totalCvScore={totalCvScore}
+              currentPageScore={currentPageScore}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+            />
+            {loading && <div role="status" className="mb-3 rounded-lg border border-border bg-background-soft px-4 py-2 text-sm text-text-secondary">Loading saved CV details…</div>}
+
+            <div className="builder-form-card rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6">
               {/* Yahan aapke existing steps same rahenge */}
               {currentStep === 0 && (
                 <BasicInfoStep
@@ -1615,12 +1491,17 @@ function CreateCVContent() {
               )}
             </div>
 
-            <div className="sticky  bottom-0 mt-5 flex  gap-3 border-t border-white/10 bg-[#101116] py-4 flex-row items-center justify-between">
+            </div>
+          </div>
+
+          {/* Always visible at the absolute bottom of the left editor pane. */}
+          <div className="builder-actions z-20 shrink-0 border-t border-border bg-surface px-3 py-3 shadow-[0_-8px_25px_rgba(0,0,0,0.035)] sm:px-5 lg:px-6">
+            <div className="mx-auto flex w-full max-w-[850px] items-center justify-between gap-3">
               <button
                 type="button"
                 disabled={currentStep === 0 || saving}
                 onClick={goBack}
-                className="h-12 rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-qorliqGold hover:text-qorliqGold disabled:opacity-40"
+                className="h-12 rounded-lg border border-border-strong bg-surface px-5 text-[13px] font-semibold text-text-primary transition hover:border-accent disabled:opacity-40"
               >
                 Back
               </button>
@@ -1630,7 +1511,7 @@ function CreateCVContent() {
                   type="button"
                   onClick={clearForm}
                   disabled={saving}
-                  className="h-12 hidden md:block rounded-full border border-white/15 px-6 text-xs font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-red-300 hover:text-red-200 disabled:opacity-50"
+                  className="hidden h-12 rounded-lg border border-border-strong bg-surface px-5 text-[13px] font-semibold text-text-secondary transition hover:border-red-300 hover:text-red-500 disabled:opacity-50 md:block"
                 >
                   Clear
                 </button>
@@ -1640,7 +1521,7 @@ function CreateCVContent() {
                     type="button"
                     onClick={goNext}
                     disabled={saving}
-                    className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                    className="h-12 rounded-lg bg-[#07183f] px-8 text-[13px] font-semibold text-white transition hover:bg-[#102b66] disabled:opacity-50 dark:bg-accent dark:text-[#07183f] dark:hover:bg-accent-hover"
                   >
                     Continue
                   </button>
@@ -1649,7 +1530,7 @@ function CreateCVContent() {
                     type="button"
                     onClick={() => requireAuth(handleSave)}
                     disabled={saving}
-                    className="h-12 rounded-full bg-qorliqGold px-8 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+                    className="h-12 rounded-lg bg-[#07183f] px-8 text-[13px] font-semibold text-white transition hover:bg-[#102b66] disabled:opacity-50 dark:bg-accent dark:text-[#07183f] dark:hover:bg-accent-hover"
                   >
                     {saving
                       ? "Saving..."
@@ -1663,24 +1544,24 @@ function CreateCVContent() {
           </div>
         </form>
         <aside
-          className={`h-full min-h-0 overflow-hidden bg-[#17181D] p-3 sm:p-5 lg:block ${mobileMode === "preview" ? "block" : "hidden"
+          className={`builder-preview h-full min-h-0 overflow-hidden bg-background-soft p-3 sm:p-5 lg:block ${mobileMode === "preview" ? "block" : "hidden"
             }`}
         >
-          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#101116] shadow-inner">
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-qorliqGold">
-                  Preview
-                </p>
-
-                <p className="text-[11px] font-semibold text-white/40">
-                  {config.name}
-                </p>
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-background-soft">
+            <div className="flex min-h-[66px] shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-background-soft px-3 py-3 sm:px-5">
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-text-secondary">Live CV preview</p>
+                <p className="truncate text-[13px] font-semibold text-text-primary">{config.name}</p>
               </div>
-
-              <span className="rounded-full bg-[#17181D] px-3 py-1.5 text-xs font-black text-white/70 shadow-sm">
-                {livePreviewCV.atsScore}%
-              </span>
+              <div className="flex items-center gap-2">
+                <div title="Current ATS score" className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+                  <span className="rounded-md bg-accent px-2 py-1 text-xs font-bold text-[#07183f]">{livePreviewCV.atsScore}%</span>
+                  <span className="hidden text-[12px] font-medium text-text-secondary sm:inline">Resume score</span>
+                </div>
+                <button type="button" onClick={() => router.push("/cv-builder")} className="inline-flex min-h-10 items-center rounded-lg border border-border bg-surface px-3 text-[12px] font-semibold text-text-primary transition hover:border-accent hover:bg-background sm:px-4">
+                  Change template
+                </button>
+              </div>
             </div>
 
             <div className="preview-viewport">
@@ -1830,17 +1711,7 @@ function PureSummaryStep({ form, updateField }) {
         }}
       />
 
-      <div className="rounded-3xl ">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
-          Writing Tips
-        </p>
 
-        <ul className="mt-4 space-y-2 text-sm leading-6 text-white/55">
-          <li>• Keep the summary between 3 and 5 lines.</li>
-          <li>• Use bold only for important keywords.</li>
-          <li>• Avoid very long paragraphs so CV remains clean.</li>
-        </ul>
-      </div>
     </div>
   );
 }
@@ -1862,7 +1733,6 @@ function BasicInfoStep({
           value={form.fullName}
           onChange={(value) => updateField("fullName", value)}
           placeholder="e.g. Qandeel Faryad"
-          required
         />
 
         <Input
@@ -1870,7 +1740,6 @@ function BasicInfoStep({
           value={form.jobTitle}
           onChange={(value) => updateField("jobTitle", value)}
           placeholder="e.g. Operations Manager"
-          required
         />
 
         <Input
@@ -1879,7 +1748,6 @@ function BasicInfoStep({
           onChange={(value) => updateField("email", value)}
           placeholder="name@email.com"
           type="email"
-          required
         />
 
         <Input
@@ -1897,7 +1765,7 @@ function BasicInfoStep({
         />
 
         <div>
-          <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+          <label className="mb-2 block text-[13px] font-medium text-text-primary">
             CV Template
           </label>
 
@@ -1912,7 +1780,7 @@ function BasicInfoStep({
               updateField("template", nextTemplate);
               updateField("selectedColor", selected?.colors?.[0] || "#2563EB");
             }}
-            className="h-14 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition focus:border-qorliqGold"
+            className="h-14 w-full rounded-2xl border border-border bg-background-soft px-4 text-sm text-text-primary outline-none transition focus:border-accent"
           >
             {cvTemplates.map((template) => (
               <option key={template.id} value={template.id}>
@@ -1951,13 +1819,13 @@ function BasicInfoStep({
         />
 
         <div className="md:col-span-2">
-          <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+          <label className="mb-2 block text-[13px] font-medium text-text-primary">
             Profile Photo
           </label>
 
-          <div className="grid gap-5 rounded-3xl border border-white/10 bg-black/30 p-5 md:grid-cols-[160px_1fr]">
+          <div className="grid gap-5 rounded-3xl border border-border bg-background-soft p-5 md:grid-cols-[160px_1fr]">
             <div className="flex justify-center">
-              <div className="flex h-36 w-36 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-black/50">
+              <div className="flex h-36 w-36 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-border bg-background-soft">
                 {form.photo ? (
                   <img
                     src={form.photo}
@@ -1970,7 +1838,7 @@ function BasicInfoStep({
                     }}
                   />
                 ) : (
-                  <span className="text-xs font-black uppercase tracking-[0.16em] text-white/30">
+                  <span className="text-xs font-black uppercase tracking-[0.16em] text-text-muted">
                     Photo
                   </span>
                 )}
@@ -1984,11 +1852,11 @@ function BasicInfoStep({
                 accept="image/jpeg,image/png,image/webp"
                 disabled={uploadingPhoto || !templateSupportsPhoto}
                 onChange={handlePhotoUpload}
-                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-4 text-sm text-white file:mr-4 file:rounded-full file:border-0 file:bg-qorliqGold file:px-5 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-[0.12em] file:text-black hover:file:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-2xl border border-border bg-background-soft px-4 py-4 text-sm text-text-primary file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-5 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-[0.12em] file:text-[#07183f] hover:file:bg-white disabled:cursor-not-allowed disabled:opacity-40"
               />
 
               {templateSupportsPhoto ? (
-                <p className="mt-3 text-xs leading-6 text-white/45">
+                <p className="mt-3 text-xs leading-6 text-text-secondary">
                   Upload JPG, PNG or WEBP. Use zoom and position controls to fit
                   the image properly.
                 </p>
@@ -2138,7 +2006,7 @@ function SkillsStep({
   return (
     <div className="grid gap-5">
       <div className="rounded-3xl">
-        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+        <label className="mb-2 block text-[13px] font-medium text-text-primary">
           Skills & Levels
         </label>
 
@@ -2153,13 +2021,13 @@ function SkillsStep({
                 addSkill(skillInput);
               }
             }}
-            className="py-4  flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+            className="py-4  flex-1 rounded-2xl border border-border bg-background-soft px-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-accent"
           />
 
           <button
             type="button"
             onClick={() => addSkill(skillInput)}
-            className="rounded-2xl bg-qorliqGold px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+            className="rounded-2xl bg-accent px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-[#07183f] transition hover:bg-background-soft"
           >
             Add Skill
           </button>
@@ -2171,7 +2039,7 @@ function SkillsStep({
               key={skill}
               type="button"
               onClick={() => addSkill(skill)}
-              className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white/65 hover:border-qorliqGold hover:text-qorliqGold"
+              className="rounded-full border border-border bg-background-muted px-3 py-2 text-xs font-bold text-text-secondary hover:border-accent hover:text-accent"
             >
               + {skill}
             </button>
@@ -2183,14 +2051,14 @@ function SkillsStep({
             {form.skills.map((item, index) => (
               <div
                 key={`${item}-${index}`}
-                className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:grid-cols-[1fr_160px_auto]"
+                className="grid gap-3 rounded-2xl border border-border bg-white/[0.04] p-3 sm:grid-cols-[1fr_160px_auto]"
               >
-                <p className="text-sm font-bold text-white/80">{item}</p>
+                <p className="text-sm font-bold text-text-primary/80">{item}</p>
 
                 <select
                   value={form.skillLevels?.[index] || "Excellent"}
                   onChange={(e) => updateSkillLevel(index, e.target.value)}
-                  className="h-10 rounded-xl border border-white/10 bg-black/45 px-3 text-xs font-bold text-white outline-none focus:border-qorliqGold"
+                  className="h-10 rounded-xl border border-border bg-background-soft px-3 text-xs font-bold text-text-primary outline-none focus:border-accent"
                 >
                   {levelOptions.map((level) => (
                     <option key={level}>{level}</option>
@@ -2200,7 +2068,7 @@ function SkillsStep({
                 <button
                   type="button"
                   onClick={() => removeSkill(index)}
-                  className="rounded-xl border border-red-300/20 px-3 py-2 text-xs font-black text-red-200 hover:bg-red-300 hover:text-black"
+                  className="rounded-xl border border-red-300/20 px-3 py-2 text-xs font-black text-red-200 hover:bg-red-300 hover:text-[#07183f]"
                 >
                   ×
                 </button>
@@ -2211,7 +2079,7 @@ function SkillsStep({
       </div>
 
       <div className="rounded-3xl ">
-        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+        <label className="mb-2 block text-[13px] font-medium text-text-primary">
           Languages & Proficiency
         </label>
 
@@ -2226,13 +2094,13 @@ function SkillsStep({
                 addLanguage(languageInput);
               }
             }}
-            className="py-4 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+            className="py-4 flex-1 rounded-2xl border border-border bg-background-soft px-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-accent"
           />
 
           <button
             type="button"
             onClick={() => addLanguage(languageInput)}
-            className="rounded-2xl bg-qorliqGold px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+            className="rounded-2xl bg-accent px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-[#07183f] transition hover:bg-background-soft"
           >
             Add Language
           </button>
@@ -2244,7 +2112,7 @@ function SkillsStep({
               key={language}
               type="button"
               onClick={() => addLanguage(language)}
-              className="rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white/65 hover:border-qorliqGold hover:text-qorliqGold"
+              className="rounded-full border border-border bg-background-muted px-3 py-2 text-xs font-bold text-text-secondary hover:border-accent hover:text-accent"
             >
               + {language}
             </button>
@@ -2256,14 +2124,14 @@ function SkillsStep({
             {form.languages.map((item, index) => (
               <div
                 key={`${item}-${index}`}
-                className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:grid-cols-[1fr_160px_auto]"
+                className="grid gap-3 rounded-2xl border border-border bg-white/[0.04] p-3 sm:grid-cols-[1fr_160px_auto]"
               >
-                <p className="text-sm font-bold text-white/80">{item}</p>
+                <p className="text-sm font-bold text-text-primary/80">{item}</p>
 
                 <select
                   value={form.languageLevels?.[index] || "Fluent"}
                   onChange={(e) => updateLanguageLevel(index, e.target.value)}
-                  className="h-10 rounded-xl border border-white/10 bg-black/45 px-3 text-xs font-bold text-white outline-none focus:border-qorliqGold"
+                  className="h-10 rounded-xl border border-border bg-background-soft px-3 text-xs font-bold text-text-primary outline-none focus:border-accent"
                 >
                   {proficiencyOptions.map((level) => (
                     <option key={level}>{level}</option>
@@ -2273,7 +2141,7 @@ function SkillsStep({
                 <button
                   type="button"
                   onClick={() => removeLanguage(index)}
-                  className="rounded-xl border border-red-300/20 px-3 py-2 text-xs font-black text-red-200 hover:bg-red-300 hover:text-black"
+                  className="rounded-xl border border-red-300/20 px-3 py-2 text-xs font-black text-red-200 hover:bg-red-300 hover:text-[#07183f]"
                 >
                   ×
                 </button>
@@ -2389,7 +2257,7 @@ function CertificationsExtraStep({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-lg font-black">Additional Sections</p>
-            <p className="mt-1 text-xs text-white/45">
+            <p className="mt-1 text-xs text-text-secondary">
               Add awards, publications, volunteering, memberships or any custom CV section.
             </p>
           </div>
@@ -2428,7 +2296,7 @@ function CertificationsExtraStep({
 
 function AdditionalSectionCard({ index, item, onChange, onRemove }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+    <div className="rounded-2xl border border-border bg-background-soft p-4">
       <CardTop title={`Additional Section ${index + 1}`} onRemove={onRemove} />
 
       <div className="mt-4 grid gap-4">
@@ -2474,7 +2342,6 @@ function ExperienceCard({
             value={item.jobTitle}
             onChange={(value) => onChange("jobTitle", value)}
             placeholder="e.g. Operations Manager"
-            required
           />
 
           <Input
@@ -2482,7 +2349,6 @@ function ExperienceCard({
             value={item.company}
             onChange={(value) => onChange("company", value)}
             placeholder="e.g. Brightline Services"
-            required
           />
         </div>
 
@@ -2499,7 +2365,6 @@ function ExperienceCard({
             value={item.startDate}
             onChange={(value) => onChange("startDate", value)}
             placeholder="e.g. Jan 2021"
-            required
           />
 
           <Input
@@ -2511,7 +2376,7 @@ function ExperienceCard({
           />
         </div>
 
-        <label className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 transition hover:border-qorliqGold/40">
+        <label className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl border border-border bg-background-soft px-4 py-3 transition hover:border-accent/40">
           <input
             type="checkbox"
             checked={Boolean(item.current)}
@@ -2527,7 +2392,7 @@ function ExperienceCard({
             className="h-5 w-5 shrink-0 accent-[#C8A24A]"
           />
 
-          <span className="min-w-0 text-sm font-bold leading-5 text-white/70">
+          <span className="min-w-0 text-sm font-bold leading-5 text-text-secondary">
             I currently work here
           </span>
         </label>
@@ -2587,7 +2452,6 @@ function EducationCard({ index, item, onChange, onRemove }) {
           value={item.degree}
           onChange={(value) => onChange("degree", value)}
           placeholder="e.g. BA Business Management"
-          required
         />
 
         <Input
@@ -2595,7 +2459,6 @@ function EducationCard({ index, item, onChange, onRemove }) {
           value={item.institution}
           onChange={(value) => onChange("institution", value)}
           placeholder="e.g. University of Manchester"
-          required
         />
 
         <Input
@@ -2610,7 +2473,6 @@ function EducationCard({ index, item, onChange, onRemove }) {
           value={item.startDate}
           onChange={(value) => onChange("startDate", value)}
           placeholder="e.g. 2018"
-          required
         />
 
         <Input
@@ -2716,14 +2578,14 @@ function CertificationCard({ index, item, onChange, onRemove }) {
 function CardTop({ title, onRemove }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-      <h4 className="min-w-0 flex-1 break-words text-xs font-black uppercase tracking-[0.14em] text-white/75 sm:text-sm sm:tracking-[0.18em]">
+      <h4 className="min-w-0 flex-1 break-words text-xs font-black uppercase tracking-[0.14em] text-text-primary sm:text-sm sm:tracking-[0.18em]">
         {title}
       </h4>
 
       <button
         type="button"
         onClick={onRemove}
-        className="shrink-0 rounded-full border border-red-300/20 px-3 py-2 text-[9px] font-black uppercase tracking-[0.12em] text-red-200 transition hover:bg-red-300 hover:text-black sm:px-4 sm:text-[10px] sm:tracking-[0.14em]"
+        className="shrink-0 rounded-full border border-red-300/20 px-3 py-2 text-[9px] font-black uppercase tracking-[0.12em] text-red-200 transition hover:bg-red-300 hover:text-[#07183f] sm:px-4 sm:text-[10px] sm:tracking-[0.14em]"
       >
         Remove
       </button>
@@ -2741,8 +2603,8 @@ function Input({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
-        {label} {required ? <span className="text-qorliqGold">*</span> : null}
+      <label className="mb-2 block text-[13px] font-medium text-text-primary">
+        {label}
       </label>
 
       <input
@@ -2751,7 +2613,7 @@ function Input({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-14 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:bg-black/55 focus:ring-4 focus:ring-qorliqGold/15 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/30"
+        className="builder-input h-12 w-full rounded-lg border border-border-strong bg-background px-4 text-[14px] font-medium text-text-primary outline-none transition placeholder:font-normal placeholder:text-text-muted focus:border-accent focus:ring-[3px] focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>
   );
@@ -2768,8 +2630,8 @@ function Textarea({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
-        {label} {required ? <span className="text-qorliqGold">*</span> : null}
+      <label className="mb-2 block text-[13px] font-medium text-text-primary">
+        {label}
       </label>
 
       <textarea
@@ -2778,7 +2640,7 @@ function Textarea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full resize-none rounded-2xl border border-white/10 bg-black/45 px-4 py-4 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold focus:bg-black/55 focus:ring-4 focus:ring-qorliqGold/15 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/30"
+        className="builder-input w-full resize-y rounded-lg border border-border-strong bg-background px-4 py-3 text-[14px] font-normal leading-6 text-text-primary outline-none transition placeholder:text-text-muted focus:border-accent focus:ring-[3px] focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>
   );
@@ -2804,7 +2666,7 @@ function ToolbarButton({
         onClick?.();
       }}
       className={`inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border text-[15px] font-black transition-all duration-150 active:scale-[0.97] ${active
-          ? "border-[#18227C] bg-[#18227C] text-white shadow-[0_8px_18px_rgba(24,34,124,0.22)]"
+          ? "border-[#18227C] bg-[#18227C] text-text-primary shadow-[0_8px_18px_rgba(24,34,124,0.22)]"
           : "border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300 hover:bg-slate-50"
         } ${className}`}
     >
@@ -2824,45 +2686,29 @@ function AIStars() {
 }
 
 function CVScoreCard({ pageScores, totalCvScore, currentPageScore, currentStep, setCurrentStep }) {
-  const stepEmojis = ["👤", "📝", "💼", "🎓", "🛠️", "🏆", "📄"];
-  const moodEmoji = totalCvScore >= 90 ? "😍" : totalCvScore >= 75 ? "😊" : totalCvScore >= 50 ? "🙂" : totalCvScore >= 25 ? "😐" : "💧";
-
   return (
-    <div className="mt-3 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-cyan-950/80 via-[#10283b] to-[#17181D] px-3 py-2 shadow-lg shadow-cyan-950/20">
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-lg">{stepEmojis[currentStep] || "✨"}</span>
-        <p className="shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
-          Your CV Score
-        </p>
-        <div className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10 shadow-inner">
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400 transition-all duration-700 ease-out"
-            style={{ width: `${totalCvScore}%` }}
-          />
+    <section aria-label="CV completion progress" className="mb-4 rounded-xl border border-border bg-surface px-4 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-[12px] font-semibold text-text-primary">CV completion</span>
+        <div className="h-1.5 min-w-[70px] flex-1 overflow-hidden rounded-full bg-background-muted">
+          <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${totalCvScore}%` }} />
         </div>
-        <span className="text-sm">{moodEmoji}</span>
-        <span className="text-sm font-black text-white">{totalCvScore}%</span>
+        <span className="text-[12px] font-bold text-text-primary">{totalCvScore}%</span>
       </div>
-
-      <div className="mt-2 grid grid-cols-7 gap-1">
+      <div className="mt-3 grid grid-cols-7 gap-1.5" aria-label="Section completion scores">
         {pageScores.map((value, index) => (
           <button
             key={`score-step-${index}`}
             type="button"
             onClick={() => setCurrentStep(index)}
-            className={`h-1.5 rounded-full transition-all ${currentStep === index
-                ? "bg-white"
-                : value >= 80
-                  ? "bg-cyan-300"
-                  : value > 0
-                    ? "bg-cyan-300/45"
-                    : "bg-white/15"
-              }`}
+            className={`h-1.5 rounded-full transition-all duration-200 ${currentStep === index ? "bg-accent" : value >= 80 ? "bg-accent/60" : value > 0 ? "bg-accent/30" : "bg-background-muted"}`}
+            aria-label={`Go to step ${index + 1}, ${value}% complete`}
+            aria-current={currentStep === index ? "step" : undefined}
             title={`Page ${index + 1}: ${value}% | Current page: ${currentPageScore}%`}
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -3023,7 +2869,7 @@ function RichTextEditor({
   return (
     <div>
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+        <label className="block text-xs font-black uppercase tracking-[0.16em] text-text-secondary">
           {label}
         </label>
 
@@ -3032,7 +2878,7 @@ function RichTextEditor({
             type="button"
             onClick={handleGenerateAI}
             disabled={aiLoading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-qorliqGold px-5 text-[11px] font-black uppercase tracking-[0.14em] text-black shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-accent px-5 text-[11px] font-black uppercase tracking-[0.14em] text-[#07183f] shadow-sm transition hover:bg-background-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             <AIStars />
             {aiLoading ? "Writing..." : "Generate AI"}
@@ -3374,10 +3220,10 @@ function RangeInput({ label, value, onChange, min, max, step }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <label className="text-[10px] font-black uppercase tracking-[0.14em] text-white/45">
+        <label className="text-[10px] font-black uppercase tracking-[0.14em] text-text-secondary">
           {label}
         </label>
-        <span className="text-[10px] font-bold text-white/40">{value}</span>
+        <span className="text-[10px] font-bold text-text-muted">{value}</span>
       </div>
 
       <input
@@ -3405,7 +3251,7 @@ function DynamicListInput({
 }) {
   return (
     <div className="rounded-3xl ">
-      <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-white/50">
+      <label className="mb-2 block text-[13px] font-medium text-text-primary">
         {label}
       </label>
 
@@ -3420,13 +3266,13 @@ function DynamicListInput({
               onAdd();
             }
           }}
-          className="py-4 flex-1 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-qorliqGold"
+          className="py-4 flex-1 rounded-2xl border border-border bg-background-soft px-4 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-accent"
         />
 
         <button
           type="button"
           onClick={onAdd}
-          className="rounded-2xl bg-qorliqGold px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+          className="rounded-2xl bg-accent px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-[#07183f] transition hover:bg-background-soft"
         >
           {buttonText}
         </button>
@@ -3437,7 +3283,7 @@ function DynamicListInput({
           {items.map((item, index) => (
             <span
               key={`${item}-${index}`}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white/80"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background-muted px-3 py-2 text-xs font-bold text-text-primary/80"
             >
               {item}
               <button
@@ -3460,7 +3306,7 @@ function AddButton({ text, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-3xl border border-dashed border-qorliqGold/40 bg-qorliqGold/10 px-5 py-4 text-xs font-black uppercase tracking-[0.16em] text-qorliqGold transition hover:bg-qorliqGold hover:text-black"
+      className="w-full rounded-3xl border border-dashed border-accent/40 bg-accent/10 px-5 py-4 text-xs font-black uppercase tracking-[0.16em] text-accent transition hover:bg-accent hover:text-[#07183f]"
     >
       + {text}
     </button>
@@ -3470,7 +3316,7 @@ function AddButton({ text, onClick }) {
 function SuggestionPanel({ title, children }) {
   return (
     <div className="mt-4 rounded-3xl mb-4">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-qorliqGold">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-accent">
         {title}
       </p>
 
@@ -3484,7 +3330,7 @@ function SuggestionButton({ text, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left text-sm leading-7 text-white/65 transition hover:border-qorliqGold hover:text-white"
+      className="rounded-2xl border border-border bg-white/[0.04] p-4 text-left text-sm leading-7 text-text-secondary transition hover:border-accent hover:text-text-primary"
     >
       {text}
     </button>

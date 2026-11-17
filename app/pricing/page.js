@@ -1,15 +1,11 @@
 import { Suspense } from "react";
 import PricingContent from "./priceContent";
 
-export default function CheckoutPage() {
+// useSearchParams in PricingContent requires a Suspense boundary for
+// static prerendering with the Next.js App Router. No full-screen loader.
+export default function PricingPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
-          <p className="text-sm font-bold text-white/60">Loading pricing...</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<main className="min-h-screen bg-background" aria-busy="true" />}>
       <PricingContent />
     </Suspense>
   );

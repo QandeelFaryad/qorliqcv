@@ -473,23 +473,7 @@ export async function POST(req) {
         body.customerForm || {}
       );
 
-    if (
-      hasMissingBillingDetails(customerDetails)
-    ) {
-      return jsonError(
-        "Please complete all required billing details.",
-        400
-      );
-    }
-
-    if (
-      !isValidEmail(customerDetails.email)
-    ) {
-      return jsonError(
-        "Please enter a valid email address.",
-        400
-      );
-    }
+   
 
     const session =
       await getServerSession(authOptions);

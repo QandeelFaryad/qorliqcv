@@ -1147,8 +1147,12 @@ function TemplateSelector({
         border-border
         px-5
         py-5
-        lg:px-6
-        lg:py-6
+        lg:min-h-[185px]
+        lg:gap-5
+        lg:rounded-2xl
+        lg:border-b-0
+        lg:px-7
+        lg:py-9
         text-left
         transition-all
         duration-300
@@ -1191,6 +1195,7 @@ function TemplateSelector({
               text-[21px]
               sm:text-[22px]
               lg:text-[24px]
+              lg:leading-[1.3]
               font-semibold
               tracking-[-0.035em]
               transition-colors
@@ -1227,6 +1232,10 @@ function TemplateSelector({
             text-[12px]
             leading-[1.7]
             text-text-secondary
+            lg:mt-3
+            lg:max-w-[340px]
+            lg:text-[13px]
+            lg:leading-[1.8]
           "
         >
           {template.description}
@@ -1576,6 +1585,8 @@ export default function LayoutsSection() {
               tabIndex={0}
               className="
                 min-w-0 border-t border-border-strong
+                lg:flex lg:flex-col lg:gap-5
+                lg:border-t-0
                 lg:max-h-[min(680px,calc(100vh-150px))]
                 lg:overflow-y-auto lg:overscroll-contain
                 lg:scroll-smooth
@@ -1586,7 +1597,11 @@ export default function LayoutsSection() {
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               {templates.map((template, index) => (
-                <div key={template.id} data-template-index={index}>
+                <div
+                  key={template.id}
+                  data-template-index={index}
+                  className="lg:shrink-0 lg:overflow-hidden lg:rounded-2xl lg:border lg:border-border"
+                >
                   <TemplateSelector
                     template={template}
                     index={index}

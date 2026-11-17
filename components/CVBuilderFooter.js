@@ -119,7 +119,7 @@ export default function CVBuilderFooter() {
   {footerLinks.map((link, index) => (
     <div
       key={link.label}
-      className="flex items-center"
+      className="flex items-center pb-2 md:pb-0"
     >
       <Link
         href={link.href}

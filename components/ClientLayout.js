@@ -12,6 +12,9 @@ export default function ClientLayout({ children }) {
     "/cv-builder/preview",
     "/cv-builder/success",
     "/cv-builder",
+    "/pricing",
+    "/checkout",
+    "/login",
     '/adfront',
     '/dashboard',
   ];

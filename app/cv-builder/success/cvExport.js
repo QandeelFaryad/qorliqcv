@@ -981,49 +981,217 @@ return {
   }
 };
 
-  export async function generateWord({ cv, previewElement }) {
-      let exportElement = null;
-    let restoreImages = null;
 
+// Word uses the same normalized CV object as the PDF text extraction.
+// A semantic document is substantially more reliable in Word than exporting
+// the complex on-screen CSS-grid template (which Word's HTML importer cannot render).
+function escapeWord(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function wordPlain(value) {
+  if (value == null) return "";
+  if (Array.isArray(value)) return value.map(wordPlain).filter(Boolean).join(", ");
+  if (typeof value === "object") return wordPlain(value.name || value.title || value.label || value.value || value.text || value.skill || value.language || "");
+  return String(value).trim();
+}
+function wordRich(value) {
+  if (!value) return "";
+  // Use textContent to avoid passing user-authored HTML or editor CSS to Word.
+  const node = document.createElement("div");
+  node.innerHTML = String(value);
+  node.querySelectorAll("script, style, iframe, object, svg").forEach((el) => el.remove());
+  node.querySelectorAll("br").forEach((el) => el.replaceWith("\n"));
+  node.querySelectorAll("li").forEach((el) => el.prepend("• "));
+  node.querySelectorAll("p, div, li, h1, h2, h3, h4, h5, h6").forEach((el) => el.append("\n"));
+  return String(node.textContent || "").split(/\n+/).map((s) => s.trim()).filter(Boolean).map((s) => `<p>${escapeWord(s)}</p>`).join("");
+}
+function buildEditableWordHtml(cv) {
+  const parts = [];
+  const line = (value) => { if (wordPlain(value)) parts.push(`<p>${escapeWord(wordPlain(value))}</p>`); };
+  const heading = (text) => parts.push(`<h2>${escapeWord(text)}</h2>`);
+  const rich = (value) => { if (value) parts.push(wordRich(value)); };
+  const dates = (item) => [item.startDate || item.start || item.from, item.current || item.isCurrent || item.currentlyWorking ? "Present" : item.endDate || item.end || item.to || item.year].filter(Boolean).join(" – ");
+  const list = (title, items, format = wordPlain) => {
+    if (!Array.isArray(items) || !items.length) return;
+    const rendered = items.map(format).filter(Boolean);
+    if (!rendered.length) return;
+    heading(title);
+    parts.push(`<ul>${rendered.map((text) => `<li>${escapeWord(text)}</li>`).join("")}</ul>`);
+  };
+  if (cv.fullName) parts.push(`<h1>${escapeWord(cv.fullName)}</h1>`);
+  line(cv.jobTitle);
+  line([cv.email, cv.phone, cv.location, cv.linkedIn, cv.github, cv.portfolio, cv.website].filter(Boolean).join(" | "));
+  if (cv.summary) { heading("Professional Summary"); rich(cv.summary); }
+  if (cv.experiences?.length) {
+    heading("Work Experience");
+    cv.experiences.filter(Boolean).forEach((item) => {
+      parts.push(`<h3>${escapeWord([item.jobTitle || item.title || item.position || item.role, item.company || item.employer || item.organization].filter(Boolean).join(" — "))}</h3>`);
+      line([dates(item), item.location].filter(Boolean).join(" | "));
+      rich(item.description); rich(item.responsibilities);
+      (item.bullets || []).forEach((bullet) => line(`• ${wordPlain(bullet)}`));
+    });
+  } else if (cv.experience) { heading("Work Experience"); rich(cv.experience); }
+  if (cv.educations?.length) {
+    heading("Education");
+    cv.educations.filter(Boolean).forEach((item) => {
+      parts.push(`<h3>${escapeWord([item.degree || item.title || item.qualification || item.course, item.institution || item.school || item.university || item.college].filter(Boolean).join(" — "))}</h3>`);
+      line([dates(item), item.location].filter(Boolean).join(" | ")); rich(item.description);
+    });
+  } else if (cv.education) { heading("Education"); rich(cv.education); }
+  list("Skills", cv.skills, (item, i) => [wordPlain(item), cv.skillLevels?.[i] || item?.level].filter(Boolean).join(" — "));
+  list("Languages", cv.languages, (item, i) => [wordPlain(item), cv.languageLevels?.[i] || item?.level].filter(Boolean).join(" — "));
+  const certifications = cv.certificationsList?.length ? cv.certificationsList : cv.certifications;
+  list("Certifications", certifications, (item) => typeof item === "string" ? item : [item.name || item.title || item.certificate, item.issuer || item.institution || item.organization, item.date || item.issuedDate || item.year].filter(Boolean).join(" | "));
+  if (cv.projectsList?.length) {
+    heading("Projects");
+    cv.projectsList.filter(Boolean).forEach((item) => {
+      parts.push(`<h3>${escapeWord(item.title || item.name || item.projectTitle || "Project")}</h3>`);
+      line([item.role, item.date || item.year].filter(Boolean).join(" | "));
+      if (item.technologies) line(`Technologies: ${wordPlain(item.technologies)}`);
+      rich(item.description); (item.bullets || []).forEach((b) => line(`• ${wordPlain(b)}`));
+    });
+  } else if (cv.projects) { heading("Projects"); rich(cv.projects); }
+  list("Career Achievements", cv.achievements);
+  list("Key Strengths", cv.strengths);
+  list("Hobbies and Interests", cv.hobbies);
+  if (Array.isArray(cv.additionalSections)) cv.additionalSections.filter(Boolean).forEach((s) => {
+    heading(s.title || "Additional Information"); rich(s.description || s.content || "");
+  });
+  else if (cv.additionalSections) { heading("Additional Information"); rich(cv.additionalSections); }
+  if (cv.references) {
+    heading("References");
+    if (Array.isArray(cv.references)) cv.references.forEach((r) => line(typeof r === "string" ? r : [r.name, r.jobTitle || r.position, r.company, r.email, r.phone].filter(Boolean).join(" | ")));
+    else rich(cv.references);
+  }
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #07183f; font-size: 10.5pt; line-height: 1.45; }
+    h1 { font-size: 22pt; margin: 0 0 5pt 0; color: #07183f; }
+    h2 { font-size: 12pt; color: #07183f; border-bottom: 1px solid #16aaa8; margin: 16pt 0 6pt; padding-bottom: 4pt; }
+    h3 { font-size: 10.5pt; margin: 8pt 0 2pt; color: #07183f; }
+    p { margin: 0 0 5pt; } ul { margin: 4pt 0 8pt; padding-left: 18pt; }
+    li { margin-bottom: 4pt; }
+  </style></head><body>${parts.join("\n")}</body></html>`;
+}
+
+
+// Produce a native, editable OOXML .docx. HTML-import DOCX files created using
+// altChunk may appear empty in Word Online, mobile Office, and LibreOffice.
+// Store ZIP entries directly to avoid introducing another runtime dependency.
+function makeDocxZip(entries) {
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  function crc32(bytes) {
+    let value = 0xffffffff;
+    for (const byte of bytes) value = table[(value ^ byte) & 255] ^ (value >>> 8);
+    return (value ^ 0xffffffff) >>> 0;
+  }
+  function header(size) { return new DataView(new ArrayBuffer(size)); }
+  const add = (bytes) => { chunks.push(bytes); offset += bytes.length; };
+  for (const [filename, content] of Object.entries(entries)) {
+    const name = encoder.encode(filename);
+    const data = encoder.encode(content);
+    const checksum = crc32(data);
+    const entryOffset = offset;
+    const local = header(30);
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(6, 0, true);
+    local.setUint16(8, 0, true); // Stored (no compression)
+    local.setUint32(14, checksum, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, name.length, true);
+    add(new Uint8Array(local.buffer)); add(name); add(data);
+    central.push({ name, checksum, length: data.length, offset: entryOffset });
+  }
+  const directoryOffset = offset;
+  for (const entry of central) {
+    const h = header(46);
+    h.setUint32(0, 0x02014b50, true);
+    h.setUint16(4, 20, true); h.setUint16(6, 20, true);
+    h.setUint32(16, entry.checksum, true);
+    h.setUint32(20, entry.length, true);
+    h.setUint32(24, entry.length, true);
+    h.setUint16(28, entry.name.length, true);
+    h.setUint32(42, entry.offset, true);
+    add(new Uint8Array(h.buffer)); add(entry.name);
+  }
+  const directoryLength = offset - directoryOffset;
+  const end = header(22);
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, central.length, true); end.setUint16(10, central.length, true);
+  end.setUint32(12, directoryLength, true);
+  end.setUint32(16, directoryOffset, true);
+  add(new Uint8Array(end.buffer));
+  return new Blob(chunks, { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+
+function nativeDocxFromHtml(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const paragraphs = [];
+  const escapeXml = (value) => String(value || "").replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const paragraph = (text, style = "Normal") => {
+    const value = String(text || "").trim();
+    if (!value) return;
+    const wordText = value.split("\n").map((part) => `<w:r><w:t xml:space="preserve">${escapeXml(part)}</w:t></w:r>`).join("<w:r><w:br/></w:r>");
+    const indent = style === "List" ? '<w:ind w:left="420" w:hanging="200"/>' : "";
+    paragraphs.push(`<w:p><w:pPr><w:pStyle w:val="${style}"/>${indent}</w:pPr>${wordText}</w:p>`);
+  };
+  for (const el of doc.body.querySelectorAll("h1, h2, h3, p, li")) {
+    if (el.closest("li") && el.tagName !== "LI") continue;
+    let style = "Normal";
+    if (el.tagName === "H1") style = "Title";
+    else if (el.tagName === "H2") style = "Heading1";
+    else if (el.tagName === "H3") style = "Heading2";
+    else if (el.tagName === "LI") style = "List";
+    paragraph(el.textContent, style);
+  }
+  if (!paragraphs.length) throw new Error("The CV has no text to export.");
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+${paragraphs.join("\n")}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1020" w:right="960" w:bottom="1020" w:left="960"/></w:sectPr>
+</w:body></w:document>`;
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="21"/><w:color w:val="07183F"/></w:rPr><w:pPr><w:spacing w:after="110" w:line="280" w:lineRule="auto"/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="44"/></w:rPr><w:pPr><w:spacing w:after="140"/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="25"/><w:color w:val="078C88"/></w:rPr><w:pPr><w:spacing w:before="230" w:after="120"/><w:keepNext/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="22"/></w:rPr><w:pPr><w:spacing w:before="150" w:after="60"/><w:keepNext/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="List"><w:name w:val="List"/><w:basedOn w:val="Normal"/></w:style>
+</w:styles>`;
+  return makeDocxZip({
+    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`,
+    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+    "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+    "word/document.xml": documentXml,
+    "word/styles.xml": stylesXml,
+  });
+}
+
+  export async function generateWord({ cv }) {
     try {
-  
-
-      if (document.fonts?.ready) await document.fonts.ready;
-
-      exportElement = createExportClone(previewElement);
-
-      if (!exportElement) throw new Error("Unable to prepare CV for Word.");
-
-      restoreImages = await prepareImagesForPDF(exportElement);
-      await waitForImages(exportElement);
-      
-
-      const htmlDocx = await import("html-docx-js/dist/html-docx");
-
-
-      exportElement.querySelectorAll("*").forEach((node) => {
-        const computed = getComputedStyle(node);
-        for (const property of computed) node.style.setProperty(property, computed.getPropertyValue(property));
-      });
-      const html = getWordHtml(exportElement.innerHTML);
-      const blob = (htmlDocx.default || htmlDocx).asBlob(html, { margins: { top: 0, right: 0, bottom: 0, left: 0 } });
-
+      if (!cv || typeof cv !== "object") throw new Error("CV content is missing.");
+      const html = buildEditableWordHtml(cv);
+      const blob = nativeDocxFromHtml(html);
+      if (!blob || blob.size < 1500) throw new Error("Word document generation failed.");
       triggerDownload(blob, `${safeFileName(cv.fullName || "qorliq-cv")}.docx`);
-
-return {
-  success: true,
-  fileSize:
-    blob.size >= 1024 * 1024
-      ? `${(blob.size / (1024 * 1024)).toFixed(2)} MB`
-      : `${(blob.size / 1024).toFixed(2)} KB`,
-};
+      return { success: true, fileSize: blob.size >= 1024 * 1024
+        ? `${(blob.size / (1024 * 1024)).toFixed(2)} MB`
+        : `${(blob.size / 1024).toFixed(2)} KB` };
     } catch (error) {
       console.error("Word download error:", error);
       throw error;
-    } finally {
-      if (restoreImages) restoreImages();
-      removeExportClone(exportElement);
-  
     }
   };
-

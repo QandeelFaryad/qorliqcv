@@ -173,7 +173,7 @@ function PaymentSuccessDialog({ onContinue }) {
           ref={continueRef}
           type="button"
           onClick={onContinue}
-          className="mt-8 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#07183F] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#102B66] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent dark:text-[#07183F]"
+          className="mt-8 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#07183F] px-5 text-sm font-semibold text-white transition-colors  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:bg-accent dark:text-[#07183F]"
         >
           Continue <ArrowRight size={17} />
         </button>
@@ -553,7 +553,7 @@ function StripePaymentForm({ planId, cvId, template, isSubscription, customerFor
       <div className="fixed inset-x-0 bottom-0 z-[90] border-t border-border bg-surface/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_rgba(7,24,63,0.08)] backdrop-blur-lg sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
       <motion.button type="submit" disabled={!ready || !stripe || !elements || processing || disabled || confirmedRef.current}
         whileHover={reduceMotion ? undefined : { scale: 1.01 }} whileTap={reduceMotion ? undefined : { scale: 0.985 }} transition={{ duration: reduceMotion ? 0 : 0.18 }}
-        className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#07183F] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#102B66] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-accent dark:text-[#07183F]">
+        className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#07183F] px-4 text-[14px] font-semibold text-white transition-colors  disabled:cursor-not-allowed disabled:opacity-60 dark:bg-accent dark:text-[#07183F]">
         {processing ? <><InlineSpinner /> Processing securely…</> : <><LockKeyhole size={16} /> {isSubscription ? "Order now · Start subscription" : "Order now · Confirm payment"} <ArrowRight size={16} /></>}
       </motion.button>
       </div>

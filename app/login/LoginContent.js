@@ -582,7 +582,7 @@ function LoginSuccessPopup({
             font-semibold
             text-white
             transition-all duration-200
-            hover:bg-[#102B66]
+            
             active:scale-[0.99]
             focus-visible:outline-2
             focus-visible:outline-offset-2
@@ -2057,8 +2057,8 @@ export default function LoginContent() {
                     font-semibold
                     text-white
                     transition-all
-                    hover:bg-[#102B66]
-                    hover:text-white
+                    
+              
                     focus-visible:outline-2
                     focus-visible:outline-offset-2
                     focus-visible:outline-accent

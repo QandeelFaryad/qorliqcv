@@ -170,6 +170,107 @@ function ResponsiveCVFrame({ cv, config }) {
   );
 }
 
+
+/* =========================================================
+   RESILIENT NETWORK REQUESTS
+   Keep GET requests retryable; never retry payment mutations.
+========================================================= */
+const CV_REQUEST_TIMEOUTS = [12000, 18000, 25000];
+const ACCESS_REQUEST_TIMEOUTS = [12000, 20000];
+
+function pauseWithSignal(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Request cancelled", "AbortError"));
+      return;
+    }
+    const timer = setTimeout(done, ms);
+    function done() {
+      signal?.removeEventListener("abort", cancel);
+      resolve();
+    }
+    function cancel() {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", cancel);
+      reject(new DOMException("Request cancelled", "AbortError"));
+    }
+    signal?.addEventListener("abort", cancel, { once: true });
+  });
+}
+
+async function resilientGetJson(url, { signal, timeouts, onRetry } = {}) {
+  const attempts = timeouts || CV_REQUEST_TIMEOUTS;
+
+  for (let attempt = 0; attempt < attempts.length; attempt += 1) {
+    if (signal?.aborted) throw new DOMException("Request cancelled", "AbortError");
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const offlineError = new Error("You are offline. Reconnect to continue.");
+      offlineError.code = "OFFLINE";
+      throw offlineError;
+    }
+
+    const attemptController = new AbortController();
+    const abortAttempt = () => attemptController.abort();
+    signal?.addEventListener("abort", abortAttempt, { once: true });
+    const timer = setTimeout(() => attemptController.abort(), attempts[attempt]);
+    let shouldRetry = false;
+    let responseData;
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+        signal: attemptController.signal,
+      });
+      if (signal?.aborted) throw new DOMException("Request cancelled", "AbortError");
+
+      if (!response.ok) {
+        const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+        if (!retryable || attempt === attempts.length - 1) {
+          const requestError = new Error(
+            response.status === 401 || response.status === 403
+              ? "Your session has expired or access was denied. Please sign in again."
+              : response.status === 404
+                ? "This CV was not found. Please return to your CVs."
+                : "We couldn't load your CV right now. Please try again."
+          );
+          requestError.code = retryable ? "TEMPORARY" : "HTTP";
+          requestError.status = response.status;
+          throw requestError;
+        }
+        shouldRetry = true;
+      } else {
+        // Parsing response JSON is included in the timeout window.
+        responseData = await response.json();
+        if (signal?.aborted) throw new DOMException("Request cancelled", "AbortError");
+        return responseData;
+      }
+    } catch (error) {
+      if (signal?.aborted) throw new DOMException("Request cancelled", "AbortError");
+      if (error.code === "HTTP" || error.code === "TEMPORARY") throw error;
+      if (attempt === attempts.length - 1) {
+        const finalError = new Error(
+          typeof navigator !== "undefined" && !navigator.onLine
+            ? "You are offline. Reconnect to continue."
+            : "Your connection is taking longer than expected. Please try again."
+        );
+        finalError.code = typeof navigator !== "undefined" && !navigator.onLine ? "OFFLINE" : "TEMPORARY";
+        throw finalError;
+      }
+      shouldRetry = true;
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abortAttempt);
+    }
+
+    if (shouldRetry) {
+      onRetry?.(attempt + 2, attempts.length);
+      await pauseWithSignal(Math.min(800 * (attempt + 1), 1800), signal);
+    }
+  }
+  throw new Error("Unable to load your CV.");
+}
+
 /* =========================================================
    CV PREVIEW PAGE — UI + NETWORK HANDLING
    API routes, payload shape and payment rules preserved.
@@ -184,12 +285,15 @@ export default function CVPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [checkingAccess, setCheckingAccess] = useState(false);
   const [networkError, setNetworkError] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [connectionMessage, setConnectionMessage] = useState("");
   const [pageError, setPageError] = useState("");
   const [notice, setNotice] = useState(null);
   const requestRef = useRef(null);
   const loadCountRef = useRef(0);
   const accessRequestRef = useRef(null);
   const paymentBusyRef = useRef(false);
+  const shouldRetryOnReconnectRef = useRef(false);
 
   const config = useMemo(() => getTemplateConfig(cv), [cv]);
   const editHref = `/cv-builder/create?edit=${cvId}&template=${encodeURIComponent(config.id)}&color=${encodeURIComponent(config.accent)}`;
@@ -213,40 +317,51 @@ export default function CVPreviewPage() {
   }, [router, editHref]);
 
   const loadCV = useCallback(async () => {
-    if (!cvId) return;
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    const requestNumber = ++loadCountRef.current;
-    setLoading(true);
-    setNetworkError(false);
-    setPageError("");
-
+    // Do not start a request or show a loading skeleton while offline.
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setLoading(false);
+      loadCountRef.current += 1;
+      requestRef.current?.abort();
+      requestRef.current = null;
+      setIsOffline(true);
       setNetworkError(true);
+      setConnectionMessage("You're offline. Reconnect to load your CV.");
+      setLoading(false);
+      return;
+    }
+    setIsOffline(false);
+    if (!cvId) {
+      setLoading(false);
+      setPageError("CV ID is missing. Please return to your CVs.");
       return;
     }
 
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    // Invalidate the previous response before aborting it.
+    const requestNumber = ++loadCountRef.current;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setLoading(true);
+    setNetworkError(false);
+    setPageError("");
+    setConnectionMessage("");
+
     try {
-      const res = await fetch(`/api/cv/${cvId}`, {
-        cache: "no-store",
+      const data = await resilientGetJson(`/api/cv/${encodeURIComponent(cvId)}`, {
         signal: controller.signal,
+        timeouts: CV_REQUEST_TIMEOUTS,
+        onRetry: (attempt, total) => {
+          if (requestNumber === loadCountRef.current && !controller.signal.aborted) {
+            setConnectionMessage(`Connection is slow. Retrying securely (${attempt}/${total})…`);
+          }
+        },
       });
-      if (requestNumber !== loadCountRef.current) return;
-      if (!res.ok) {
-        if (res.status >= 500) throw new Error("Network or server unavailable");
-        setPageError("Unable to load this CV. Please try again.");
+
+      if (controller.signal.aborted || requestNumber !== loadCountRef.current) return;
+      if (!data?.success || !(data.cv || data.data)) {
+        setPageError(data?.error || "We couldn't find this CV. Please try again.");
         return;
       }
-      const data = await res.json();
-      if (requestNumber !== loadCountRef.current) return;
-      if (!data.success) {
-        setPageError("Unable to load this CV. Please try again.");
-        return;
-      }
-      const loaded = data.cv || data.data || {};
+      const loaded = data.cv || data.data;
       setCv({
         ...emptyCV,
         ...loaded,
@@ -267,37 +382,69 @@ export default function CVPreviewPage() {
         additionalSections: Array.isArray(loaded.additionalSections) ? loaded.additionalSections : [],
       });
     } catch (error) {
-      if (requestNumber !== loadCountRef.current) return;
-      if (controller.signal.aborted && requestRef.current !== controller) return;
-      console.error("Load CV error:", error);
-      setNetworkError(true);
+      if (controller.signal.aborted || requestNumber !== loadCountRef.current) return;
+      if (error.code === "HTTP") {
+        setPageError(error.message);
+      } else {
+        setIsOffline(typeof navigator !== "undefined" && navigator.onLine === false);
+        setNetworkError(true);
+        setConnectionMessage(error.message || "Your connection is unavailable. Please try again.");
+      }
     } finally {
-      clearTimeout(timeout);
-      if (requestNumber === loadCountRef.current) setLoading(false);
+      if (requestNumber === loadCountRef.current && !controller.signal.aborted) {
+        setLoading(false);
+        requestRef.current = null;
+      }
     }
   }, [cvId]);
 
   useEffect(() => {
     loadCV();
-    return () => requestRef.current?.abort();
+    return () => {
+      loadCountRef.current += 1;
+      requestRef.current?.abort();
+      accessRequestRef.current?.abort();
+    };
   }, [loadCV]);
 
   useEffect(() => {
+    // navigator.onLine is only a connectivity hint. Actual network failures
+    // are still handled by resilientGetJson and the normal retry UI.
     const handleOnline = () => {
-      if (networkError) loadCV();
+      setIsOffline(false);
+      // Reconnect should automatically attempt the CV again if the last
+      // load failed. The ref prevents using stale effect callback state.
+      if (shouldRetryOnReconnectRef.current) loadCV();
     };
     const handleOffline = () => {
+      loadCountRef.current += 1;
       requestRef.current?.abort();
+      requestRef.current = null;
+      setIsOffline(true);
+      setConnectionMessage("You're offline. Your CV is safe. Reconnect to continue.");
       setNetworkError(true);
       setLoading(false);
     };
+    setIsOffline(navigator.onLine === false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [networkError, loadCV]);
+  }, [loadCV]);
+
+  const handleReload = useCallback(() => {
+    if (loading || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setIsOffline(true);
+        setNetworkError(true);
+        setConnectionMessage("You're offline. Please reconnect before retrying.");
+      }
+      return;
+    }
+    loadCV();
+  }, [loading, loadCV]);
 
   // Existing access checks and destinations are unchanged.
   const handlePayAndSave = async () => {
@@ -319,18 +466,14 @@ export default function CVPreviewPage() {
       accessRequestRef.current?.abort();
       const controller = new AbortController();
       accessRequestRef.current = controller;
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      let res;
-      try {
-        res = await fetch("/api/user/access", {
-          method: "GET", cache: "no-store", signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
-      const data = await res.json();
-      if (!res.ok) {
-        showNotice(data?.error || "Unable to verify your access.");
+      const data = await resilientGetJson("/api/user/access", {
+        signal: controller.signal,
+        timeouts: ACCESS_REQUEST_TIMEOUTS,
+        onRetry: () => showNotice("Your connection is slow. Rechecking account access…", "warning"),
+      });
+      if (controller.signal.aborted) return;
+      if (data?.success === false) {
+        showNotice(data.error || "Unable to verify your access.");
         return;
       }
       if (data?.hasAccess === true) {
@@ -340,14 +483,16 @@ export default function CVPreviewPage() {
       router.push(`/pricing?cvId=${savedCvId}&template=${template}`);
     } catch (error) {
       console.error("Pay and save error:", error);
-      showNotice("Unable to continue. Please check your connection and try again.");
+      showNotice(error.message || "Unable to continue. Please check your connection and try again.");
     } finally {
       paymentBusyRef.current = false;
+      accessRequestRef.current = null;
       setCheckingAccess(false);
     }
   };
 
-  const errorState = networkError || Boolean(pageError);
+  const errorState = !loading && (networkError || Boolean(pageError));
+  shouldRetryOnReconnectRef.current = networkError || isOffline;
 
   // One set of actions for desktop, another for mobile; both share the same handlers.
   const actions = (mobile = false) => (
@@ -362,7 +507,7 @@ export default function CVPreviewPage() {
         type="button"
         onClick={handlePayAndSave}
         disabled={checkingAccess || status === "loading"}
-        className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-[#07183F] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#102B66] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-accent dark:text-[#07183F] dark:hover:opacity-90 focus-visible:outline-2 focus-visible:outline-accent"
+        className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl bg-[#07183F] px-4 text-[13px] font-semibold text-white transition-colors  cursor-pointer disabled:opacity-60 dark:bg-accent dark:text-[#07183F] dark:hover:opacity-90 focus-visible:outline-2 focus-visible:outline-accent"
       >
         {checkingAccess && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}
         <span>{checkingAccess ? "Checking..." : "Pay & Save"}</span>
@@ -404,26 +549,45 @@ export default function CVPreviewPage() {
       </div>
 
       <div className="mx-auto w-full max-w-[1100px] px-2 pb-[calc(102px+env(safe-area-inset-bottom))] pt-3 sm:px-5 md:px-8 md:pb-8 md:pt-6 print:max-w-none print:p-0">
-        {errorState ? (
+        {loading ? (
+          <div className="mx-auto w-full max-w-[794px] overflow-hidden rounded-2xl border border-border bg-surface p-5 sm:p-8" aria-label="Loading CV preview" role="status" aria-busy="true">
+            <div className="mb-6 flex items-center gap-3 text-[13px] font-medium text-text-secondary">
+              <LoaderCircle size={18} className="animate-spin text-accent motion-reduce:animate-none" />
+              <span>{connectionMessage || "Loading your CV securely…"}</span>
+            </div>
+            <div className="animate-pulse space-y-4 motion-reduce:animate-none">
+              <div className="h-8 w-2/5 rounded-lg bg-background-muted" />
+              <div className="h-3 w-3/5 rounded bg-background-muted" />
+              <div className="mt-8 h-3 w-full rounded bg-background-muted" />
+              <div className="h-3 w-4/5 rounded bg-background-muted" />
+              <div className="mt-8 h-3 w-1/2 rounded bg-background-muted" />
+            </div>
+          </div>
+        ) : errorState ? (
           <div role="alert" className="mx-auto mt-8 flex max-w-md flex-col items-center rounded-2xl border border-border bg-surface px-6 py-10 text-center shadow-sm">
             <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
               <WifiOff size={27} strokeWidth={1.8} aria-hidden="true" />
             </span>
             <h2 className="text-center text-base font-semibold text-text-primary">
-              {networkError ? "Couldn't reach the internet. Please check your internet connection." : pageError}
+              {isOffline ? "No internet connection" : networkError ? "Connection interrupted" : "Unable to load your CV"}
             </h2>
-            <button type="button" onClick={loadCV} disabled={loading}
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-[#07183F] transition-opacity hover:opacity-85 disabled:opacity-60">
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} aria-hidden="true" /> Reload
+            <p className="mt-2 max-w-sm text-center text-[13px] leading-relaxed text-text-secondary">
+              {isOffline
+                ? "Connect to Wi-Fi or mobile data. Your CV will reload automatically once you're online."
+                : networkError
+                  ? connectionMessage || "Please check your connection and try again."
+                  : pageError}
+            </p>
+            <button
+              type="button"
+              onClick={handleReload}
+              disabled={loading || isOffline}
+              aria-disabled={loading || isOffline}
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-[#07183F] transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} aria-hidden="true" />
+              {isOffline ? "Waiting for connection" : "Reload"}
             </button>
-          </div>
-        ) : loading ? (
-          <div className="mx-auto w-full max-w-[794px] animate-pulse overflow-hidden rounded-lg border border-border bg-surface p-5 sm:p-8" aria-label="Loading CV preview" role="status">
-            <div className="h-7 w-2/5 rounded bg-background-muted" />
-            <div className="mt-5 h-3 w-3/5 rounded bg-background-muted" />
-            <div className="mt-8 h-3 w-full rounded bg-background-muted" />
-            <div className="mt-3 h-3 w-4/5 rounded bg-background-muted" />
-            <div className="mt-8 h-3 w-1/2 rounded bg-background-muted" />
           </div>
         ) : (
           <div className="mx-auto w-full max-w-[794px] print:max-w-none">

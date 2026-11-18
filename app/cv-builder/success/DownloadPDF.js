@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import DownloadNotification from "./DownloadNotification";
+import { FileDown, FileText, LoaderCircle } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 
 const DownloadContext = createContext(null);
 
@@ -71,17 +73,26 @@ export function DownloadProvider({ cv, cvRef, hasAccess, children }) {
 }
 
 function DownloadButton({ format }) {
+  const reduceMotion = useReducedMotion();
   const context = useContext(DownloadContext);
   if (!context) throw new Error("Download buttons must be inside DownloadProvider.");
   const { operation, download } = context;
   const active = operation?.format === format;
+  const Icon = format === "pdf" ? FileDown : FileText;
   const label = format === "pdf" ? "PDF" : "MS Word";
   const text = !active ? `Download ${label}` : operation.phase === "authorizing" ? "Checking access..." : operation.phase === "history" ? "Saving history..." : `Preparing ${label}...`;
   return (
-    <button type="button" onClick={() => download(format)} disabled={Boolean(operation)} aria-busy={active}
-      className={`min-h-12 w-full rounded-full px-5 py-3 text-xs font-black uppercase tracking-[0.1em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#B88A2C] disabled:cursor-not-allowed disabled:opacity-60 md:w-auto ${format === "pdf" ? "bg-[#B88A2C] text-black hover:bg-white" : "border border-white/25 text-white hover:border-[#B88A2C] hover:text-[#B88A2C]"}`}>
-      {text}
-    </button>
+    <motion.button
+      type="button" onClick={() => download(format)}
+      disabled={Boolean(operation)} aria-busy={active}
+      whileHover={reduceMotion || operation ? undefined : { y: -2 }}
+      whileTap={reduceMotion || operation ? undefined : { scale: 0.985 }}
+      transition={{ duration: 0.18 }}
+      className={`inline-flex min-h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-3 text-[12px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60 md:w-auto md:flex-none md:px-4 ${format === "pdf" ? "bg-[#07183F] text-white dark:bg-accent dark:text-[#07183F]" : "border border-border-strong bg-background text-text-primary hover:border-accent"}`}
+    >
+      {active ? <LoaderCircle size={17} className="shrink-0 animate-spin" aria-hidden="true" /> : <Icon size={17} className="shrink-0" aria-hidden="true" />}
+      <span className="truncate">{text}</span>
+    </motion.button>
   );
 }
 

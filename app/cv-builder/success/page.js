@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DownloadPDF, { DownloadProvider, DownloadWord } from "./DownloadPDF";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { ArrowLeft, ArrowRight, Maximize2, Minimize2, CheckCircle2, AlertCircle, CreditCard, FileWarning, LockKeyhole, ShieldCheck, LoaderCircle } from "lucide-react";
+import CVBuilderFooter from "@/components/CVBuilderFooter";
+import PricingHeader from "@/components/pricing/PricingHeader";
+
 
 /* =========================
    TEMPLATE CONFIG
@@ -121,7 +126,8 @@ const emptyCV = {
 
 export default function SuccessPage() {
   const router = useRouter();
-  const [fitPreview, setFitPreview] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const [fitPreview, setFitPreview] = useState(true);
   const cvRef = useRef(null);
   const previewShellRef = useRef(null);
 
@@ -296,60 +302,362 @@ setHasAccess(true);
 
   if (loading || accessChecking) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
-        <p className="text-sm font-black uppercase tracking-[0.2em] text-[#B88A2C]">
-          Checking your access...
-        </p>
+      <main
+        role="status"
+        aria-label="Loading your CV preview"
+        aria-busy="true"
+        className="min-h-screen bg-background text-text-primary"
+      >
+        <span className="sr-only">Checking your access and preparing your CV...</span>
+        <div className="mx-auto w-full max-w-[1330px] px-3 pb-28 pt-5 sm:px-6 sm:pt-8 lg:px-10 lg:pb-12">
+          <div className="mb-5 h-10 w-36 animate-pulse rounded-xl bg-background-muted motion-reduce:animate-none" />
+
+          <div className="flex flex-col gap-5 rounded-2xl border border-border bg-surface px-4 py-5 shadow-[0_8px_30px_rgba(7,24,63,0.04)] sm:p-6 md:flex-row md:items-center md:justify-between">
+            <div className="w-full max-w-lg space-y-3.5">
+              <div className="h-3.5 w-36 animate-pulse rounded bg-background-muted motion-reduce:animate-none" />
+              <div className="h-8 w-56 max-w-full animate-pulse rounded-lg bg-background-muted motion-reduce:animate-none sm:h-10 sm:w-72" />
+              <div className="h-3.5 w-64 max-w-full animate-pulse rounded bg-background-muted motion-reduce:animate-none sm:w-80" />
+            </div>
+            <div className="hidden shrink-0 items-center gap-2 md:flex">
+              <div className="h-11 w-36 animate-pulse rounded-xl bg-background-muted motion-reduce:animate-none" />
+              <div className="h-11 w-40 animate-pulse rounded-xl bg-background-muted motion-reduce:animate-none" />
+            </div>
+          </div>
+
+          <div className="mt-5 mb-3 flex items-center justify-between gap-3 px-1">
+            <div className="h-3.5 w-36 animate-pulse rounded bg-background-muted motion-reduce:animate-none" />
+            <div className="h-10 w-32 animate-pulse rounded-xl bg-background-muted motion-reduce:animate-none" />
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background-soft p-1.5 sm:p-4">
+            <div className="mx-auto min-h-[520px] w-full max-w-[794px] overflow-hidden bg-white shadow-[0_12px_35px_rgba(7,24,63,0.05)] sm:min-h-[750px]">
+              <div className="border-b border-slate-100 px-6 pb-7 pt-9 sm:px-12 sm:pt-12">
+                <div className="h-9 w-3/5 animate-pulse rounded-lg bg-slate-200 motion-reduce:animate-none" />
+                <div className="mt-3 h-4 w-2/5 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+                <div className="mt-5 h-3 w-4/5 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+              </div>
+              <div className="space-y-8 px-6 py-8 sm:px-12">
+                {[0, 1, 2, 3].map((index) => (
+                  <div key={index} className="space-y-3">
+                    <div className="h-5 w-36 animate-pulse rounded bg-slate-200 motion-reduce:animate-none" />
+                    <div className="h-3 w-full animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+                    <div className="h-3 w-[91%] animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+                    <div className="h-3 w-[67%] animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div aria-hidden="true" className="fixed inset-x-0 bottom-0 z-[90] border-t border-border bg-surface/95 px-3 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-md md:hidden">
+          <div className="mx-auto flex max-w-[580px] gap-2">
+            <div className="h-12 flex-1 animate-pulse rounded-xl bg-background-muted motion-reduce:animate-none" />
+            <div className="h-12 flex-1 animate-pulse rounded-xl bg-background-muted motion-reduce:animate-none" />
+          </div>
+        </div>
       </main>
     );
   }
 
-  if (accessError || !hasAccess) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
-        <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
-            Access Required
-          </p>
+/* =========================================================
+   ACCESS REQUIRED / CV ERROR
+   MOBILE: BOTTOM SHEET
+   DESKTOP: CENTERED CARD
+========================================================= */
 
-          <h1 className="mt-4 text-3xl font-black">Subscription Required</h1>
+if (accessError || !hasAccess || error) {
+  const isAccessError = Boolean(accessError || !hasAccess);
 
-          <p className="mt-4 text-sm leading-7 text-white/55">
-            {accessError || "Please choose a plan to download your CV."}
-          </p>
+  const title = isAccessError
+    ? "Choose a plan to continue"
+    : "Unable to load your CV";
 
-          <button
-            type="button"
-            onClick={() => {
-              const params = new URLSearchParams(window.location.search);
-              const cvId = params.get("cvId") || "";
-              const template = params.get("template") || "";
-              window.location.href = `/pricing?cvId=${cvId}&template=${template}`;
+  const description = isAccessError
+    ? accessError || "Please choose a plan to download your CV."
+    : error;
+
+  const Icon = isAccessError ? LockKeyhole : FileWarning;
+
+  const handleAction = () => {
+    if (isAccessError) {
+      const params = new URLSearchParams(window.location.search);
+
+      const cvId = params.get("cvId") || "";
+      const template = params.get("template") || "";
+
+      const query = new URLSearchParams();
+
+      if (cvId) query.set("cvId", cvId);
+      if (template) query.set("template", template);
+
+      router.push(
+        `/pricing${query.toString() ? `?${query.toString()}` : ""}`
+      );
+
+      return;
+    }
+
+    router.push("/cv-builder");
+  };
+
+  return (
+    <>
+  
+    <main className="relative min-h-[100dvh] bg-background text-text-primary">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={isAccessError ? "access-required" : "cv-error"}
+          className="
+            fixed inset-0 z-[200]
+            flex items-end justify-center
+            sm:items-center
+            sm:px-6 sm:py-8
+          "
+        >
+          {/* BACKDROP — MOBILE ONLY */}
+          <motion.div
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{
+              duration: reduceMotion ? 0 : 0.3,
+              ease: "easeOut",
             }}
-            className="mt-6 rounded-full bg-[#B88A2C] px-6 py-3 text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-white"
+            className="
+              absolute inset-0
+              bg-[#061126]/55
+              backdrop-blur-[4px]
+              sm:hidden
+            "
+          />
+
+          {/* POPUP */}
+          <motion.section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="cv-status-title"
+            aria-describedby="cv-status-description"
+            initial={
+              reduceMotion
+                ? false
+                : {
+                    opacity: 0,
+                    y: 100,
+                  }
+            }
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            exit={
+              reduceMotion
+                ? {
+                    opacity: 0,
+                  }
+                : {
+                    opacity: 0,
+                    y: 100,
+                  }
+            }
+            transition={{
+              type: reduceMotion ? "tween" : "spring",
+              stiffness: 260,
+              damping: 30,
+              mass: 0.9,
+            }}
+            className="
+              relative z-10
+              w-full
+              max-h-[92dvh]
+              overflow-y-auto
+              overscroll-contain
+
+              rounded-t-[30px]
+              border border-border
+              bg-surface
+
+              px-6
+              pb-[calc(26px+env(safe-area-inset-bottom))]
+              pt-5
+
+              text-center
+              shadow-[0_-20px_70px_rgba(7,24,63,0.18)]
+
+              sm:max-w-[470px]
+              sm:rounded-[24px]
+              sm:px-9
+              sm:pb-9
+              sm:pt-10
+              sm:shadow-[0_20px_65px_rgba(7,24,63,0.07)]
+            "
           >
-            Choose Plan
-          </button>
-        </div>
-      </main>
-    );
-  }
+            {/* MOBILE DRAG INDICATOR */}
+            <div
+              aria-hidden="true"
+              className="
+                mx-auto mb-7
+                h-1 w-11
+                rounded-full
+                bg-border-strong
+                sm:hidden
+              "
+            />
 
-  if (error) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
-        <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.05] p-8 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-red-300">
-            CV Not Found
-          </p>
+            {/* ICON */}
+            <div
+              className={`
+                mx-auto flex
+                h-[76px] w-[76px]
+                items-center justify-center
+                rounded-[22px]
+                border
 
-          <h1 className="mt-4 text-3xl font-black">Unable to Load CV</h1>
+                ${
+                  isAccessError
+                    ? "border-amber-500/15 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "border-red-500/15 bg-red-500/10 text-red-600 dark:text-red-400"
+                }
+              `}
+            >
+              <Icon
+                size={31}
+                strokeWidth={1.65}
+                aria-hidden="true"
+              />
+            </div>
 
-          <p className="mt-4 text-sm leading-7 text-white/55">{error}</p>
-        </div>
-      </main>
-    );
-  }
+            {/* STATUS BADGE */}
+            <div
+              className={`
+                mx-auto mt-6
+                inline-flex items-center gap-2
+                rounded-full border
+                px-3.5 py-1.5
+                text-[11px] font-semibold
+
+                ${
+                  isAccessError
+                    ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                }
+              `}
+            >
+              {isAccessError ? (
+                <ShieldCheck size={13} aria-hidden="true" />
+              ) : (
+                <AlertCircle size={13} aria-hidden="true" />
+              )}
+
+              {isAccessError
+                ? "Account access required"
+                : "CV unavailable"}
+            </div>
+
+            {/* TITLE */}
+            <h1
+              id="cv-status-title"
+              className="
+                mt-4
+                text-[27px]
+                font-semibold
+                leading-[1.15]
+                tracking-[-0.055em]
+                text-text-primary
+                sm:text-[32px]
+              "
+            >
+              {title}
+            </h1>
+
+            {/* DESCRIPTION */}
+            <p
+              id="cv-status-description"
+              className="
+                mx-auto mt-3
+                max-w-[355px]
+                text-[14px]
+                leading-[1.8]
+                text-text-secondary
+              "
+            >
+              {description}
+            </p>
+
+            {/* ACTION BUTTON */}
+            <motion.button
+              type="button"
+              onClick={handleAction}
+              whileHover={
+                reduceMotion ? undefined : { y: -2 }
+              }
+              whileTap={
+                reduceMotion ? undefined : { scale: 0.985 }
+              }
+              className="
+                mt-7
+                inline-flex h-12 w-full
+                cursor-pointer
+                items-center justify-center
+                gap-2 rounded-xl
+                bg-[#07183F]
+                px-5
+                text-[13px]
+                font-semibold
+                text-white
+                transition-colors
+                
+
+                focus-visible:outline-2
+                focus-visible:outline-offset-2
+                focus-visible:outline-accent
+
+                dark:bg-accent
+                dark:text-[#07183F]
+              "
+            >
+              {isAccessError ? (
+                <>
+                  <CreditCard size={16} aria-hidden="true" />
+                  View available plans
+                  <ArrowRight size={16} aria-hidden="true" />
+                </>
+              ) : (
+                <>
+                  <ArrowLeft size={16} aria-hidden="true" />
+                  Back to CV Builder
+                </>
+              )}
+            </motion.button>
+
+            {/* FOOTER */}
+            <p
+              className="
+                mt-5
+                flex items-center justify-center
+                gap-1.5
+                text-[11px]
+                leading-relaxed
+                text-text-muted
+              "
+            >
+              {isAccessError ? (
+                <>
+                  <ShieldCheck size={13} aria-hidden="true" />
+                  Secure checkout with QORLIQ CV
+                </>
+              ) : (
+                "Your saved CV information has not been changed."
+              )}
+            </p>
+          </motion.section>
+        </motion.div>
+      </AnimatePresence>
+    </main>
+    </>
+  );
+}
 
   const goBack = () => {
     const id = cv?._id || cv?.id || new URLSearchParams(window.location.search).get("cvId");
@@ -365,52 +673,62 @@ setHasAccess(true);
     router.push(previewPath);
   };
 
+  const fade = { initial: reduceMotion ? false : { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } };
+
   return (
     <DownloadProvider cv={cv} cvRef={cvRef} hasAccess={hasAccess}>
-      <main className="min-h-screen bg-[#050505] px-3 py-6 text-white sm:px-4 md:px-6 md:py-10">
-        <div className="mx-auto w-full max-w-7xl">
-          <button type="button" onClick={goBack} aria-label="Back to CV preview"
-            className="mb-5 inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-white/20 px-3 text-sm font-semibold transition hover:border-[#B88A2C] hover:text-[#B88A2C] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#B88A2C] md:px-4">
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 19-7-7 7-7M5 12h14" /></svg>
-            <span className="hidden md:inline">Back</span>
-          </button>
-          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:gap-x-0">
-            <header className="order-1 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 md:rounded-r-none md:border-r-0">
-              <p className="text-xs font-black uppercase tracking-[0.25em] text-[#B88A2C]">Payment Successful</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Download your CV</h1>
-              <p className="mt-2 text-sm text-white/70">Selected template: <span className="font-bold text-[#B88A2C]">{config.name}</span>. Your CV is ready for export.</p>
-            </header>
-            <div className="download-actions order-3 flex flex-col gap-3 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 sm:flex-row md:order-2 md:items-center md:rounded-l-none md:border-l-0">
-              <DownloadPDF />
-              <DownloadWord />
+        <PricingHeader/>
+      <main className="min-h-screen bg-background text-text-primary pb-[calc(105px+env(safe-area-inset-bottom))] md:pb-12">
+        <div className="mx-auto w-full max-w-[1330px] px-3 pt-5 sm:px-6 sm:pt-8 lg:px-10">
+          <motion.div {...fade} className="mb-5 flex items-center justify-between gap-3">
+            <button type="button" onClick={goBack} aria-label="Back to CV preview"
+              className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-[13px] font-semibold text-text-secondary transition hover:border-accent hover:text-text-primary focus-visible:outline-2 focus-visible:outline-accent">
+              <ArrowLeft size={16} /> Back to preview
+            </button>
+            <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 sm:inline-flex">
+              <CheckCircle2 size={14} /> Ready to download
+            </span>
+          </motion.div>
+
+          <motion.header {...fade} transition={{ ...fade.transition, delay: 0.06 }}
+            className="mb-5 flex flex-col gap-4 rounded-2xl border border-border bg-surface px-4 py-5 shadow-[0_8px_30px_rgba(7,24,63,0.04)] sm:p-6 md:flex-row md:items-center md:justify-between md:gap-6">
+            <div className="min-w-0">
+              <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#078C88] dark:text-accent"><CheckCircle2 size={15} /> Payment successful</p>
+              <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.055em] sm:text-[32px]">Your CV is ready</h1>
+              <p className="mt-2 text-[13px] leading-6 text-text-secondary">{config.name} · Download your CV in your preferred format.</p>
             </div>
-            <section className="order-2 min-w-0 md:order-3 md:col-span-2" aria-label="CV preview">
-              <div className="mb-3 flex items-center justify-between gap-3 text-xs text-white/70">
-                <p>{fitPreview ? "Fit to screen" : "Full-size preview · scroll sideways to read"}</p>
-                <button type="button" onClick={() => setFitPreview((value) => !value)} aria-pressed={fitPreview}
-                  className="min-h-11 shrink-0 rounded-full border border-white/20 px-4 font-semibold text-white hover:border-[#B88A2C]">
-                  {fitPreview ? "Read at 100%" : "Fit to screen"}
-                </button>
-              </div>
-              <div ref={previewShellRef} tabIndex={0} aria-label="Scrollable CV preview"
-                className="mx-auto w-full overflow-x-auto rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-2 sm:p-4">
-                <div className="relative mx-auto" style={{ width: `${794 * previewScale}px`, height: `${previewHeight}px`, minHeight: `${previewHeight}px` }}>
-                  <div ref={cvRef} id="qorliq-cv-pdf" style={{ width: "794px", minWidth: "794px", maxWidth: "794px", background: "#ffffff", margin: 0, position: "absolute", top: 0, left: 0, transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
-                    <TemplateRenderer cv={cv} config={config} />
-                  </div>
+            <div className="hidden shrink-0 items-center gap-2 md:flex">
+              <DownloadPDF /><DownloadWord />
+            </div>
+          </motion.header>
+
+          <motion.section {...fade} transition={{ ...fade.transition, delay: 0.12 }} aria-label="CV preview" className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-[12px] text-text-secondary">
+              <span>{fitPreview ? "Fit to screen · A4 preview" : "Actual size · scroll horizontally"}</span>
+              <button type="button" onClick={() => setFitPreview((value) => !value)} aria-pressed={fitPreview}
+                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 text-[12px] font-semibold text-text-primary transition hover:border-accent focus-visible:outline-2 focus-visible:outline-accent">
+                {fitPreview ? <Maximize2 size={15} /> : <Minimize2 size={15} />}
+                {fitPreview ? "View at 100%" : "Fit to screen"}
+              </button>
+            </div>
+            <div ref={previewShellRef} tabIndex={0} aria-label="Scrollable CV preview"
+              className="mx-auto w-full overflow-x-auto rounded-2xl border border-border bg-background-soft p-1.5 shadow-[0_12px_35px_rgba(7,24,63,0.05)] sm:p-4">
+              <div className="relative mx-auto" style={{ width: `${794 * previewScale}px`, height: `${previewHeight}px`, minHeight: `${previewHeight}px` }}>
+                <div ref={cvRef} id="qorliq-cv-pdf" style={{ width: "794px", minWidth: "794px", maxWidth: "794px", background: "#ffffff", margin: 0, position: "absolute", top: 0, left: 0, transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
+                  <TemplateRenderer cv={cv} config={config} />
                 </div>
               </div>
-            </section>
-          </div>
+            </div>
+          </motion.section>
         </div>
-        <style jsx>{`
-          .download-actions { animation: actions-in .25s ease-out both; }
-          @keyframes actions-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-          @media (prefers-reduced-motion: reduce) { .download-actions { animation: none; } }
-        `}</style>
+        <div className="fixed inset-x-0 bottom-0 z-[90] border-t border-border bg-surface/95 px-3 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] shadow-[0_-12px_35px_rgba(7,24,63,0.09)] backdrop-blur-md md:hidden">
+          <div className="mx-auto flex max-w-[580px] items-center gap-2"><DownloadPDF /><DownloadWord /></div>
+        </div>
       </main>
+      <CVBuilderFooter/>
     </DownloadProvider>
   );
+
 }
 
 /* =========================

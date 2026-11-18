@@ -1,8 +1,10 @@
-// Keep every source pixel; only move cuts back to nearby line boundaries.
+// PDF and Word exports use a Blob URL. No window.open(), location changes,
+// form submission, or navigation to the generated document.
 export function paginateContent(totalHeight, pageHeight, ranges = [], padding = 0) {
   if (!(totalHeight > 0) || !(pageHeight > 0) || padding * 2 >= pageHeight) {
     throw new Error("Invalid PDF page dimensions.");
   }
+
   const slices = [];
   let sourceY = 0;
   while (sourceY < totalHeight) {
@@ -13,8 +15,6 @@ export function paginateContent(totalHeight, pageHeight, ranges = [], padding = 
     let cut = ideal;
     if (ideal < totalHeight) {
       const minimum = sourceY + available * 0.88;
-      // Each move clears an intersecting line in either column. Limit whitespace
-      // to 12%; oversized photos/blocks fall back to a normal page cut.
       while (true) {
         const crossing = ranges.filter((range) => range.top < cut && range.bottom > cut);
         if (!crossing.length) break;
@@ -30,17 +30,25 @@ export function paginateContent(totalHeight, pageHeight, ranges = [], padding = 
 }
 
 export function triggerDownload(blob, filename) {
-  if (!blob?.size) throw new Error("The generated file is empty. Please try again.");
-  const url = URL.createObjectURL(blob);
+  if (!(blob instanceof Blob) || blob.size === 0) {
+    throw new Error("The generated file is empty. Please try again.");
+  }
+
+  const safeName = String(filename || "QORLIQ-CV.pdf").replace(/[\\/\u0000-\u001f]/g, "_");
+  const blobUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
+  anchor.href = blobUrl;
+  anchor.download = safeName;
+  anchor.target = "_self";
+  anchor.rel = "noopener noreferrer";
   anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  try { anchor.click(); }
-  finally {
+
+  try {
+    document.body.appendChild(anchor);
+    anchor.click();
+  } finally {
     anchor.remove();
-    // Give browsers time to consume the object URL, especially on mobile.
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    // Do not revoke immediately: browsers may still be consuming the URL.
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
   }
 }

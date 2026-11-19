@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import HeaderLogo from "./HeaderLogo";
 import Link from "next/link";
 
 import {
@@ -272,10 +273,10 @@ function UserAvatarMenu({
         onClick={() => setOpen((prev) => !prev)}
         className={`
           group
-          flex h-11 items-center gap-2
+          flex h-12 items-center gap-2 sm:h-13
           rounded-full
           border
-          py-1 pl-1 pr-2
+          py-1 pl-1 pr-2.5 sm:pr-3
 
           transition-all duration-300
 
@@ -298,7 +299,7 @@ function UserAvatarMenu({
         <span
           className="
             relative
-            flex h-8 w-8 shrink-0
+            flex h-9 w-9 shrink-0 sm:h-10 sm:w-10
             items-center justify-center
             overflow-hidden
             rounded-full
@@ -314,7 +315,7 @@ function UserAvatarMenu({
               src={userImage}
               alt=""
               fill
-              sizes="32px"
+              sizes="40px"
               unoptimized
               className="object-cover"
             />
@@ -331,9 +332,9 @@ function UserAvatarMenu({
 
         <span
           className="
-            hidden max-w-[110px]
+            hidden max-w-[130px]
             truncate
-            text-[12px]
+            text-[14px]
             font-semibold
             text-text-primary
             xl:block
@@ -542,7 +543,7 @@ lg:w-[320px]
               rounded-xl
               px-3 py-2.5
 
-              text-[13px]
+              text-[14px]
               font-medium
               text-text-primary
 
@@ -616,7 +617,7 @@ lg:w-[320px]
               px-3 py-2.5
               text-left
 
-              text-[13px]
+              text-[14px]
               font-medium
               text-text-primary
 
@@ -970,21 +971,22 @@ export default function Header() {
           setMobileOpen(false);
         }}
         className="
-          inline-flex h-10
+          inline-flex h-12 sm:h-13
           shrink-0 items-center
           justify-center
 
           whitespace-nowrap
           rounded-full
-          px-4
+          border border-border bg-surface
+          px-6 lg:px-7
 
-          text-[13px]
+          text-[15px]
           font-semibold
           text-text-primary
 
           transition-colors duration-200
 
-          hover:bg-background-soft
+          hover:border-accent hover:bg-background-soft
 
           focus-visible:outline-2
           focus-visible:outline-offset-2
@@ -1114,7 +1116,7 @@ export default function Header() {
             items-center justify-between
             gap-3
 
-            px-5
+            px-3
             sm:px-8
 
             lg:h-[84px]
@@ -1128,35 +1130,7 @@ export default function Header() {
               LOGO
           ======================================== */}
 
-        <Link
-          href="/"
-          aria-label="QORLIQ CV homepage"
-          className="
-            inline-flex shrink-0 items-center
-            rounded-md outline-offset-4
-            focus-visible:outline-2 focus-visible:outline-accent
-          "
-        >
-          {/* Light Mode Logo */}
-          <Image
-             src="/QORLIQ_cv.svg"
-             alt="QORLIQ CV"
-             width={185}
-             height={56}
-             priority
-             className="h-auto w-[158px] lg:w-[185px] dark:hidden"
-           />
-        
-          {/* Dark Mode Logo */}
-          <Image
-            src="/QORLIQ_cv_dark.svg"
-            alt="QORLIQ CV"
-            width={185}
-            height={56}
-            priority
-            className="hidden h-auto w-[158px] lg:w-[185px] dark:block"
-          />
-        </Link>
+        <HeaderLogo />
 
           {/* ========================================
               DESKTOP NAVIGATION
@@ -1282,9 +1256,9 @@ export default function Header() {
           <div
             className="
               flex shrink-0
-              items-center gap-2
+              items-center gap-1.5
 
-              lg:hidden
+              sm:gap-2 lg:hidden
             "
           >
             {mounted ? (
@@ -1528,7 +1502,7 @@ export default function Header() {
                       setMobileOpen(false)
                     }
                     className="
-                      inline-flex h-12
+                      inline-flex h-14
                       items-center justify-center
 
                       rounded-xl
@@ -1536,7 +1510,7 @@ export default function Header() {
                       border border-border-strong
                       bg-surface
 
-                      text-sm font-semibold
+                      text-base font-semibold
                       text-text-primary
 
                       transition-colors

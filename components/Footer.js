@@ -1,7 +1,8 @@
 "use client";
 
-import Image from "next/image";
+
 import Link from "next/link";
+import HeaderLogo from "./HeaderLogo";
 
 import {
   motion,
@@ -281,36 +282,7 @@ export default function Footer() {
           {/* ====================================
               RESPONSIVE LOGO
           ==================================== */}
-
-      <Link
-  href="/"
-  aria-label="QORLIQ CV homepage"
-  className="
-    inline-flex shrink-0 items-center
-    rounded-md outline-offset-4
-    focus-visible:outline-2 focus-visible:outline-accent
-  "
->
-  {/* Light Mode Logo */}
-  <Image
-     src="/QORLIQ_cv.svg"
-     alt="QORLIQ CV"
-     width={185}
-     height={56}
-     priority
-     className="h-auto w-[158px] lg:w-[185px] dark:hidden"
-   />
-
-  {/* Dark Mode Logo */}
-  <Image
-    src="/QORLIQ_cv_dark.svg"
-    alt="QORLIQ CV"
-    width={185}
-    height={56}
-    priority
-    className="hidden h-auto w-[158px] lg:w-[185px] dark:block"
-  />
-</Link>
+    <HeaderLogo />
 
           {/* ====================================
               BRAND DESCRIPTION

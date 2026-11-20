@@ -7,9 +7,11 @@ import DifferenceSection from "@/components/DifferenceSection";
 import FAQSection from "@/components/FAQSection";
 import FinalCTA from "@/components/FinalCTA";
 import CustomerReviews from "@/components/CustomerReviews";
+import Header from "@/components/Header";
 export default function HomePage() {
   return (
     <main>
+      <Header/>
       <HeroSection />
       <PartnerSection />
       <HowItWorksSection />

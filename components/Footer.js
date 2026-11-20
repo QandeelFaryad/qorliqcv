@@ -53,7 +53,7 @@ const footerLinks = [
       },
       {
         label: "Help & Support",
-        href: "/dashboard/support",
+        href: "/support",
       },
     ],
   },

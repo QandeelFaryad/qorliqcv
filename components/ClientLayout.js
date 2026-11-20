@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Header from "@/components/Header";
+import WebsiteHeader from "./WebsiteHeader";
 import Footer from "@/components/Footer";
 
 export default function ClientLayout({ children }) {
@@ -25,7 +25,7 @@ export default function ClientLayout({ children }) {
 
   return (
     <>
-      {!shouldHideNavbarFooter && <Header />}
+      {!shouldHideNavbarFooter && <WebsiteHeader />}
 
       <main className={shouldHideNavbarFooter ? "min-h-screen" : "min-h-screen"}>
         {children}

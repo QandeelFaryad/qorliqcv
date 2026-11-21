@@ -9,6 +9,7 @@ export default function ContactPage() {
     <main>
       <ContactHero />
       <ContactForm/>
+      
       <FAQSection/>
         <PartnershipsCertificates/>
     </main>

@@ -88,9 +88,13 @@ export default function HelpSupportContent() {
           <motion.div {...entrance()} className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[11px] font-medium text-text-secondary">
             <span className="h-1.5 w-1.5 rounded-full bg-[#078C88] dark:bg-accent" aria-hidden="true" /> Help centre
           </motion.div>
-          <motion.h1 {...entrance(0.06)} className="mt-5 text-[clamp(2.65rem,6vw,4.5rem)] font-semibold leading-[1.07] tracking-[-0.072em] text-text-primary">
-            We're here to help<span className="text-[#078C88] dark:text-accent">.</span>
-          </motion.h1>
+        <motion.h1
+  {...entrance(0.06)}
+  className="mt-5 text-[clamp(2.8rem,5.3vw,5.2rem)] font-bold leading-[1.08] tracking-[-0.065em] text-text-primary"
+>
+  We're here to help
+  <span className="text-[#089D98] dark:text-accent">.</span>
+</motion.h1>
           <motion.p {...entrance(0.12)} className="mt-4 max-w-[620px] text-[15px] leading-[1.85] text-text-secondary sm:text-[17px]">
             Get straightforward support for billing, your account and CV downloads. Choose a topic and contact us directly by email.
           </motion.p>

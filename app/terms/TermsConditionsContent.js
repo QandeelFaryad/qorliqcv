@@ -217,9 +217,10 @@ export default function TermsConditionsContent() {
               <ShieldCheck size={14} className="text-[#078C88] dark:text-accent" aria-hidden="true" />
               Clear terms for your CV
             </motion.div>
-            <h1 className="text-[clamp(2.6rem,6vw,4.25rem)] font-semibold leading-[1.05] tracking-[-0.07em] text-text-primary">
-              Terms &amp; Conditions<span className="text-[#089D98] dark:text-accent">.</span>
-            </h1>
+           <h1 className="text-[clamp(2.8rem,5.3vw,5.2rem)] font-bold leading-[1.08] tracking-[-0.065em] text-text-primary">
+  Terms &amp; Conditions
+  <span className="text-[#089D98] dark:text-accent">.</span>
+</h1>
             <motion.p {...enter(0.08)} className="mt-5 max-w-[690px] text-[15px] leading-[1.85] text-text-secondary sm:text-[17px]">
               Read the terms for using QORLIQ CV, including subscription billing, cancellation, downloads and our refund policy. We have highlighted important payment conditions so they are easy to find.
             </motion.p>

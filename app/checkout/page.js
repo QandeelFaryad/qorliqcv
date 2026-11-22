@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import CheckoutContent from "./CheckoutContent";
+import CheckoutContent from "./checkoutContent";
 
 // Next.js requires a boundary for the useSearchParams() call in CheckoutContent
 // during static prerendering. Keep the fallback inside the checkout content area.

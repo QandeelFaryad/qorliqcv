@@ -1,0 +1,333 @@
+/* =========================================================
+   QORLIQ CV — CUSTOMER DASHBOARD DESIGN SYSTEM
+   Tailwind CSS v4 compatible. Import after your root globals.css.
+   Scoped to .q-dashboard. No @import "tailwindcss" here.
+========================================================= */
+
+/* =========================================================
+   01. LIGHT THEME — QORLIQ BRAND PALETTE
+========================================================= */
+.q-dashboard,
+.q-dashboard[data-theme="light"] {
+  color-scheme: light;
+
+  --qd-background: #ffffff;
+  --qd-background-soft: #f5f9ff;
+  --qd-background-muted: #eaf2ff;
+  --qd-surface: #ffffff;
+  --qd-surface-secondary: #f0f6ff;
+
+  --qd-foreground: #07183f;
+  --qd-text-primary: #07183f;
+  --qd-text-secondary: #52617a;
+  --qd-text-muted: #8490a5;
+
+  --qd-primary: #061747;
+  --qd-primary-hover: #102b66;
+  --qd-primary-text: #ffffff;
+  --qd-accent: #00d5df;
+  --qd-accent-hover: #00b8c5;
+  --qd-accent-text: #061747;
+
+  --qd-border: #e2eaf5;
+  --qd-border-strong: #cbd8e9;
+  --qd-ring: #00d5df;
+
+  --qd-success: #07885d;
+  --qd-success-soft: #e9f9f1;
+  --qd-warning: #b96c06;
+  --qd-warning-soft: #fff5e6;
+  --qd-danger: #c53846;
+  --qd-danger-soft: #fff0f1;
+
+  --qd-overlay: rgb(6 23 71 / 50%);
+  --qd-shadow-sm: 0 2px 12px rgb(7 24 63 / 4%);
+  --qd-shadow-card: 0 10px 32px rgb(7 24 63 / 5%);
+  --qd-shadow-popover: 0 18px 52px rgb(7 24 63 / 14%);
+
+  --qd-radius-sm: 10px;
+  --qd-radius-md: 14px;
+  --qd-radius-lg: 20px;
+  --qd-radius-xl: 24px;
+
+  --qd-sidebar-width: 260px;
+  --qd-header-height: 76px;
+
+  min-height: 100dvh;
+  background: var(--qd-background-soft);
+  color: var(--qd-foreground);
+  font-family: var(--font-rubik, Rubik), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  isolation: isolate;
+}
+
+/* =========================================================
+   02. DARK THEME — PREMIUM NAVY
+   Apply data-theme="dark" to the .q-dashboard wrapper.
+   Dashboard mode is independent of the public site's .dark.
+========================================================= */
+.q-dashboard[data-theme="dark"] {
+  color-scheme: dark;
+
+  --qd-background: #061747;
+  --qd-background-soft: #0b2055;
+  --qd-background-muted: #112b65;
+  --qd-surface: #0c2254;
+  --qd-surface-secondary: #142f68;
+
+  --qd-foreground: #ffffff;
+  --qd-text-primary: #ffffff;
+  --qd-text-secondary: #c4d3eb;
+  --qd-text-muted: #91a8cc;
+
+  --qd-primary: #00d5df;
+  --qd-primary-hover: #33e5eb;
+  --qd-primary-text: #061747;
+  --qd-accent: #00d5df;
+  --qd-accent-hover: #33e5eb;
+  --qd-accent-text: #061747;
+
+  --qd-border: #244174;
+  --qd-border-strong: #36558a;
+  --qd-ring: #00d5df;
+
+  --qd-success: #5de3ab;
+  --qd-success-soft: #103e48;
+  --qd-warning: #ffd083;
+  --qd-warning-soft: #3d3554;
+  --qd-danger: #ffa0ae;
+  --qd-danger-soft: #482844;
+
+  --qd-overlay: rgb(1 9 32 / 68%);
+  --qd-shadow-sm: 0 2px 12px rgb(1 8 28 / 10%);
+  --qd-shadow-card: 0 10px 32px rgb(1 8 28 / 16%);
+  --qd-shadow-popover: 0 18px 52px rgb(1 8 28 / 36%);
+}
+
+/* =========================================================
+   03. LOCAL BASE + COLOR UTILITIES
+   These do NOT override html/body/public website CSS.
+========================================================= */
+.q-dashboard *,
+.q-dashboard *::before,
+.q-dashboard *::after { box-sizing: border-box; }
+
+.q-dashboard :where(button, input, textarea, select) { font: inherit; }
+.q-dashboard :where(button) { cursor: pointer; }
+.q-dashboard :where(button:disabled) { cursor: not-allowed; }
+.q-dashboard :where(a) { color: inherit; }
+.q-dashboard :where(:focus-visible) {
+  outline: 2px solid var(--qd-ring);
+  outline-offset: 3px;
+}
+.q-dashboard ::selection { background: var(--qd-accent); color: #061747; }
+
+.qd-bg { background: var(--qd-background); }
+.qd-bg-soft { background: var(--qd-background-soft); }
+.qd-bg-muted { background: var(--qd-background-muted); }
+.qd-surface { background: var(--qd-surface); }
+.qd-surface-secondary { background: var(--qd-surface-secondary); }
+.qd-text { color: var(--qd-text-primary); }
+.qd-text-secondary { color: var(--qd-text-secondary); }
+.qd-text-muted { color: var(--qd-text-muted); }
+.qd-border { border-color: var(--qd-border); }
+
+/* =========================================================
+   04. DASHBOARD SHELL / LAYOUT
+========================================================= */
+.qd-shell { min-height: 100dvh; display: flex; background: var(--qd-background-soft); }
+.qd-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex: 0 0 var(--qd-sidebar-width);
+  flex-direction: column;
+  height: 100dvh;
+  border-right: 1px solid var(--qd-border);
+  background: var(--qd-surface);
+  z-index: 30;
+}
+.qd-sidebar-header { min-height: var(--qd-header-height); display: flex; align-items: center; padding: 0 22px; border-bottom: 1px solid var(--qd-border); }
+.qd-sidebar-body { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 13px; }
+.qd-sidebar-footer { padding: 16px 13px; border-top: 1px solid var(--qd-border); }
+.qd-main { flex: 1; min-width: 0; }
+.qd-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: var(--qd-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--qd-border);
+  background: var(--qd-surface);
+}
+.qd-content { width: min(100%, 1480px); margin-inline: auto; padding: 30px 30px 64px; }
+.qd-page-title { margin: 0; color: var(--qd-text-primary); font-size: clamp(1.55rem, 2.4vw, 2.1rem); font-weight: 650; line-height: 1.2; letter-spacing: -0.045em; }
+.qd-page-description { margin-top: 8px; color: var(--qd-text-secondary); font-size: 14px; line-height: 1.7; }
+.qd-section-title { margin: 0; color: var(--qd-text-primary); font-size: 17px; font-weight: 650; letter-spacing: -0.035em; }
+
+/* =========================================================
+   05. SIDEBAR NAVIGATION
+========================================================= */
+.qd-nav-label { padding: 8px 13px 10px; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--qd-text-muted); }
+.qd-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 4px;
+  padding: 10px 13px;
+  border: 1px solid transparent;
+  border-radius: var(--qd-radius-sm);
+  color: var(--qd-text-secondary);
+  font-size: 13px;
+  font-weight: 550;
+  text-decoration: none;
+  transition: color .2s ease, background-color .2s ease, border-color .2s ease;
+}
+.qd-nav-link:hover { color: var(--qd-text-primary); background: var(--qd-background-soft); }
+.qd-nav-link[aria-current="page"], .qd-nav-link[data-active="true"] {
+  color: var(--qd-text-primary);
+  background: var(--qd-background-muted);
+  border-color: var(--qd-border);
+  font-weight: 650;
+}
+.qd-nav-link[aria-current="page"] .qd-nav-icon, .qd-nav-link[data-active="true"] .qd-nav-icon { color: var(--qd-accent-hover); }
+.qd-nav-icon { width: 19px; height: 19px; flex: none; }
+
+/* =========================================================
+   06. PANELS / CARDS / METRICS
+========================================================= */
+.qd-card { min-width: 0; border: 1px solid var(--qd-border); border-radius: var(--qd-radius-lg); background: var(--qd-surface); box-shadow: var(--qd-shadow-sm); }
+.qd-card-interactive { transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
+.qd-card-interactive:hover { transform: translateY(-2px); border-color: var(--qd-border-strong); box-shadow: var(--qd-shadow-card); }
+.qd-card-body { padding: 22px; }
+.qd-divider { height: 1px; width: 100%; background: var(--qd-border); }
+.qd-stat-label { color: var(--qd-text-secondary); font-size: 12px; font-weight: 550; }
+.qd-stat-value { color: var(--qd-text-primary); font-size: clamp(1.6rem, 2.4vw, 2.15rem); line-height: 1.2; letter-spacing: -.05em; font-weight: 700; }
+.qd-stat-footnote { color: var(--qd-text-muted); font-size: 12px; line-height: 1.6; }
+.qd-icon-tile { display: inline-flex; align-items: center; justify-content: center; height: 42px; width: 42px; flex: none; border-radius: 12px; background: var(--qd-background-muted); color: var(--qd-text-primary); }
+
+/* =========================================================
+   07. BUTTONS / THEME TOGGLE
+========================================================= */
+.qd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-decoration: none;
+  transition: transform .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.qd-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.qd-btn:active:not(:disabled) { transform: translateY(0); }
+.qd-btn:disabled { opacity: .58; }
+.qd-btn-primary { background: var(--qd-primary); color: var(--qd-primary-text); }
+.qd-btn-primary:hover:not(:disabled) { background: var(--qd-primary-hover); }
+.qd-btn-secondary { background: var(--qd-surface); border-color: var(--qd-border); color: var(--qd-text-primary); }
+.qd-btn-secondary:hover:not(:disabled) { background: var(--qd-background-soft); border-color: var(--qd-border-strong); }
+.qd-btn-ghost { background: transparent; color: var(--qd-text-secondary); }
+.qd-btn-ghost:hover:not(:disabled) { background: var(--qd-background-muted); color: var(--qd-text-primary); }
+.qd-icon-button { width: 42px; height: 42px; padding: 0; border: 1px solid var(--qd-border); border-radius: 12px; background: var(--qd-surface); color: var(--qd-text-primary); display: inline-grid; place-items: center; }
+.qd-icon-button:hover { background: var(--qd-background-soft); border-color: var(--qd-border-strong); }
+.qd-theme-toggle { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid var(--qd-border); border-radius: 12px; background: var(--qd-surface-secondary); color: var(--qd-text-primary); transition: background-color .2s ease, transform .2s ease; }
+.qd-theme-toggle:hover { background: var(--qd-background-muted); transform: translateY(-1px); }
+
+/* =========================================================
+   08. INPUTS / LABELS / SEARCH
+========================================================= */
+.qd-label { display: block; margin-bottom: 8px; color: var(--qd-text-primary); font-size: 12px; font-weight: 650; }
+.qd-input, .qd-select, .qd-textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--qd-border);
+  border-radius: 11px;
+  background: var(--qd-surface);
+  color: var(--qd-text-primary);
+  padding: 11px 13px;
+  font-size: 13px;
+  line-height: 1.45;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.qd-textarea { min-height: 130px; resize: vertical; }
+.qd-input::placeholder, .qd-textarea::placeholder { color: var(--qd-text-muted); }
+.qd-input:focus, .qd-select:focus, .qd-textarea:focus { border-color: var(--qd-ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--qd-ring) 16%, transparent); }
+.qd-input:disabled, .qd-select:disabled, .qd-textarea:disabled { opacity: .6; cursor: not-allowed; }
+.qd-field-error { margin-top: 6px; color: var(--qd-danger); font-size: 12px; }
+
+/* =========================================================
+   09. STATUS BADGES / TABLES / EMPTY STATES
+========================================================= */
+.qd-badge { display: inline-flex; align-items: center; gap: 6px; min-height: 25px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 650; line-height: 1.3; background: var(--qd-background-muted); color: var(--qd-text-primary); }
+.qd-badge-success { background: var(--qd-success-soft); color: var(--qd-success); }
+.qd-badge-warning { background: var(--qd-warning-soft); color: var(--qd-warning); }
+.qd-badge-danger { background: var(--qd-danger-soft); color: var(--qd-danger); }
+.qd-table-wrap { overflow-x: auto; border: 1px solid var(--qd-border); border-radius: var(--qd-radius-lg); background: var(--qd-surface); }
+.qd-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: var(--qd-text-secondary); }
+.qd-table th { padding: 14px 17px; background: var(--qd-surface-secondary); color: var(--qd-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+.qd-table td { padding: 16px 17px; border-top: 1px solid var(--qd-border); }
+.qd-table tbody tr:hover { background: var(--qd-background-soft); }
+.qd-empty { display: grid; place-items: center; gap: 10px; padding: 48px 20px; text-align: center; color: var(--qd-text-secondary); }
+
+/* =========================================================
+   10. OVERLAYS / MODALS / SKELETONS
+========================================================= */
+.qd-overlay { position: fixed; inset: 0; z-index: 80; background: var(--qd-overlay); }
+.qd-modal { width: min(calc(100vw - 32px), 540px); max-height: calc(100dvh - 32px); overflow-y: auto; border: 1px solid var(--qd-border); border-radius: var(--qd-radius-xl); background: var(--qd-surface); box-shadow: var(--qd-shadow-popover); }
+.qd-skeleton { border-radius: 9px; background: var(--qd-background-muted); animation: qd-pulse 1.45s ease-in-out infinite; }
+@keyframes qd-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* =========================================================
+   11. SCROLLBARS — DASHBOARD ONLY
+========================================================= */
+.q-dashboard :where(* ) { scrollbar-color: var(--qd-border-strong) transparent; scrollbar-width: thin; }
+
+/* =========================================================
+   12. RESPONSIVE
+========================================================= */
+@media (max-width: 1023px) {
+  .qd-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.22, 1, .36, 1);
+    box-shadow: var(--qd-shadow-popover);
+  }
+  .qd-sidebar[data-open="true"] { transform: translateX(0); }
+  .qd-header { padding-inline: 20px; }
+  .qd-content { padding: 26px 20px 52px; }
+}
+@media (max-width: 639px) {
+  .q-dashboard { --qd-header-height: 64px; }
+  .qd-header { padding: 10px 15px; gap: 10px; }
+  .qd-content { padding: 22px 15px 44px; }
+  .qd-card-body { padding: 17px; }
+  .qd-page-title { font-size: 1.55rem; }
+  .qd-modal { width: 100%; max-height: 90dvh; border-radius: 22px 22px 0 0; }
+}
+
+/* =========================================================
+   13. ACCESSIBILITY
+========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .q-dashboard *, .q-dashboard *::before, .q-dashboard *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

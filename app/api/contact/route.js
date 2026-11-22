@@ -32,9 +32,9 @@ export async function POST(request) {
       );
     }
 
-    const resendKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.RESEND_FROM_EMAIL;
-    const adminEmail = process.env.CONTACT_ADMIN_EMAIL;
+    const resendKey = process.env.RESEND_API;
+    const fromEmail = process.env.RESEND_EMAIL;
+    const adminEmail = process.env.CONTACT_ADMIN;
     const rateLimitSecret = process.env.CONTACT_RATE_LIMIT_SECRET;
 
     if (!resendKey || !fromEmail || !adminEmail || !rateLimitSecret) {
@@ -85,7 +85,7 @@ export async function POST(request) {
     });
 
   const resend = new Resend(
-  process.env.RESEND_API_KEY?.trim()
+  process.env.RESEND_API?.trim()
 );
 
     const { data, error } = await resend.emails.send({

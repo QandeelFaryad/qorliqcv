@@ -54,10 +54,7 @@ const navigation = [
     label: "Cookie Policy",
     href: "/cookie-policy",
   },
-    {
-    label: "Contact",
-    href: "/contact",
-  },
+
 ];
 
 /* =========================================================

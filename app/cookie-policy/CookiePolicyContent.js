@@ -397,7 +397,7 @@ export default function CookiePolicyContent() {
                   <p className="font-semibold text-text-primary">QORLIQ CV — Privacy inquiries</p>
                   <p className="mt-1 text-[13px]">Official legal entity, contact address and privacy contact: <strong>confirm before publication.</strong></p>
                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-                    <Link href="/privacy-policy" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg font-semibold focus-visible:outline-2 focus-visible:outline-accent">Privacy Policy <ArrowUpRight size={15} aria-hidden="true" /></Link>
+                    <Link href="/privacy" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg font-semibold focus-visible:outline-2 focus-visible:outline-accent">Privacy Policy <ArrowUpRight size={15} aria-hidden="true" /></Link>
                     <Link href="/contact" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg font-semibold focus-visible:outline-2 focus-visible:outline-accent">Contact <ArrowUpRight size={15} aria-hidden="true" /></Link>
                   </div>
                 </div>
